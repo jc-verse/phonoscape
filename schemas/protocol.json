@@ -1,0 +1,57 @@
+{
+  "$id": "https://pyview.dev/schemas/protocol.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "pyview protocol schemas",
+  "type": "object",
+  "$defs": {
+    "ProtocolVersion": {
+      "type": "string",
+      "pattern": "^pyview\\.v[0-9]+$",
+      "default": "pyview.v1"
+    },
+
+    "SessionCreateRequest": {
+      "type": "object",
+      "required": ["protocol_version", "dataset"],
+      "properties": {
+        "protocol_version": { "$ref": "#/$defs/ProtocolVersion" },
+        "dataset": { "$ref": "#/$defs/DatasetSource" }
+      },
+      "additionalProperties": false
+    },
+
+    "DatasetSource": {
+      "type": "object",
+      "properties": {
+        "dtype": {
+          "type": "string",
+          "enum": ["float32", "float64", "int32", "int64"]
+        },
+        "shape": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 1
+        },
+        "data": {
+          "type": "string"
+        }
+      },
+      "required": ["data", "dtype", "shape"],
+      "additionalProperties": false
+    },
+
+    "SessionState": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    }
+  }
+}
