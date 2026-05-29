@@ -55,6 +55,27 @@ class PyViewTk(tk.Tk):
                 temporal_map.remove(audio_traj)
                 temporal_map = [audio_traj, f"{audio_traj}_spect"] + temporal_map
 
+        min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
+        max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
+        for variable in data.values():
+            for traj in variable.trajectories.values():
+                if traj.kind != "spatial":
+                    continue
+                x, y, z = traj.data[:, :3].T
+                min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+                min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+                min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
+
+        palate_variable = kwargs.get("palate")
+        palate_trace = None
+        if palate_variable is not None:
+            palate_trace = other_data[palate_variable]
+            x, y, z = palate_trace[:, :3].T
+            min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+            min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+            min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
+            del other_data[palate_variable]
+
         self.state_model = PyViewState(
             file=path,
             variables_pattern=variables,
@@ -63,7 +84,8 @@ class PyViewTk(tk.Tk):
             selected_variable=first_variable,
             temporal_map=temporal_map,
             dpi=self.winfo_fpixels("1i"),
-            palate_variable=kwargs.get("palate"),
+            spatial_bounds=(min_x, max_x, min_y, max_y, min_z, max_z),
+            palate_trace=palate_trace,
             spline_trajs=kwargs.get("spline"),
             audio_traj=audio_traj,
             framing_traj=kwargs.get("framing", audio_traj),
@@ -73,7 +95,6 @@ class PyViewTk(tk.Tk):
         self.geometry("1440x1000")
 
         self._build_ui()
-        self.plot()
 
     def _build_ui(self) -> None:
         self.rowconfigure(0, weight=0)
@@ -103,6 +124,7 @@ class PyViewTk(tk.Tk):
 
         self.spatial_view = SpatialView(left, state_model=self.state_model)
         self.spatial_view.grid(row=0, column=0, sticky="nsew")
+        self.spatial_view.reset_plot()
 
         right = ttk.Frame(self)
         right.grid(row=1, column=1, sticky="nsew", padx=(2, 4), pady=(0, 4))
@@ -115,19 +137,16 @@ class PyViewTk(tk.Tk):
             on_cursor_changed=self._on_cursor_changed,
         )
         self.temporal_view.grid(row=0, column=0, sticky="nsew")
+        self.temporal_view.reset_plot()
 
     def _on_variable_change(self, name: str) -> None:
         self.state_model.selected_variable = name
         self.state_model.cursor_s = 0.0
-        self.plot()
+        self.temporal_view.update_plot(cursor=True, trajectories=True)
+        self.spatial_view.update_plot(points=True)
 
-    def _on_cursor_changed(self, t: float) -> None:
-        self.state_model.cursor_s = t
-        self.spatial_view.plot()
-
-    def plot(self) -> None:
-        self.temporal_view.plot()
-        self.spatial_view.plot()
+    def _on_cursor_changed(self) -> None:
+        self.spatial_view.update_plot(points=True)
 
     def _play_current_mode(self, mode: str) -> None:
         print(f"Play mode: {mode}")  # TODO

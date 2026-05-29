@@ -33,7 +33,8 @@ class PyViewState:
     selected_variable: str
     temporal_map: list[str]
     dpi: float
-    palate_variable: str | None = None
+    spatial_bounds: tuple[float, float, float, float, float, float]
+    palate_trace: np.ndarray | None = None
     spline_trajs: list[str] | None = None
     audio_traj: str | None = None
     framing_traj: str | None = None
