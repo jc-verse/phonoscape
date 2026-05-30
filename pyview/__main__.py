@@ -43,7 +43,7 @@ if __name__ == "__main__":
         "--spline",
         type=str,
         nargs="+",
-        help="List of variable names to apply spline interpolation (optional).",
+        help="List of trajectory names to apply spline interpolation (default: all trajectories starting with 'T').",
     )
     parser.add_argument(
         "--audio",
@@ -53,13 +53,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--framing",
         type=str,
-        help="Variable name for framing trajectory (default: audio).",
+        help="Variable name for framing trajectory (default: --audio, or first trajectory if no audio found).",
     )
     parser.add_argument(
-        "--temporal-map",
+        "--temporal-disp-trajs",
         type=str,
         nargs="+",
-        help="List of variable names to include in temporal map view (default: all + audio_spect).",
+        help="List of variable names to include in temporal display (default: all plus {--audio}_SPECT).",
     )
     args = parser.parse_args()
 
@@ -70,5 +70,5 @@ if __name__ == "__main__":
         spline=args.spline,
         audio=args.audio,
         framing=args.framing,
-        temporal_map=args.temporal_map,
+        temporal_disp_trajs=args.temporal_disp_trajs,
     )

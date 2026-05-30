@@ -5,6 +5,42 @@ import numpy as np
 
 
 @dataclass
+class PyViewConfig:
+    palate_trace: np.ndarray | None
+    spline_trajs: list[str]
+    audio_traj: str | None
+    framing_traj: str
+    temporal_disp_specs: list[TrajDisplay]
+
+
+@dataclass
+class ScalarTrajDisplay:
+    traj_name: str
+    content: Literal[
+        "signal", "SPECT", "F0", "RMS", "ZC", "VEL", "ABSVEL"
+    ]
+    def __str__(self) -> str:
+        if self.content == "signal":
+            return self.traj_name
+        else:
+            return f"{self.traj_name}_{self.content}"
+
+
+@dataclass
+class SpatialTrajDisplay:
+    traj_name: str
+    content: Literal["movement", "velocity", "acceleration"]
+    components: list[Literal["x", "y", "z"]]
+    def __str__(self) -> str:
+        comp_str = "".join(self.components)
+        prefix = {"movement": "", "velocity": "v", "acceleration": "a"}[self.content]
+        return f"{prefix}{self.traj_name}{comp_str}"
+
+
+TrajDisplay = ScalarTrajDisplay | SpatialTrajDisplay
+
+
+@dataclass
 class Trajectory:
     name: str
     kind: Literal["scalar", "spatial"]
@@ -31,14 +67,10 @@ class PyViewState:
     data: dict[str, DatasetVariable]
     other_data: dict[str, Any]
     selected_variable: str
-    temporal_map: list[str]
     dpi: float
     spatial_bounds: tuple[float, float, float, float, float, float]
-    palate_trace: np.ndarray | None = None
-    spline_trajs: list[str] | None = None
-    audio_traj: str | None = None
-    framing_traj: str | None = None
-    cursor_s: float = 0.0
+    config: PyViewConfig
+    cursor_s: float
 
     @property
     def variable_names(self) -> list[str]:

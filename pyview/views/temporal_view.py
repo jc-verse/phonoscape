@@ -3,13 +3,13 @@ from typing import Callable
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
+
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
-
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ..state import PyViewState
+from ..state import PyViewState, TrajDisplay
 
 
 class TemporalView(ttk.Frame):
@@ -52,8 +52,8 @@ class TemporalView(ttk.Frame):
         self.figure.subplots_adjust(
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
-        n = len(self.state_model.temporal_map)
-        self.height_ratios = [1.0] * n
+        n = len(self.state_model.config.temporal_disp_specs)
+        self.height_ratios = [1.0 if spec.content != "SPECT" else 2.0 for spec in self.state_model.config.temporal_disp_specs]
         self.gs = self.figure.add_gridspec(
             nrows=n, ncols=1, height_ratios=self.height_ratios
         )
@@ -61,8 +61,8 @@ class TemporalView(ttk.Frame):
 
         duration = self.state_model.selected_value.duration_ms
         self.artists = []
-        for i, (ax, traj) in enumerate(zip(self.axes, self.state_model.temporal_map)):
-            artist = self._plot_one_axis(ax, traj, i=i, duration=duration)
+        for i, (ax, spec) in enumerate(zip(self.axes, self.state_model.config.temporal_disp_specs)):
+            artist = self._plot_one_axis(ax, spec, i=i, duration=duration)
             self.artists.append(artist)
 
         self.cursor_artists = [
@@ -82,11 +82,11 @@ class TemporalView(ttk.Frame):
                 line.set_xdata([self.state_model.cursor_s, self.state_model.cursor_s])
         if trajectories:
             duration = self.state_model.selected_value.duration_ms
-            for i, traj in enumerate(self.state_model.temporal_map):
-                traj, is_spect = self._get_traj(traj)
+            for i, spec in enumerate(self.state_model.config.temporal_disp_specs):
+                traj = self.state_model.selected_value.trajectories[spec.traj_name]
                 t = np.arange(traj.n_samples) / traj.sample_rate_hz
                 artist = self.artists[i]
-                if is_spect:
+                if spec.content == "SPECT":
                     # TODO: incremental update (require separate spectrogram computation)
                     self.artists[i] = self.axes[i].specgram(
                         traj.data,
@@ -95,11 +95,12 @@ class TemporalView(ttk.Frame):
                         noverlap=512,
                         cmap="gray_r",
                     )
-                elif traj.kind == "scalar":
+                elif spec.content == "signal":
                     artist.set_data(t, traj.data)
-                else:
-                    for j in range(min(3, traj.dimensions)):
-                        artist[j].set_data(t, traj.data[:, j])
+                elif spec.content == "movement":
+                    for j, comp in enumerate(spec.components):
+                        idx = {"x": 0, "y": 1, "z": 2}[comp]
+                        artist[j].set_data(t, traj.data[:, idx])
                 self.axes[i].relim()
                 self.axes[i].autoscale_view(scalex=False, scaley=True)
                 self.axes[i].set_xlim(0, duration)
@@ -107,12 +108,12 @@ class TemporalView(ttk.Frame):
             self.canvas.draw_idle()
 
     def _plot_one_axis(
-        self, ax: plt_axes.Axes, name: str, i: int, duration: float
+        self, ax: plt_axes.Axes, spec: TrajDisplay, i: int, duration: float
     ):
-        traj, is_spect = self._get_traj(name)
+        traj = self.state_model.selected_value.trajectories[spec.traj_name]
         t = np.arange(traj.n_samples) / traj.sample_rate_hz
         artist = None
-        if is_spect:
+        if spec.content == "SPECT":
             self.height_ratios[i] = 4.0
             self.gs.set_height_ratios(self.height_ratios)
             artist = ax.specgram(
@@ -122,19 +123,19 @@ class TemporalView(ttk.Frame):
                 noverlap=512,
                 cmap="gray_r",
             )
-        elif traj.kind == "scalar":
+        elif spec.content == "signal":
             artist = ax.plot(t, traj.data, linewidth=0.8, color=traj.color)[0]
-        else:
-            labels = ["x", "y", "z"]
+        elif spec.content == "movement":
             artist = []
-            for i in range(min(3, traj.dimensions)):
+            for comp in spec.components:
+                idx = {"x": 0, "y": 1, "z": 2}[comp]
                 a = ax.plot(
                     t,
-                    traj.data[:, i],
+                    traj.data[:, idx],
                     linewidth=0.8,
-                    label=labels[i],
+                    label=comp,
                     color=traj.color,
-                    alpha=(1 - i * 0.3),
+                    alpha=(1 - idx * 0.3),
                 )[0]
                 artist.append(a)
 
@@ -145,11 +146,13 @@ class TemporalView(ttk.Frame):
                 handlelength=1.2,
                 handletextpad=0.3,
             )
+        else:
+            raise ValueError(f"Unexpected content type for temporal display: {spec.content}")
 
         ax.text(
             0.01,
             0.98,
-            f"{traj.name}  {traj.sample_rate_hz:.0f} Hz",
+            f"{spec}  {traj.sample_rate_hz:.0f} Hz",
             ha="left",
             va="top",
             transform=ax.transAxes,
@@ -174,37 +177,6 @@ class TemporalView(ttk.Frame):
             spine.set_visible(True)
         
         return artist
-
-    def _get_traj(self, name: str):
-        candidate_names = [name, name.upper(), name.lower()]
-        traj = None
-        is_spect = False
-        for candidate in candidate_names:
-            if candidate in self.state_model.selected_value.trajectories:
-                traj = self.state_model.selected_value.trajectories[candidate]
-                break
-        else:
-            if name.lower().endswith("_spect"):
-                base_name = name[:-6]
-                for candidate in [base_name, base_name.upper(), base_name.lower()]:
-                    if candidate in self.state_model.selected_value.trajectories:
-                        traj = self.state_model.selected_value.trajectories[candidate]
-                        break
-                else:
-                    raise ValueError(
-                        f"Trajectory '{base_name}' (requested via '{name}') not found among variable trajectories"
-                    )
-                if traj.kind != "scalar":
-                    raise ValueError(
-                        f"Trajectory '{traj.name}' found for '{name}' is not scalar and thus cannot be spectrogrammed"
-                    )
-                is_spect = True
-
-            else:
-                raise ValueError(
-                    f"Trajectory '{name}' not found among variable trajectories"
-                )
-        return traj, is_spect
 
     def _event_is_in_temporal_axes(self, event) -> bool:
         return event.inaxes in self.axes

@@ -67,11 +67,11 @@ class SpatialView(ttk.Frame):
         self.text_artists: dict[str, Text3D] = {}
         self.spline_artist: Line3D | None = None
 
-        if self.state_model.palate_trace is not None:
+        if self.state_model.config.palate_trace is not None:
             self.ax.plot(
-                self.state_model.palate_trace[:, 0],
-                self.state_model.palate_trace[:, 1],
-                self.state_model.palate_trace[:, 2],
+                self.state_model.config.palate_trace[:, 0],
+                self.state_model.config.palate_trace[:, 1],
+                self.state_model.config.palate_trace[:, 2],
                 color=plt.rcParams["text.color"],
                 linewidth=1.0,
             )
@@ -97,7 +97,7 @@ class SpatialView(ttk.Frame):
                 Text3D, self.ax.text(x, y, z, f" {traj.name}")
             )
 
-        if self.state_model.spline_trajs is not None:
+        if self.state_model.config.spline_trajs is not None:
             spline = self._compute_spline(positions_by_name)
             if spline is not None:
                 x_new, y_new, z_new = spline
@@ -144,18 +144,16 @@ class SpatialView(ttk.Frame):
     def _compute_spline(
         self, positions_by_name: dict[str, tuple[float, float, float]]
     ) -> tuple[Any, Any, Any] | None:
-        if self.state_model.spline_trajs is None:
+        if self.state_model.config.spline_trajs is None:
             raise Exception(
                 "Unexpected: calling _compute_spline when no spline trajectories configured"
             )
 
         spline_points: list[tuple[float, float, float]] = []
 
-        for name in self.state_model.spline_trajs:
+        for name in self.state_model.config.spline_trajs:
             if name in positions_by_name:
                 spline_points.append(positions_by_name[name])
-            elif name.upper() in positions_by_name:
-                spline_points.append(positions_by_name[name.upper()])
             else:
                 raise ValueError(
                     f"Spline trajectory '{name}' not found among spatial trajectories"

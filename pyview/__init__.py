@@ -4,20 +4,12 @@ from pathlib import Path
 from typing import TypedDict, Unpack
 import matplotlib.pyplot as plt
 
-from .data import load_variables
+from .data import load_variables, normalize_args, PyViewArgs
 from .state import PyViewState
 from .widgets.play_button import SplitPlayButton
 from .widgets.variable_dropdown import VariableDropdown
 from .views.temporal_view import TemporalView
 from .views.spatial_view import SpatialView
-
-
-class PyViewArgs(TypedDict, total=False):
-    palate: str | None
-    spline: list[str] | None
-    audio: str | None
-    framing: str | None
-    temporal_map: list[str] | None
 
 
 class PyViewTk(tk.Tk):
@@ -36,24 +28,7 @@ class PyViewTk(tk.Tk):
         if not data:
             raise ValueError(f"No matching variables found for pattern {variables!r}")
 
-        first_variable = next(iter(data))
-        audio_traj = kwargs.get("audio")
-        if audio_traj is None:
-            audio_traj = next(
-                (
-                    name
-                    for name, traj in data[first_variable].trajectories.items()
-                    if traj.sample_rate_hz > 1000 and traj.kind == "scalar"
-                ),
-                None,
-            )
-
-        temporal_map = kwargs.get("temporal_map")
-        if temporal_map is None:
-            temporal_map = list(data[first_variable].trajectories.keys())
-            if audio_traj:
-                temporal_map.remove(audio_traj)
-                temporal_map = [audio_traj, f"{audio_traj}_spect"] + temporal_map
+        config = normalize_args(kwargs, data, other_data)
 
         min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
         max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
@@ -65,30 +40,23 @@ class PyViewTk(tk.Tk):
                 min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
                 min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
                 min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
-
-        palate_variable = kwargs.get("palate")
-        palate_trace = None
-        if palate_variable is not None:
-            palate_trace = other_data[palate_variable]
+        if config.palate_trace is not None:
+            palate_trace = config.palate_trace
             x, y, z = palate_trace[:, :3].T
             min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
             min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
             min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
-            del other_data[palate_variable]
 
         self.state_model = PyViewState(
             file=path,
             variables_pattern=variables,
             data=data,
             other_data=other_data,
-            selected_variable=first_variable,
-            temporal_map=temporal_map,
+            selected_variable=next(iter(data.keys())),
             dpi=self.winfo_fpixels("1i"),
             spatial_bounds=(min_x, max_x, min_y, max_y, min_z, max_z),
-            palate_trace=palate_trace,
-            spline_trajs=kwargs.get("spline"),
-            audio_traj=audio_traj,
-            framing_traj=kwargs.get("framing", audio_traj),
+            config=config,
+            cursor_s=0.0,
         )
 
         self.title(f"pyview - {path.name}")
