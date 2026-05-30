@@ -3,6 +3,7 @@ from typing import Callable
 import numpy as np
 import tkinter as tk
 from tkinter import ttk
+from scipy.signal import ShortTimeFFT, windows
 
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
@@ -54,21 +55,24 @@ class TemporalView(ttk.Frame):
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
         n = len(self.state_model.config.temporal_disp_specs)
-        self.height_ratios = [
+        height_ratios = [
             1.0 if spec.content != "SPECT" else 2.0
             for spec in self.state_model.config.temporal_disp_specs
         ]
-        self.gs = self.figure.add_gridspec(
-            nrows=n, ncols=1, height_ratios=self.height_ratios
-        )
-        self.axes = [self.figure.add_subplot(self.gs[i, 0]) for i in range(n)]
+        gs = self.figure.add_gridspec(nrows=n, ncols=1, height_ratios=height_ratios)
+        self.axes = [self.figure.add_subplot(gs[i, 0]) for i in range(n)]
+
+        self.plotting_data = [
+            self._get_plotting_data(spec)
+            for spec in self.state_model.config.temporal_disp_specs
+        ]
 
         duration = self.state_model.selected_value.duration_ms
         self.artists = []
         self.zero_artists: list[Line2D | None] = []
-        self.cursor_artists = []
-        for i, (ax, spec) in enumerate(
-            zip(self.axes, self.state_model.config.temporal_disp_specs)
+        self.cursor_artists: list[Line2D] = []
+        for i, ax, spec in zip(
+            range(n), self.axes, self.state_model.config.temporal_disp_specs
         ):
             artist, zero_artist, cursor_artist = self._plot_one_axis(
                 ax, spec, i=i, duration=duration
@@ -77,31 +81,31 @@ class TemporalView(ttk.Frame):
             self.zero_artists.append(zero_artist)
             self.cursor_artists.append(cursor_artist)
 
-    def update_plot(self, cursor: bool = False, trajectories: bool = False) -> None:
+    def update_plot(
+        self, cursor: bool = False, trajectories: bool = False, variable: bool = False
+    ) -> None:
         if cursor:
             for line in self.cursor_artists:
                 line.set_xdata([self.state_model.cursor_s, self.state_model.cursor_s])
+        if variable:
+            trajectories = True
+            self.plotting_data = [
+                self._get_plotting_data(spec)
+                for spec in self.state_model.config.temporal_disp_specs
+            ]
         if trajectories:
             duration = self.state_model.selected_value.duration_ms
             for i, spec in enumerate(self.state_model.config.temporal_disp_specs):
-                traj = self.state_model.selected_value.trajectories[spec.traj_name]
-                t = np.arange(traj.n_samples) / traj.sample_rate_hz
+                t, data = self.plotting_data[i]
                 artist = self.artists[i]
                 if spec.content == "SPECT":
-                    # TODO: incremental update (require separate spectrogram computation)
-                    self.artists[i] = self.axes[i].specgram(
-                        traj.data,
-                        NFFT=1024,
-                        Fs=traj.sample_rate_hz,
-                        noverlap=512,
-                        cmap="gray_r",
-                    )
-                elif spec.content == "SIGNAL":
-                    artist.set_data(t, traj.data)
+                    self.artists[i].set_data(data)
+                    self.artists[i].set_extent(t)
+                elif spec.content in ("SIGNAL", "velocity", "acceleration"):
+                    artist.set_data(t, data)
                 elif spec.content == "movement":
-                    for j, comp in enumerate(spec.components):
-                        idx = {"x": 0, "y": 1, "z": 2}[comp]
-                        artist[j].set_data(t, traj.data[:, idx])
+                    for j in range(data.shape[1]):
+                        artist[j].set_data(t, data[:, j])
                 if artist := self.zero_artists[i]:
                     artist.set_visible(False)
                 self.axes[i].relim()
@@ -118,65 +122,41 @@ class TemporalView(ttk.Frame):
         self, ax: plt_axes.Axes, spec: TrajDisplay, i: int, duration: float
     ):
         traj = self.state_model.selected_value.trajectories[spec.traj_name]
-        t = np.arange(traj.n_samples) / traj.sample_rate_hz
+        t, data = self.plotting_data[i]
         artist = None
         if spec.content == "SPECT":
-            self.height_ratios[i] = 4.0
-            self.gs.set_height_ratios(self.height_ratios)
-            artist = ax.specgram(
-                traj.data,
-                NFFT=1024,
-                Fs=traj.sample_rate_hz,
-                noverlap=512,
+            artist = ax.imshow(
+                data,
+                aspect="auto",
+                origin="lower",
+                extent=t,
                 cmap="gray_r",
             )
         elif spec.content == "SIGNAL":
-            artist = ax.plot(t, traj.data, linewidth=0.8, color=traj.color)[0]
+            artist = ax.plot(t, data, linewidth=0.8, color=traj.color)[0]
         elif spec.content == "movement":
             artist = []
-            for j, comp in enumerate(spec.components):
-                idx = {"x": 0, "y": 1, "z": 2}[comp]
+            for j in range(data.shape[1]):
                 a = ax.plot(
                     t,
-                    traj.data[:, idx],
+                    data[:, j],
                     linewidth=0.8,
-                    label=comp,
+                    label=spec.components[j],
                     color=traj.color,
                     alpha=(1 - j * 0.3),
                 )[0]
                 artist.append(a)
 
-            ax.legend(
-                loc="upper right",
-                frameon=True,
-                borderpad=0.2,
-                handlelength=1.2,
-                handletextpad=0.3,
-            )
-        elif spec.content == "velocity":
-            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
-            ps = traj.data[:, cols]
-            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
-            if vs.shape[1] > 1:
-                speed = np.linalg.norm(vs, axis=1)
-            else:
-                # Preserve sign for 1D
-                # TODO: currently this way for mview compatibility, but I think
-                # "velocity" and "speed" should be separate content types
-                # Otherwise there's this inconsistency between 1D and multi-D
-                speed = vs[:, 0]
-            artist = ax.plot(t, speed, linewidth=0.8, color=traj.color)[0]
-        elif spec.content == "acceleration":
-            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
-            ps = traj.data[:, cols]
-            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
-            accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
-            if accs.shape[1] > 1:
-                accel = np.linalg.norm(accs, axis=1)
-            else:
-                # Preserve sign for 1D
-                accel = accs[:, 0]
-            artist = ax.plot(t, accel, linewidth=0.8, color=traj.color)[0]
+            if len(spec.components) > 1:
+                ax.legend(
+                    loc="upper right",
+                    frameon=True,
+                    borderpad=0.2,
+                    handlelength=1.2,
+                    handletextpad=0.3,
+                )
+        elif spec.content in ("velocity", "acceleration"):
+            artist = ax.plot(t, data, linewidth=0.8, color=traj.color)[0]
         else:
             raise ValueError(
                 f"Unexpected content type for temporal display: {spec.content}"
@@ -232,6 +212,62 @@ class TemporalView(ttk.Frame):
         )
 
         return artist, zero_artist, cursor_artist
+
+    def _get_plotting_data(self, spec: TrajDisplay):
+        traj = self.state_model.selected_value.trajectories[spec.traj_name]
+        t = np.arange(traj.n_samples) / traj.sample_rate_hz
+        if spec.content == "SPECT":
+            window_ms = 25
+            overlap = 0.75
+            nperseg = round(traj.sample_rate_hz * window_ms / 1000)
+            hop = max(1, round(nperseg * (1.0 - overlap)))
+
+            win = windows.hann(nperseg, sym=False)
+
+            stft = ShortTimeFFT(
+                win=win,
+                hop=hop,
+                fs=traj.sample_rate_hz,
+                mfft=1024,
+                scale_to="magnitude",
+            )
+
+            S = stft.spectrogram(traj.data)
+            S_db = 20 * np.log10(S + np.finfo(float).eps)
+            extent = [0, t[-1], 0, traj.sample_rate_hz / 2]
+            return extent, S_db
+        elif spec.content == "SIGNAL":
+            return t, traj.data
+        elif spec.content == "movement":
+            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
+            return t, traj.data[:, cols]
+        elif spec.content == "velocity":
+            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
+            ps = traj.data[:, cols]
+            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
+            if vs.shape[1] > 1:
+                speed = np.linalg.norm(vs, axis=1)
+            else:
+                # Preserve sign for 1D
+                # TODO: currently this way for mview compatibility, but I think
+                # "velocity" and "speed" should be separate content types
+                # Otherwise there's this inconsistency between 1D and multi-D
+                speed = vs[:, 0]
+            return t, speed
+        elif spec.content == "acceleration":
+            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
+            ps = traj.data[:, cols]
+            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
+            accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
+            if accs.shape[1] > 1:
+                accel = np.linalg.norm(accs, axis=1)
+            else:
+                accel = accs[:, 0]
+            return t, accel
+        else:
+            raise ValueError(
+                f"Unexpected content type for temporal display: {spec.content}"
+            )
 
     def _event_is_in_temporal_axes(self, event) -> bool:
         return event.inaxes in self.axes

@@ -111,7 +111,7 @@ class PyViewTk(tk.Tk):
     def _on_variable_change(self, name: str) -> None:
         self.state_model.selected_variable = name
         self.state_model.cursor_s = 0.0
-        self.temporal_view.update_plot(cursor=True, trajectories=True)
+        self.temporal_view.update_plot(cursor=True, variable=True)
         self.spatial_view.update_plot(points=True)
 
     def _on_cursor_changed(self) -> None:
