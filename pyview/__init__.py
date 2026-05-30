@@ -5,11 +5,13 @@ from typing import Unpack
 import matplotlib.pyplot as plt
 
 from .data.parse import load_variables, normalize_args, PyViewArgs
-from .state import PyViewState
+from .data.process import get_plotting_data
+from .state import PyViewState, ScalarTrajDisplay
 from .widgets.play_button import SplitPlayButton
 from .widgets.variable_dropdown import VariableDropdown
 from .views.temporal_view import TemporalView
 from .views.spatial_view import SpatialView
+from .views.freq_domain_view import FreqDomainView
 
 
 class PyViewTk(tk.Tk):
@@ -47,12 +49,22 @@ class PyViewTk(tk.Tk):
             min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
             min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
 
+        selected_variable = next(iter(data.keys()))
+
         self.state_model = PyViewState(
             file=path,
             variables_pattern=variables,
             data=data,
             other_data=other_data,
-            selected_variable=next(iter(data.keys())),
+            audio_spect=(
+                get_plotting_data(
+                    data[selected_variable].trajectories[config.audio_traj],
+                    ScalarTrajDisplay(traj_name=config.audio_traj, content="SPECT"),
+                )
+                if config.audio_traj is not None
+                else None
+            ),
+            selected_variable=selected_variable,
             dpi=self.winfo_fpixels("1i"),
             spatial_bounds=(min_x, max_x, min_y, max_y, min_z, max_z),
             config=config,
@@ -95,6 +107,11 @@ class PyViewTk(tk.Tk):
         self.spatial_view.grid(row=0, column=0, sticky="nsew")
         self.spatial_view.reset_plot()
 
+        self.freq_domain_view = FreqDomainView(left, state_model=self.state_model)
+        self.freq_domain_view.grid(row=1, column=0, sticky="nsew")
+        if self.state_model.audio_spect is not None:
+            self.freq_domain_view.reset_plot()
+
         right = ttk.Frame(self)
         right.grid(row=1, column=1, sticky="nsew", padx=(2, 4), pady=(0, 4))
         right.rowconfigure(0, weight=1)
@@ -111,11 +128,27 @@ class PyViewTk(tk.Tk):
     def _on_variable_change(self, name: str) -> None:
         self.state_model.selected_variable = name
         self.state_model.cursor_s = 0.0
+        self.state_model.audio_spect = (
+            get_plotting_data(
+                self.state_model.data[name].trajectories[
+                    self.state_model.config.audio_traj
+                ],
+                ScalarTrajDisplay(
+                    traj_name=self.state_model.config.audio_traj, content="SPECT"
+                ),
+            )
+            if self.state_model.config.audio_traj is not None
+            else None
+        )
         self.temporal_view.update_plot(cursor=True, variable=True)
+        if self.state_model.audio_spect is not None:
+            self.freq_domain_view.update_plot()
         self.spatial_view.update_plot(points=True)
 
     def _on_cursor_changed(self) -> None:
         self.spatial_view.update_plot(points=True)
+        if self.state_model.config.audio_traj is not None:
+            self.freq_domain_view.update_plot()
 
 
 def pyview(file: str, variables: str = "*", **kwargs: Unpack[PyViewArgs]) -> None:

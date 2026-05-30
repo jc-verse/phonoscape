@@ -15,11 +15,7 @@ def get_plotting_data(traj: Trajectory, spec: TrajDisplay):
         hop = max(1, round(nperseg * (1.0 - overlap)))
         win = windows.hann(nperseg, sym=False)
         stft = ShortTimeFFT(
-            win=win,
-            hop=hop,
-            fs=traj.sample_rate_hz,
-            mfft=1024,
-            scale_to="magnitude",
+            win=win, hop=hop, fs=traj.sample_rate_hz, mfft=1024, scale_to="magnitude"
         )
         S = stft.spectrogram(traj.data)
         S_db = 20 * np.log10(S + np.finfo(float).eps)
@@ -42,11 +38,10 @@ def get_plotting_data(traj: Trajectory, spec: TrajDisplay):
         wl = round(20 * traj.sample_rate_hz / 1000)  # 20 msec filter window
         wl2 = int(np.ceil(wl / 2))
         s = np.concatenate([np.zeros(wl2), traj.data, np.zeros(wl2)])
-        zc = cast(np.ndarray, lfilter(
-            np.ones(wl),  # rectwin(wl)
-            [1],
-            np.concatenate([[0], np.abs(np.diff(s >= 0))]),
-        ))
+        zc = cast(
+            np.ndarray,
+            lfilter(np.ones(wl), [1], np.concatenate([[0], np.abs(np.diff(s >= 0))])),
+        )
         zc: np.ndarray = zc[wl2 * 2 :]
         return t, zc
     elif spec.content in ("movement", "velocity", "acceleration"):

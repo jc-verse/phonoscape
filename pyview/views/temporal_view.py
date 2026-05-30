@@ -1,12 +1,14 @@
-from typing import Callable
+from typing import Callable, cast, Any
 
 import tkinter as tk
 from tkinter import ttk
 
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
+from matplotlib.image import AxesImage
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..state import PyViewState, TrajDisplay
@@ -45,6 +47,7 @@ class TemporalView(ttk.Frame):
         self.canvas.mpl_connect("button_press_event", self._on_press)
         self.canvas.mpl_connect("motion_notify_event", self._on_motion)
         self.canvas.mpl_connect("button_release_event", self._on_release)
+        self.canvas.mpl_connect("figure_leave_event", self._on_figure_leave)
 
         self.reset_plot()
 
@@ -62,14 +65,19 @@ class TemporalView(ttk.Frame):
         self.axes = [self.figure.add_subplot(gs[i, 0]) for i in range(n)]
 
         self.plotting_data = [
-            get_plotting_data(
-                self.state_model.selected_value.trajectories[spec.traj_name], spec
+            (
+                get_plotting_data(
+                    self.state_model.selected_value.trajectories[spec.traj_name], spec
+                )
+                if spec.traj_name != self.state_model.config.audio_traj
+                or spec.content != "SPECT"
+                else cast(tuple[Any, np.ndarray], self.state_model.audio_spect)
             )
             for spec in self.state_model.config.temporal_disp_specs
         ]
 
         duration = self.state_model.selected_value.duration_ms
-        self.artists = []
+        self.artists: list[Line2D | AxesImage | list[Line2D]] = []
         self.zero_artists: list[Line2D | None] = []
         self.cursor_artists: list[Line2D] = []
         for i, ax, spec in zip(
@@ -94,6 +102,9 @@ class TemporalView(ttk.Frame):
                 get_plotting_data(
                     self.state_model.selected_value.trajectories[spec.traj_name], spec
                 )
+                if spec.traj_name != self.state_model.config.audio_traj
+                or spec.content != "SPECT"
+                else cast(tuple[Any, np.ndarray], self.state_model.audio_spect)
                 for spec in self.state_model.config.temporal_disp_specs
             ]
         if trajectories:
@@ -139,7 +150,7 @@ class TemporalView(ttk.Frame):
     ):
         traj = self.state_model.selected_value.trajectories[spec.traj_name]
         t, data = self.plotting_data[i]
-        artist = None
+        artist: list[Line2D] | AxesImage | Line2D | None = None
         if spec.content == "SPECT":
             artist = ax.imshow(
                 data,
@@ -272,14 +283,16 @@ class TemporalView(ttk.Frame):
         self._on_cursor_changed()
 
     def _on_release(self, event) -> None:
-        if (
-            not self._cursor_dragging
-            or event.xdata is None
-            or not self._event_is_in_temporal_axes(event)
-        ):
+        if not self._cursor_dragging or event.xdata is None:
+            return
+        elif not self._event_is_in_temporal_axes(event):
+            self._cursor_dragging = False
             return
         self._cursor_dragging = False
 
         self.state_model.cursor_s = float(event.xdata)
         self.update_plot(cursor=True)
         self._on_cursor_changed()
+
+    def _on_figure_leave(self, event) -> None:
+        self._cursor_dragging = False

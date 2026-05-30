@@ -30,7 +30,7 @@ class SpatialView(ttk.Frame):
                 self.height / self.state_model.dpi,
             ),
             dpi=state_model.dpi,
-            frameon=False,
+            frameon=True,
         )
         self.figure.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
@@ -144,10 +144,7 @@ class SpatialView(ttk.Frame):
     def _compute_spline(
         self, positions_by_name: dict[str, tuple[float, float, float]]
     ) -> tuple[Any, Any, Any] | None:
-        if self.state_model.config.spline_trajs is None:
-            raise Exception(
-                "Unexpected: calling _compute_spline when no spline trajectories configured"
-            )
+        assert self.state_model.config.spline_trajs is not None
 
         spline_points: list[tuple[float, float, float]] = []
 

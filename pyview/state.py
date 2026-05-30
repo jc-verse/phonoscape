@@ -70,6 +70,11 @@ class PyViewState:
     variables_pattern: str
     data: dict[str, DatasetVariable]
     other_data: dict[str, Any]
+    """
+    Precomputed because it's also used for the spectrogram cross-section.
+    Avoids two FFTs, one for each view.
+    """
+    audio_spect: tuple[Any, np.ndarray] | None
     selected_variable: str
     dpi: float
     spatial_bounds: tuple[float, float, float, float, float, float]
