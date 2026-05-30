@@ -155,9 +155,7 @@ def normalize_args(
                 f"Audio trajectory '{audio_traj}' not found among trajectories of variable '{first_variable.name}'"
             )
         if first_variable.trajectories[audio_traj].kind != "scalar":
-            raise ValueError(
-                f"Audio trajectory '{audio_traj}' found but is not scalar"
-            )
+            raise ValueError(f"Audio trajectory '{audio_traj}' found but is not scalar")
 
     temporal_disp_trajs = args.get("temporal_disp_trajs")
     if temporal_disp_trajs is None:

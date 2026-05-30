@@ -53,7 +53,10 @@ class TemporalView(ttk.Frame):
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
         n = len(self.state_model.config.temporal_disp_specs)
-        self.height_ratios = [1.0 if spec.content != "SPECT" else 2.0 for spec in self.state_model.config.temporal_disp_specs]
+        self.height_ratios = [
+            1.0 if spec.content != "SPECT" else 2.0
+            for spec in self.state_model.config.temporal_disp_specs
+        ]
         self.gs = self.figure.add_gridspec(
             nrows=n, ncols=1, height_ratios=self.height_ratios
         )
@@ -61,7 +64,9 @@ class TemporalView(ttk.Frame):
 
         duration = self.state_model.selected_value.duration_ms
         self.artists = []
-        for i, (ax, spec) in enumerate(zip(self.axes, self.state_model.config.temporal_disp_specs)):
+        for i, (ax, spec) in enumerate(
+            zip(self.axes, self.state_model.config.temporal_disp_specs)
+        ):
             artist = self._plot_one_axis(ax, spec, i=i, duration=duration)
             self.artists.append(artist)
 
@@ -147,7 +152,9 @@ class TemporalView(ttk.Frame):
                 handletextpad=0.3,
             )
         else:
-            raise ValueError(f"Unexpected content type for temporal display: {spec.content}")
+            raise ValueError(
+                f"Unexpected content type for temporal display: {spec.content}"
+            )
 
         ax.text(
             0.01,
@@ -175,7 +182,7 @@ class TemporalView(ttk.Frame):
 
         for spine in ax.spines.values():
             spine.set_visible(True)
-        
+
         return artist
 
     def _event_is_in_temporal_axes(self, event) -> bool:

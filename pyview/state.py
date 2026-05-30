@@ -16,9 +16,8 @@ class PyViewConfig:
 @dataclass
 class ScalarTrajDisplay:
     traj_name: str
-    content: Literal[
-        "signal", "SPECT", "F0", "RMS", "ZC", "VEL", "ABSVEL"
-    ]
+    content: Literal["signal", "SPECT", "F0", "RMS", "ZC", "VEL", "ABSVEL"]
+
     def __str__(self) -> str:
         if self.content == "signal":
             return self.traj_name
@@ -31,6 +30,7 @@ class SpatialTrajDisplay:
     traj_name: str
     content: Literal["movement", "velocity", "acceleration"]
     components: list[Literal["x", "y", "z"]]
+
     def __str__(self) -> str:
         comp_str = "".join(self.components)
         prefix = {"movement": "", "velocity": "v", "acceleration": "a"}[self.content]

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
-from typing import TypedDict, Unpack
+from typing import Unpack
 import matplotlib.pyplot as plt
 
 from .data import load_variables, normalize_args, PyViewArgs
@@ -74,8 +74,9 @@ class PyViewTk(tk.Tk):
         navbar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=8, pady=6)
         navbar.columnconfigure(3, weight=1)
 
-        play_button = SplitPlayButton(navbar, on_play=self._play_current_mode)
-        play_button.grid(row=0, column=0, sticky="w", padx=(0, 12))
+        if self.state_model.config.audio_traj is not None:
+            play_button = SplitPlayButton(navbar, self.state_model)
+            play_button.grid(row=0, column=0, sticky="w", padx=(0, 12))
 
         self.variable_box = VariableDropdown(
             navbar,
@@ -115,9 +116,6 @@ class PyViewTk(tk.Tk):
 
     def _on_cursor_changed(self) -> None:
         self.spatial_view.update_plot(points=True)
-
-    def _play_current_mode(self, mode: str) -> None:
-        print(f"Play mode: {mode}")  # TODO
 
 
 def pyview(file: str, variables: str = "*", **kwargs: Unpack[PyViewArgs]) -> None:

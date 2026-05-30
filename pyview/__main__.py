@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--audio",
         type=str,
-        help="Variable name for audio trajectory - for spectrogram plotting (default: first scalar trajectory with sampling rate > 1000 Hz).",
+        help="Variable name for audio trajectory - for spectrogram plotting and playback (default: first scalar trajectory with sampling rate > 1000 Hz).",
     )
     parser.add_argument(
         "--framing",

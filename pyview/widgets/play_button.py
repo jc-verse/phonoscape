@@ -1,24 +1,26 @@
 import tkinter as tk
 from tkinter import ttk
-from collections.abc import Callable
+import sounddevice as sd
+
+from ..state import PyViewState
+
+modes = (
+    "Entire file",
+    "To cursor",
+    "From cursor",
+    "150ms @ cursor",
+)
 
 
 class SplitPlayButton(ttk.Frame):
     def __init__(
         self,
         parent: tk.Widget,
-        *,
-        on_play: Callable[[str], None],
-        modes: tuple[str, ...] = (
-            "Entire file",
-            "To cursor",
-            "From cursor",
-            "150ms @ cursor",
-        ),
+        state_model: PyViewState,
     ):
         super().__init__(parent, style="SplitButton.TFrame", padding=0)
 
-        self._on_play = on_play
+        self.state_model = state_model
         self.play_mode = tk.StringVar(value=modes[0])
 
         self.menu = tk.Menu(self, tearoff=False)
@@ -53,4 +55,27 @@ class SplitPlayButton(ttk.Frame):
         self.menu.tk_popup(event.x_root, event.y_root)
 
     def _play(self) -> None:
-        self._on_play(self.play_mode.get())
+        mode = self.play_mode.get()
+        audio_traj = self.state_model.config.audio_traj
+        if audio_traj is None:
+            print("No audio trajectory configured.")
+            return
+        traj = self.state_model.selected_value.trajectories[audio_traj]
+        play_data = None
+        cursor_index = int(self.state_model.cursor_s * traj.sample_rate_hz)
+        if mode == "Entire file":
+            play_data = traj.data
+        elif mode == "To cursor":
+            play_data = traj.data[:cursor_index]
+        elif mode == "From cursor":
+            play_data = traj.data[cursor_index:]
+        elif mode == "150ms @ cursor":
+            half_window = int(0.15 * traj.sample_rate_hz / 2)
+            start = max(0, cursor_index - half_window)
+            end = min(len(traj.data), cursor_index + half_window)
+            play_data = traj.data[start:end]
+        else:
+            print(f"Unknown play mode: {mode}")
+            return
+        if play_data is not None and len(play_data) > 0:
+            sd.play(play_data, samplerate=traj.sample_rate_hz)
