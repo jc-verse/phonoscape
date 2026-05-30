@@ -16,7 +16,9 @@ class PyViewConfig:
 @dataclass
 class ScalarTrajDisplay:
     traj_name: str
-    content: Literal["SIGNAL", "SPECT", "F0", "RMS", "ZC", "VEL", "ABSVEL"]
+    # TODO: should I implement "F0"?
+    # The mview version is buggy
+    content: Literal["SIGNAL", "SPECT", "RMS", "ZC", "VEL", "ABSVEL"]
 
     def __str__(self) -> str:
         if self.content == "SIGNAL":

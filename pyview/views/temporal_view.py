@@ -1,9 +1,7 @@
 from typing import Callable
 
-import numpy as np
 import tkinter as tk
 from tkinter import ttk
-from scipy.signal import ShortTimeFFT, windows
 
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
@@ -12,6 +10,7 @@ from matplotlib.lines import Line2D
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..state import PyViewState, TrajDisplay
+from ..data.process import get_plotting_data
 
 
 class TemporalView(ttk.Frame):
@@ -63,7 +62,9 @@ class TemporalView(ttk.Frame):
         self.axes = [self.figure.add_subplot(gs[i, 0]) for i in range(n)]
 
         self.plotting_data = [
-            self._get_plotting_data(spec)
+            get_plotting_data(
+                self.state_model.selected_value.trajectories[spec.traj_name], spec
+            )
             for spec in self.state_model.config.temporal_disp_specs
         ]
 
@@ -90,7 +91,9 @@ class TemporalView(ttk.Frame):
         if variable:
             trajectories = True
             self.plotting_data = [
-                self._get_plotting_data(spec)
+                get_plotting_data(
+                    self.state_model.selected_value.trajectories[spec.traj_name], spec
+                )
                 for spec in self.state_model.config.temporal_disp_specs
             ]
         if trajectories:
@@ -101,18 +104,31 @@ class TemporalView(ttk.Frame):
                 if spec.content == "SPECT":
                     self.artists[i].set_data(data)
                     self.artists[i].set_extent(t)
-                elif spec.content in ("SIGNAL", "velocity", "acceleration"):
-                    artist.set_data(t, data)
                 elif spec.content == "movement":
                     for j in range(data.shape[1]):
                         artist[j].set_data(t, data[:, j])
+                elif spec.content in (
+                    "SIGNAL",
+                    "VEL",
+                    "ABSVEL",
+                    "RMS",
+                    "ZC",
+                    "velocity",
+                    "acceleration",
+                ):
+                    artist.set_data(t, data)
+                else:
+                    raise ValueError(
+                        f"Unexpected content type for temporal display: {spec.content}"
+                    )
                 if artist := self.zero_artists[i]:
                     artist.set_visible(False)
-                self.axes[i].relim()
-                self.axes[i].autoscale_view(scalex=False, scaley=True)
-                self.axes[i].set_xlim(0, duration)
+                ax = self.axes[i]
+                ax.relim(visible_only=True)
+                ax.autoscale(axis="y")
+                ax.set_xlim(0, duration)
                 if artist := self.zero_artists[i]:
-                    ymin, ymax = self.axes[i].get_ylim()
+                    ymin, ymax = ax.get_ylim()
                     zero_visible = ymin < 0 < ymax
                     artist.set_visible(zero_visible)
         if cursor or trajectories:
@@ -132,8 +148,6 @@ class TemporalView(ttk.Frame):
                 extent=t,
                 cmap="gray_r",
             )
-        elif spec.content == "SIGNAL":
-            artist = ax.plot(t, data, linewidth=0.8, color=traj.color)[0]
         elif spec.content == "movement":
             artist = []
             for j in range(data.shape[1]):
@@ -155,7 +169,15 @@ class TemporalView(ttk.Frame):
                     handlelength=1.2,
                     handletextpad=0.3,
                 )
-        elif spec.content in ("velocity", "acceleration"):
+        elif spec.content in (
+            "SIGNAL",
+            "VEL",
+            "ABSVEL",
+            "RMS",
+            "ZC",
+            "velocity",
+            "acceleration",
+        ):
             artist = ax.plot(t, data, linewidth=0.8, color=traj.color)[0]
         else:
             raise ValueError(
@@ -200,6 +222,9 @@ class TemporalView(ttk.Frame):
                 zorder=0,
                 visible=zero_visible,
             )
+            # Reset limits because invisible line still affects autoscaling
+            ax.relim(visible_only=True)
+            ax.autoscale(axis="y")
         else:
             zero_artist = None
 
@@ -212,62 +237,6 @@ class TemporalView(ttk.Frame):
         )
 
         return artist, zero_artist, cursor_artist
-
-    def _get_plotting_data(self, spec: TrajDisplay):
-        traj = self.state_model.selected_value.trajectories[spec.traj_name]
-        t = np.arange(traj.n_samples) / traj.sample_rate_hz
-        if spec.content == "SPECT":
-            window_ms = 25
-            overlap = 0.75
-            nperseg = round(traj.sample_rate_hz * window_ms / 1000)
-            hop = max(1, round(nperseg * (1.0 - overlap)))
-
-            win = windows.hann(nperseg, sym=False)
-
-            stft = ShortTimeFFT(
-                win=win,
-                hop=hop,
-                fs=traj.sample_rate_hz,
-                mfft=1024,
-                scale_to="magnitude",
-            )
-
-            S = stft.spectrogram(traj.data)
-            S_db = 20 * np.log10(S + np.finfo(float).eps)
-            extent = [0, t[-1], 0, traj.sample_rate_hz / 2]
-            return extent, S_db
-        elif spec.content == "SIGNAL":
-            return t, traj.data
-        elif spec.content == "movement":
-            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
-            return t, traj.data[:, cols]
-        elif spec.content == "velocity":
-            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
-            ps = traj.data[:, cols]
-            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
-            if vs.shape[1] > 1:
-                speed = np.linalg.norm(vs, axis=1)
-            else:
-                # Preserve sign for 1D
-                # TODO: currently this way for mview compatibility, but I think
-                # "velocity" and "speed" should be separate content types
-                # Otherwise there's this inconsistency between 1D and multi-D
-                speed = vs[:, 0]
-            return t, speed
-        elif spec.content == "acceleration":
-            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
-            ps = traj.data[:, cols]
-            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
-            accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
-            if accs.shape[1] > 1:
-                accel = np.linalg.norm(accs, axis=1)
-            else:
-                accel = accs[:, 0]
-            return t, accel
-        else:
-            raise ValueError(
-                f"Unexpected content type for temporal display: {spec.content}"
-            )
 
     def _event_is_in_temporal_axes(self, event) -> bool:
         return event.inaxes in self.axes

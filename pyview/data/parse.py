@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io import loadmat
 
-from .state import (
+from ..state import (
     DatasetVariable,
     Trajectory,
     TrajDisplay,

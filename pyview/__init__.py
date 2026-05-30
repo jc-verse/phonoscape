@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Unpack
 import matplotlib.pyplot as plt
 
-from .data import load_variables, normalize_args, PyViewArgs
+from .data.parse import load_variables, normalize_args, PyViewArgs
 from .state import PyViewState
 from .widgets.play_button import SplitPlayButton
 from .widgets.variable_dropdown import VariableDropdown
