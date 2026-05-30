@@ -92,7 +92,7 @@ def parse_trajectory_display_spec(
             raise ValueError(
                 f"Trajectory '{name}' does not match any known scalar trajectory for variable '{first_variable.name}'"
             )
-    match = re.match(r"^([va])?(.*)(x)?(y)?(z)?$", name)
+    match = re.match(r"^([va])?(.*?)(x)?(y)?(z)?$", name)
     if not match:
         raise Exception(f"Unexpected non-match")
     content, base_name, x, y, z = match.groups()
@@ -124,7 +124,7 @@ def parse_trajectory_display_spec(
     ):
         if content or x or y or z:
             raise ValueError(f"Trajectory '{base_name}' is scalar")
-        return ScalarTrajDisplay(traj_name=base_name, content="signal")
+        return ScalarTrajDisplay(traj_name=base_name, content="SIGNAL")
     else:
         raise ValueError(
             f"Trajectory '{name}' does not match any known trajectory for variable '{first_variable.name}'"

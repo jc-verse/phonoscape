@@ -7,6 +7,7 @@ from tkinter import ttk
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ..state import PyViewState, TrajDisplay
@@ -64,22 +65,17 @@ class TemporalView(ttk.Frame):
 
         duration = self.state_model.selected_value.duration_ms
         self.artists = []
+        self.zero_artists: list[Line2D | None] = []
+        self.cursor_artists = []
         for i, (ax, spec) in enumerate(
             zip(self.axes, self.state_model.config.temporal_disp_specs)
         ):
-            artist = self._plot_one_axis(ax, spec, i=i, duration=duration)
-            self.artists.append(artist)
-
-        self.cursor_artists = [
-            ax.axvline(
-                self.state_model.cursor_s,
-                color=plt.rcParams["text.color"],
-                linewidth=0.5,
-                zorder=1000,
-                clip_on=True,
+            artist, zero_artist, cursor_artist = self._plot_one_axis(
+                ax, spec, i=i, duration=duration
             )
-            for ax in self.axes
-        ]
+            self.artists.append(artist)
+            self.zero_artists.append(zero_artist)
+            self.cursor_artists.append(cursor_artist)
 
     def update_plot(self, cursor: bool = False, trajectories: bool = False) -> None:
         if cursor:
@@ -100,15 +96,21 @@ class TemporalView(ttk.Frame):
                         noverlap=512,
                         cmap="gray_r",
                     )
-                elif spec.content == "signal":
+                elif spec.content == "SIGNAL":
                     artist.set_data(t, traj.data)
                 elif spec.content == "movement":
                     for j, comp in enumerate(spec.components):
                         idx = {"x": 0, "y": 1, "z": 2}[comp]
                         artist[j].set_data(t, traj.data[:, idx])
+                if artist := self.zero_artists[i]:
+                    artist.set_visible(False)
                 self.axes[i].relim()
                 self.axes[i].autoscale_view(scalex=False, scaley=True)
                 self.axes[i].set_xlim(0, duration)
+                if artist := self.zero_artists[i]:
+                    ymin, ymax = self.axes[i].get_ylim()
+                    zero_visible = ymin < 0 < ymax
+                    artist.set_visible(zero_visible)
         if cursor or trajectories:
             self.canvas.draw_idle()
 
@@ -128,11 +130,11 @@ class TemporalView(ttk.Frame):
                 noverlap=512,
                 cmap="gray_r",
             )
-        elif spec.content == "signal":
+        elif spec.content == "SIGNAL":
             artist = ax.plot(t, traj.data, linewidth=0.8, color=traj.color)[0]
         elif spec.content == "movement":
             artist = []
-            for comp in spec.components:
+            for j, comp in enumerate(spec.components):
                 idx = {"x": 0, "y": 1, "z": 2}[comp]
                 a = ax.plot(
                     t,
@@ -140,7 +142,7 @@ class TemporalView(ttk.Frame):
                     linewidth=0.8,
                     label=comp,
                     color=traj.color,
-                    alpha=(1 - idx * 0.3),
+                    alpha=(1 - j * 0.3),
                 )[0]
                 artist.append(a)
 
@@ -151,6 +153,30 @@ class TemporalView(ttk.Frame):
                 handlelength=1.2,
                 handletextpad=0.3,
             )
+        elif spec.content == "velocity":
+            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
+            ps = traj.data[:, cols]
+            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
+            if vs.shape[1] > 1:
+                speed = np.linalg.norm(vs, axis=1)
+            else:
+                # Preserve sign for 1D
+                # TODO: currently this way for mview compatibility, but I think
+                # "velocity" and "speed" should be separate content types
+                # Otherwise there's this inconsistency between 1D and multi-D
+                speed = vs[:, 0]
+            artist = ax.plot(t, speed, linewidth=0.8, color=traj.color)[0]
+        elif spec.content == "acceleration":
+            cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
+            ps = traj.data[:, cols]
+            vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
+            accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
+            if accs.shape[1] > 1:
+                accel = np.linalg.norm(accs, axis=1)
+            else:
+                # Preserve sign for 1D
+                accel = accs[:, 0]
+            artist = ax.plot(t, accel, linewidth=0.8, color=traj.color)[0]
         else:
             raise ValueError(
                 f"Unexpected content type for temporal display: {spec.content}"
@@ -183,7 +209,29 @@ class TemporalView(ttk.Frame):
         for spine in ax.spines.values():
             spine.set_visible(True)
 
-        return artist
+        if spec.content != "SPECT":
+            ymin, ymax = ax.get_ylim()
+            zero_visible = ymin < 0 < ymax
+            zero_artist = ax.axhline(
+                0,
+                linewidth=0.5,
+                linestyle="--",
+                color=plt.rcParams["text.color"],
+                zorder=0,
+                visible=zero_visible,
+            )
+        else:
+            zero_artist = None
+
+        cursor_artist = ax.axvline(
+            self.state_model.cursor_s,
+            color=plt.rcParams["text.color"],
+            linewidth=0.5,
+            zorder=1000,
+            clip_on=True,
+        )
+
+        return artist, zero_artist, cursor_artist
 
     def _event_is_in_temporal_axes(self, event) -> bool:
         return event.inaxes in self.axes
