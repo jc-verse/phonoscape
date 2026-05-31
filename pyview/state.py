@@ -59,7 +59,7 @@ class Trajectory:
 @dataclass
 class DatasetVariable:
     name: str
-    duration_ms: float
+    duration_s: float
     trajectories: dict[str, Trajectory]
     # embedded_labels
 
@@ -80,6 +80,8 @@ class PyViewState:
     spatial_bounds: tuple[float, float, float, float, float, float]
     config: PyViewConfig
     cursor_s: float
+    head_s: float
+    tail_s: float
 
     @property
     def variable_names(self) -> list[str]:

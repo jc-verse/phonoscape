@@ -1,4 +1,4 @@
-from typing import Callable, cast, Any
+from typing import Callable, cast, Any, Literal
 
 import tkinter as tk
 from tkinter import ttk
@@ -11,8 +11,14 @@ from matplotlib.lines import Line2D
 from matplotlib.image import AxesImage
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ..state import PyViewState, TrajDisplay
+from ..state import PyViewState, TrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay
 from ..data.process import get_plotting_data
+
+ArtistType = (
+    tuple[Literal["spatial"], list[Line2D]]
+    | tuple[Literal["image"], AxesImage]
+    | tuple[Literal["scalar"], Line2D]
+)
 
 
 class TemporalView(ttk.Frame):
@@ -26,7 +32,7 @@ class TemporalView(ttk.Frame):
         super().__init__(parent)
 
         self._on_cursor_changed = on_cursor_changed
-        self._cursor_dragging = False
+        self.dragging: Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float] = None
         self.state_model = state_model
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
@@ -57,110 +63,105 @@ class TemporalView(ttk.Frame):
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
         n = len(self.state_model.config.temporal_disp_specs)
-        height_ratios = [
+        height_ratios = [1.0, 0.08] + [  # Framing trajectory and spacing
             1.0 if spec.content != "SPECT" else 2.0
             for spec in self.state_model.config.temporal_disp_specs
         ]
-        gs = self.figure.add_gridspec(nrows=n, ncols=1, height_ratios=height_ratios)
-        self.axes = [self.figure.add_subplot(gs[i, 0]) for i in range(n)]
-
-        self.plotting_data = [
-            (
-                get_plotting_data(
-                    self.state_model.selected_value.trajectories[spec.traj_name], spec
-                )
-                if spec.traj_name != self.state_model.config.audio_traj
-                or spec.content != "SPECT"
-                else cast(tuple[Any, np.ndarray], self.state_model.audio_spect)
-            )
-            for spec in self.state_model.config.temporal_disp_specs
+        gs = self.figure.add_gridspec(
+            nrows=len(height_ratios), ncols=1, height_ratios=height_ratios
+        )
+        self.axes = [self.figure.add_subplot(gs[0])] + [
+            self.figure.add_subplot(gs[i + 2]) for i in range(n)
         ]
 
-        duration = self.state_model.selected_value.duration_ms
-        self.artists: list[Line2D | AxesImage | list[Line2D]] = []
+        self._refresh_plotting_data()
+
+        duration_s = self.state_model.selected_value.duration_s
+        self.artists: list[ArtistType] = []
         self.zero_artists: list[Line2D | None] = []
         self.cursor_artists: list[Line2D] = []
-        for i, ax, spec in zip(
-            range(n), self.axes, self.state_model.config.temporal_disp_specs
-        ):
+        for i, ax, spec in zip(range(n + 1), self.axes, self._get_temp_disp_specs()):
             artist, zero_artist, cursor_artist = self._plot_one_axis(
-                ax, spec, i=i, duration=duration
+                ax, spec, i=i, duration_s=duration_s
             )
             self.artists.append(artist)
             self.zero_artists.append(zero_artist)
             self.cursor_artists.append(cursor_artist)
 
     def update_plot(
-        self, cursor: bool = False, trajectories: bool = False, variable: bool = False
+        self,
+        cursor: bool = False,
+        trajectories: bool = False,
+        variable: bool = False,
+        frame: bool = False,
     ) -> None:
         if cursor:
             for line in self.cursor_artists:
                 line.set_xdata([self.state_model.cursor_s, self.state_model.cursor_s])
         if variable:
             trajectories = True
-            self.plotting_data = [
-                get_plotting_data(
-                    self.state_model.selected_value.trajectories[spec.traj_name], spec
-                )
-                if spec.traj_name != self.state_model.config.audio_traj
-                or spec.content != "SPECT"
-                else cast(tuple[Any, np.ndarray], self.state_model.audio_spect)
-                for spec in self.state_model.config.temporal_disp_specs
-            ]
+            frame = True
+            self._refresh_plotting_data()
         if trajectories:
-            duration = self.state_model.selected_value.duration_ms
-            for i, spec in enumerate(self.state_model.config.temporal_disp_specs):
+            for i, artist in enumerate(self.artists):
                 t, data = self.plotting_data[i]
-                artist = self.artists[i]
-                if spec.content == "SPECT":
-                    self.artists[i].set_data(data)
-                    self.artists[i].set_extent(t)
-                elif spec.content == "movement":
+                if artist[0] == "image":
+                    artist[1].set_data(data)
+                    artist[1].set_extent(t)
+                elif artist[0] == "spatial":
                     for j in range(data.shape[1]):
-                        artist[j].set_data(t, data[:, j])
-                elif spec.content in (
-                    "SIGNAL",
-                    "VEL",
-                    "ABSVEL",
-                    "RMS",
-                    "ZC",
-                    "velocity",
-                    "acceleration",
-                ):
-                    artist.set_data(t, data)
-                else:
-                    raise ValueError(
-                        f"Unexpected content type for temporal display: {spec.content}"
-                    )
+                        artist[1][j].set_data(t, data[:, j])
+                elif artist[0] == "scalar":
+                    artist[1].set_data(t, data)
                 if artist := self.zero_artists[i]:
                     artist.set_visible(False)
                 ax = self.axes[i]
                 ax.relim(visible_only=True)
                 ax.autoscale(axis="y")
-                ax.set_xlim(0, duration)
+                if i == 0:
+                    ax.set_xlim(0, self.state_model.selected_value.duration_s)
                 if artist := self.zero_artists[i]:
                     ymin, ymax = ax.get_ylim()
                     zero_visible = ymin < 0 < ymax
                     artist.set_visible(zero_visible)
-        if cursor or trajectories:
+        if frame:
+            head_s = self.state_model.head_s
+            tail_s = self.state_model.tail_s
+            for i, ax in enumerate(self.axes):
+                if i > 0:
+                    ax.set_xlim(head_s, tail_s)
+            ymin, ymax = self.axes[0].get_ylim()
+            self.frame_artist.set_verts([
+                [
+                    (head_s, ymin),
+                    (head_s, ymax),
+                    (tail_s, ymax),
+                    (tail_s, ymin),
+                    (head_s, ymin),
+                ]
+            ])
+        if cursor or trajectories or frame:
             self.canvas.draw_idle()
 
     def _plot_one_axis(
-        self, ax: plt_axes.Axes, spec: TrajDisplay, i: int, duration: float
+        self, ax: plt_axes.Axes, spec: TrajDisplay, i: int, duration_s: float
     ):
         traj = self.state_model.selected_value.trajectories[spec.traj_name]
         t, data = self.plotting_data[i]
-        artist: list[Line2D] | AxesImage | Line2D | None = None
+        artist: ArtistType | None = None
         if spec.content == "SPECT":
-            artist = ax.imshow(
-                data,
-                aspect="auto",
-                origin="lower",
-                extent=t,
-                cmap="gray_r",
+            artist = (
+                "image",
+                ax.imshow(
+                    data,
+                    aspect="auto",
+                    origin="lower",
+                    extent=t,
+                    cmap="gray_r",
+                ),
             )
         elif spec.content == "movement":
-            artist = []
+            artist = ("spatial", [])
             for j in range(data.shape[1]):
                 a = ax.plot(
                     t,
@@ -170,7 +171,7 @@ class TemporalView(ttk.Frame):
                     color=traj.color,
                     alpha=(1 - j * 0.3),
                 )[0]
-                artist.append(a)
+                artist[1].append(a)
 
             if len(spec.components) > 1:
                 ax.legend(
@@ -189,26 +190,28 @@ class TemporalView(ttk.Frame):
             "velocity",
             "acceleration",
         ):
-            artist = ax.plot(t, data, linewidth=0.8, color=traj.color)[0]
+            artist = ("scalar", ax.plot(t, data, linewidth=0.8, color=traj.color)[0])
         else:
             raise ValueError(
                 f"Unexpected content type for temporal display: {spec.content}"
             )
 
-        ax.text(
-            0.01,
-            0.98,
-            f"{spec}  {traj.sample_rate_hz:.0f} Hz",
-            ha="left",
-            va="top",
-            transform=ax.transAxes,
-            bbox=dict(
-                facecolor=plt.rcParams["figure.facecolor"],
-                alpha=0.65,
-                edgecolor="none",
-                pad=1,
-            ),
-        )
+        # No label for framing trajectory
+        if i > 0:
+            ax.text(
+                0.01,
+                0.98,
+                f"{spec}  {traj.sample_rate_hz:.0f} Hz",
+                ha="left",
+                va="top",
+                transform=ax.transAxes,
+                bbox=dict(
+                    facecolor=plt.rcParams["figure.facecolor"],
+                    alpha=0.65,
+                    edgecolor="none",
+                    pad=1,
+                ),
+            )
 
         ax.set_xticks([])
         ax.set_yticks([])
@@ -217,7 +220,7 @@ class TemporalView(ttk.Frame):
         ax.set_title("")
         ax.tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
 
-        ax.set_xlim(0, duration)
+        ax.set_xlim(0, duration_s)
 
         for spine in ax.spines.values():
             spine.set_visible(True)
@@ -247,52 +250,125 @@ class TemporalView(ttk.Frame):
             clip_on=True,
         )
 
+        if i == 0:
+            ymin, ymax = ax.get_ylim()
+            self.frame_artist = ax.fill_betweenx(
+                [ymin, ymax],
+                self.state_model.head_s,
+                self.state_model.tail_s,
+                color=plt.rcParams["text.color"],
+                alpha=0.3,
+                zorder=1000,
+                clip_on=True,
+            )
+
         return artist, zero_artist, cursor_artist
 
-    def _event_is_in_temporal_axes(self, event) -> bool:
-        return event.inaxes in self.axes
+    def _get_temp_disp_specs(self):
+        framing_traj_name = self.state_model.config.framing_traj
+        framing_traj = self.state_model.selected_value.trajectories[framing_traj_name]
+        framing_traj_spec = (
+            ScalarTrajDisplay(content="SIGNAL", traj_name=framing_traj_name)
+            if framing_traj.kind == "scalar"
+            else SpatialTrajDisplay(
+                content="movement",
+                traj_name=framing_traj_name,
+                components=["x", "y", "z"],
+            )
+        )
+        return [framing_traj_spec] + self.state_model.config.temporal_disp_specs
+
+    def _refresh_plotting_data(self) -> None:
+        self.plotting_data = [
+            (
+                get_plotting_data(
+                    self.state_model.selected_value.trajectories[spec.traj_name],
+                    spec,
+                )
+                if spec.traj_name != self.state_model.config.audio_traj
+                or spec.content != "SPECT"
+                else cast(tuple[Any, np.ndarray], self.state_model.audio_spect)
+            )
+            for spec in self._get_temp_disp_specs()
+        ]
+
+    def _event_is_in_cursor_axes(self, event) -> bool:
+        return event.inaxes in self.axes and event.inaxes != self.axes[0]
+
+    def _event_is_in_frame_axes(self, event) -> bool:
+        return event.inaxes == self.axes[0]
 
     def _toolbar_is_active(self) -> bool:
         toolbar = getattr(self.canvas, "toolbar", None)
         return toolbar is not None and bool(getattr(toolbar, "mode", ""))
 
     def _on_press(self, event) -> None:
-        if (
-            event.button != 1
-            or self._toolbar_is_active()
-            or event.xdata is None
-            or not self._event_is_in_temporal_axes(event)
-        ):
+        if event.button != 1 or self._toolbar_is_active() or event.xdata is None:
             return
-
-        self._cursor_dragging = True
-        self.state_model.cursor_s = float(event.xdata)
-        self.update_plot(cursor=True)
-        self._on_cursor_changed()
+        if self._event_is_in_cursor_axes(event):
+            self.dragging = "cursor"
+            self.state_model.cursor_s = float(event.xdata)
+            self.update_plot(cursor=True)
+            self._on_cursor_changed()
+        elif self._event_is_in_frame_axes(event):
+            loc = float(event.xdata)
+            dist_to_head = abs(loc - self.state_model.head_s)
+            dist_to_tail = abs(loc - self.state_model.tail_s)
+            thres_dist = 0.025 * self.state_model.selected_value.duration_s
+            if dist_to_head < dist_to_tail and dist_to_head < thres_dist:
+                self.dragging = "head"
+                self.state_model.head_s = loc
+                self.update_plot(frame=True)
+            elif dist_to_tail < dist_to_head and dist_to_tail < thres_dist:
+                self.dragging = "tail"
+                self.state_model.tail_s = loc
+                self.update_plot(frame=True)
+            elif self.state_model.head_s < loc < self.state_model.tail_s:
+                self.dragging = ("frame", loc)
 
     def _on_motion(self, event) -> None:
-        if (
-            not self._cursor_dragging
-            or event.xdata is None
-            or not self._event_is_in_temporal_axes(event)
-        ):
+        if not self.dragging or event.xdata is None:
             return
-
-        self.state_model.cursor_s = float(event.xdata)
-        self.update_plot(cursor=True)
-        self._on_cursor_changed()
+        if self.dragging == "cursor":
+            if self._event_is_in_cursor_axes(event):
+                self.state_model.cursor_s = float(event.xdata)
+                self.update_plot(cursor=True)
+                self._on_cursor_changed()
+            else:
+                # Cancel drag if moved outside of axes
+                self.dragging = None
+        elif self.dragging == "head":
+            if self._event_is_in_frame_axes(event):
+                loc = min(float(event.xdata), self.state_model.tail_s - 0.025)
+                self.state_model.head_s = loc
+                self.update_plot(frame=True)
+            else:
+                self.dragging = None
+        elif self.dragging == "tail":
+            if self._event_is_in_frame_axes(event):
+                loc = max(float(event.xdata), self.state_model.head_s + 0.025)
+                self.state_model.tail_s = loc
+                self.update_plot(frame=True)
+            else:
+                self.dragging = None
+        else:
+            old_loc = self.dragging[1]
+            if self._event_is_in_frame_axes(event):
+                loc = float(event.xdata)
+                delta = loc - old_loc
+                if self.state_model.head_s + delta < 0:
+                    delta = -self.state_model.head_s
+                elif self.state_model.tail_s + delta > self.state_model.selected_value.duration_s:
+                    delta = self.state_model.selected_value.duration_s - self.state_model.tail_s
+                self.state_model.head_s += delta
+                self.state_model.tail_s += delta
+                self.update_plot(frame=True)
+                self.dragging = ("frame", loc)
+            else:
+                self.dragging = None
 
     def _on_release(self, event) -> None:
-        if not self._cursor_dragging or event.xdata is None:
-            return
-        elif not self._event_is_in_temporal_axes(event):
-            self._cursor_dragging = False
-            return
-        self._cursor_dragging = False
-
-        self.state_model.cursor_s = float(event.xdata)
-        self.update_plot(cursor=True)
-        self._on_cursor_changed()
+        self.dragging = None
 
     def _on_figure_leave(self, event) -> None:
-        self._cursor_dragging = False
+        self.dragging = None

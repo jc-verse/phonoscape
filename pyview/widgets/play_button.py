@@ -5,6 +5,7 @@ import sounddevice as sd
 from ..state import PyViewState
 
 modes = (
+    "Selection",
     "Entire file",
     "To cursor",
     "From cursor",
@@ -62,17 +63,29 @@ class SplitPlayButton(ttk.Frame):
             return
         traj = self.state_model.selected_value.trajectories[audio_traj]
         play_data = None
+        head_index = int(self.state_model.head_s * traj.sample_rate_hz)
         cursor_index = int(self.state_model.cursor_s * traj.sample_rate_hz)
-        if mode == "Entire file":
+        tail_index = int(self.state_model.tail_s * traj.sample_rate_hz)
+        if mode == "Selection":
+            play_data = traj.data[head_index:tail_index]
+        elif mode == "Entire file":
             play_data = traj.data
         elif mode == "To cursor":
-            play_data = traj.data[:cursor_index]
+            play_data = (
+                traj.data[head_index:cursor_index]
+                if cursor_index > head_index
+                else traj.data[head_index:tail_index]
+            )
         elif mode == "From cursor":
-            play_data = traj.data[cursor_index:]
+            play_data = (
+                traj.data[cursor_index:tail_index]
+                if cursor_index < tail_index
+                else traj.data[head_index:tail_index]
+            )
         elif mode == "150ms @ cursor":
             half_window = int(0.15 * traj.sample_rate_hz / 2)
-            start = max(0, cursor_index - half_window)
-            end = min(len(traj.data), cursor_index + half_window)
+            start = max(head_index, cursor_index - half_window)
+            end = min(tail_index, cursor_index + half_window)
             play_data = traj.data[start:end]
         else:
             print(f"Unknown play mode: {mode}")

@@ -69,6 +69,8 @@ class PyViewTk(tk.Tk):
             spatial_bounds=(min_x, max_x, min_y, max_y, min_z, max_z),
             config=config,
             cursor_s=0.0,
+            head_s=0.0,
+            tail_s=data[selected_variable].duration_s,
         )
 
         self.title(f"pyview - {path.name}")
@@ -139,6 +141,13 @@ class PyViewTk(tk.Tk):
             )
             if self.state_model.config.audio_traj is not None
             else None
+        )
+        self.state_model.head_s = min(
+            self.state_model.head_s,
+            max(0, self.state_model.data[name].duration_s - 0.3),
+        )
+        self.state_model.tail_s = min(
+            self.state_model.tail_s, self.state_model.data[name].duration_s
         )
         self.temporal_view.update_plot(cursor=True, variable=True)
         if self.state_model.audio_spect is not None:

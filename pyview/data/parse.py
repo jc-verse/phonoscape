@@ -1,7 +1,7 @@
 from pathlib import Path
 import re
 from fnmatch import fnmatch
-from typing import TypedDict, Literal
+from typing import TypedDict, Literal, cast
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -71,7 +71,7 @@ def load_variables(
             estimated_durations.append(signal.shape[0] / float(srate))
         structured_data[k] = DatasetVariable(
             name=k,
-            duration_ms=max(estimated_durations) if estimated_durations else 0.0,
+            duration_s=max(estimated_durations) if estimated_durations else 0.0,
             trajectories=trajectories,
         )
 
@@ -81,13 +81,16 @@ def load_variables(
 def parse_trajectory_display_spec(
     name: str, first_variable: DatasetVariable
 ) -> TrajDisplay:
-    if match := re.match(r"^(.*)_(SPECT|F0|RMS|ZC|VEL|ABSVEL)$", name):
+    if match := re.match(r"^(.*)_(SPECT|RMS|ZC|VEL|ABSVEL)$", name):
         base_name, content = match.groups()
         if (
             base_name in first_variable.trajectories
             and first_variable.trajectories[base_name].kind == "scalar"
         ):
-            return ScalarTrajDisplay(traj_name=base_name, content=content)
+            return ScalarTrajDisplay(
+                traj_name=base_name,
+                content=cast(Literal["SPECT", "RMS", "ZC", "VEL", "ABSVEL"], content),
+            )
         else:
             raise ValueError(
                 f"Trajectory '{name}' does not match any known scalar trajectory for variable '{first_variable.name}'"
