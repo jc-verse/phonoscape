@@ -51,21 +51,17 @@ def get_plotting_data(traj: Trajectory, spec: TrajDisplay):
             return t, ps
         vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
         if spec.content == "velocity":
-            if vs.shape[1] > 1:
-                speed: np.ndarray = np.linalg.norm(vs, axis=1)
-            else:
-                # Preserve sign for 1D
+            if vs.shape[1] == traj.dimensions:
+                # Collapse if viewing all components
                 # TODO: currently this way for mview compatibility, but I think
                 # "velocity" and "speed" should be separate content types
-                # Otherwise there's this inconsistency between 1D and multi-D
-                speed = vs[:, 0]
-            return t, speed
+                # Otherwise there's this inconsistency
+                return t, np.array([np.linalg.norm(vs, axis=1)]).T
+            return t, vs
         accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
-        if accs.shape[1] > 1:
-            accel: np.ndarray = np.linalg.norm(accs, axis=1)
-        else:
-            accel = accs[:, 0]
-        return t, accel
+        if accs.shape[1] == traj.dimensions:
+            return t, np.array([np.linalg.norm(accs, axis=1)]).T
+        return t, accs
     else:
         raise ValueError(
             f"Unexpected content type for temporal display: {spec.content}"

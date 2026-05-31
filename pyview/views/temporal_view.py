@@ -32,7 +32,9 @@ class TemporalView(ttk.Frame):
         super().__init__(parent)
 
         self._on_cursor_changed = on_cursor_changed
-        self.dragging: Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float] = None
+        self.dragging: (
+            Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float]
+        ) = None
         self.state_model = state_model
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
@@ -131,15 +133,17 @@ class TemporalView(ttk.Frame):
                 if i > 0:
                     ax.set_xlim(head_s, tail_s)
             ymin, ymax = self.axes[0].get_ylim()
-            self.frame_artist.set_verts([
+            self.frame_artist.set_verts(
                 [
-                    (head_s, ymin),
-                    (head_s, ymax),
-                    (tail_s, ymax),
-                    (tail_s, ymin),
-                    (head_s, ymin),
+                    [
+                        (head_s, ymin),
+                        (head_s, ymax),
+                        (tail_s, ymax),
+                        (tail_s, ymin),
+                        (head_s, ymin),
+                    ]
                 ]
-            ])
+            )
         if cursor or trajectories or frame:
             self.canvas.draw_idle()
 
@@ -149,18 +153,7 @@ class TemporalView(ttk.Frame):
         traj = self.state_model.selected_value.trajectories[spec.traj_name]
         t, data = self.plotting_data[i]
         artist: ArtistType | None = None
-        if spec.content == "SPECT":
-            artist = (
-                "image",
-                ax.imshow(
-                    data,
-                    aspect="auto",
-                    origin="lower",
-                    extent=t,
-                    cmap="gray_r",
-                ),
-            )
-        elif spec.content == "movement":
+        if isinstance(spec, SpatialTrajDisplay):
             artist = ("spatial", [])
             for j in range(data.shape[1]):
                 a = ax.plot(
@@ -181,14 +174,23 @@ class TemporalView(ttk.Frame):
                     handlelength=1.2,
                     handletextpad=0.3,
                 )
+        elif spec.content == "SPECT":
+            artist = (
+                "image",
+                ax.imshow(
+                    data,
+                    aspect="auto",
+                    origin="lower",
+                    extent=t,
+                    cmap="gray_r",
+                ),
+            )
         elif spec.content in (
             "SIGNAL",
             "VEL",
             "ABSVEL",
             "RMS",
             "ZC",
-            "velocity",
-            "acceleration",
         ):
             artist = ("scalar", ax.plot(t, data, linewidth=0.8, color=traj.color)[0])
         else:
@@ -358,8 +360,14 @@ class TemporalView(ttk.Frame):
                 delta = loc - old_loc
                 if self.state_model.head_s + delta < 0:
                     delta = -self.state_model.head_s
-                elif self.state_model.tail_s + delta > self.state_model.selected_value.duration_s:
-                    delta = self.state_model.selected_value.duration_s - self.state_model.tail_s
+                elif (
+                    self.state_model.tail_s + delta
+                    > self.state_model.selected_value.duration_s
+                ):
+                    delta = (
+                        self.state_model.selected_value.duration_s
+                        - self.state_model.tail_s
+                    )
                 self.state_model.head_s += delta
                 self.state_model.tail_s += delta
                 self.update_plot(frame=True)

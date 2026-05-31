@@ -71,7 +71,7 @@ def load_variables(
             estimated_durations.append(signal.shape[0] / float(srate))
         structured_data[k] = DatasetVariable(
             name=k,
-            duration_s=max(estimated_durations) if estimated_durations else 0.0,
+            duration_s=min(estimated_durations) if estimated_durations else 0.0,
             trajectories=trajectories,
         )
 
