@@ -7,8 +7,7 @@ import matplotlib.pyplot as plt
 from .data.parse import load_variables, normalize_args, PyViewArgs
 from .data.process import get_plotting_data
 from .state import PyViewState, ScalarTrajDisplay
-from .widgets.play_button import SplitPlayButton
-from .widgets.variable_dropdown import VariableDropdown
+from .widgets.play_button import PlayButton, configure_menu as configure_play_menu, modes as play_modes
 from .views.temporal_view import TemporalView
 from .views.spatial_view import SpatialView
 from .views.freq_domain_view import FreqDomainView
@@ -71,12 +70,14 @@ class PyViewTk(tk.Tk):
             cursor_s=0.0,
             head_s=0.0,
             tail_s=data[selected_variable].duration_s,
+            play_mode=tk.StringVar(value=play_modes[0]),
         )
 
         self.title(f"pyview - {path.name}")
         self.geometry("1440x1000")
 
         self._build_ui()
+        self._build_menu()
 
     def _build_ui(self) -> None:
         self.rowconfigure(0, weight=0)
@@ -89,15 +90,14 @@ class PyViewTk(tk.Tk):
         navbar.columnconfigure(3, weight=1)
 
         if self.state_model.config.audio_traj is not None:
-            play_button = SplitPlayButton(navbar, self.state_model)
+            play_button = PlayButton(navbar, self.state_model)
             play_button.grid(row=0, column=0, sticky="w", padx=(0, 12))
 
-        self.variable_box = VariableDropdown(
+        self.info_label = ttk.Label(
             navbar,
-            variable_names=self.state_model.variable_names,
-            on_variable_changed=self._on_variable_change,
+            text=f"{self.state_model.selected_variable} ({self.state_model.data[self.state_model.selected_variable].duration_s:.2f}s)",
         )
-        self.variable_box.grid(row=0, column=2, sticky="ew", padx=(6, 12))
+        self.info_label.grid(row=0, column=1, sticky="w")
 
         left = ttk.Frame(self)
         left.grid(row=1, column=0, sticky="nsew", padx=(4, 2), pady=(0, 4))
@@ -127,8 +127,29 @@ class PyViewTk(tk.Tk):
         self.temporal_view.grid(row=0, column=0, sticky="nsew")
         self.temporal_view.reset_plot()
 
-    def _on_variable_change(self, name: str) -> None:
+    def _build_menu(self) -> None:
+        self.menu_bar = tk.Menu(self)
+
+        configure_play_menu(self, self.menu_bar, self.state_model)
+
+        variables_menu = tk.Menu(self.menu_bar, tearoff=False)
+        self.selected_variable_var = tk.StringVar(value=self.state_model.selected_variable)
+        for name in self.state_model.variable_names:
+            variables_menu.add_radiobutton(
+                label=name,
+                variable=self.selected_variable_var,
+                value=name,
+                command=self._on_variable_change,
+            )
+        self.menu_bar.add_cascade(label="Variables", menu=variables_menu)
+        self.config(menu=self.menu_bar)
+
+    def _on_variable_change(self) -> None:
+        name = self.selected_variable_var.get()
         self.state_model.selected_variable = name
+        self.info_label.config(
+            text=f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
+        )
         self.state_model.cursor_s = 0.0
         self.state_model.audio_spect = (
             get_plotting_data(
@@ -144,7 +165,7 @@ class PyViewTk(tk.Tk):
         )
         self.state_model.head_s = min(
             self.state_model.head_s,
-            max(0, self.state_model.data[name].duration_s - 0.3),
+            max(0, self.state_model.data[name].duration_s - 0.025),
         )
         self.state_model.tail_s = min(
             self.state_model.tail_s, self.state_model.data[name].duration_s

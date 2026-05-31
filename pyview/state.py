@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 import numpy as np
+import tkinter as tk
 
 
 @dataclass
@@ -82,6 +83,7 @@ class PyViewState:
     cursor_s: float
     head_s: float
     tail_s: float
+    play_mode: tk.StringVar
 
     @property
     def variable_names(self) -> list[str]:
