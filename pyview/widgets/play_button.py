@@ -1,4 +1,3 @@
-import sys
 import tkinter as tk
 from tkinter import ttk
 import sounddevice as sd
@@ -51,30 +50,6 @@ def play(state_model: PyViewState) -> None:
         return
     if play_data is not None and len(play_data) > 0:
         sd.play(play_data, samplerate=traj.sample_rate_hz)
-
-
-def configure_menu(root: tk.Tk, menu_bar: tk.Menu, state_model: PyViewState) -> None:
-    for modifier in ("Control", "Command", "Meta"):
-        if sys.platform == "darwin" and modifier == "Control":
-            continue
-        for button in ("p", "P"):
-            # TODO: idk why it has to be like this
-            root.bind(f"<{modifier}-{button}>", lambda _: play(state_model))
-
-    play_menu = tk.Menu(menu_bar, tearoff=False)
-    play_menu.add_command(
-        label="Play",
-        command=lambda: play(state_model),
-        accelerator=f"{"Command" if sys.platform == "darwin" else "Ctrl"}+P",
-    )
-    play_menu.add_separator()
-
-    for mode in modes:
-        play_menu.add_radiobutton(
-            label=mode, variable=state_model.play_mode, value=mode
-        )
-
-    menu_bar.add_cascade(label="Play", menu=play_menu)
 
 
 class PlayButton(ttk.Frame):

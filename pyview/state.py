@@ -84,6 +84,8 @@ class PyViewState:
     head_s: float
     tail_s: float
     play_mode: tk.StringVar
+    # TODO: should this be configurable? Should this have a minimum of 1/sr?
+    min_sel_dur_s: float = 0.025
 
     @property
     def variable_names(self) -> list[str]:

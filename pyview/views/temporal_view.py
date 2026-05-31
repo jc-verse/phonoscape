@@ -27,11 +27,11 @@ class TemporalView(ttk.Frame):
         parent: tk.Widget,
         state_model: PyViewState,
         *,
-        on_cursor_changed: Callable[[], None],
+        on_cursor_change: Callable[[], None],
     ):
         super().__init__(parent)
 
-        self._on_cursor_changed = on_cursor_changed
+        self._on_cursor_change = on_cursor_change
         self.dragging: (
             Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float]
         ) = None
@@ -57,9 +57,6 @@ class TemporalView(ttk.Frame):
         self.canvas.mpl_connect("button_release_event", self._on_release)
         self.canvas.mpl_connect("figure_leave_event", self._on_figure_leave)
 
-        self.reset_plot()
-
-    def reset_plot(self) -> None:
         self.figure.clear()
         self.figure.subplots_adjust(
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
@@ -311,12 +308,15 @@ class TemporalView(ttk.Frame):
             self.dragging = "cursor"
             self.state_model.cursor_s = float(event.xdata)
             self.update_plot(cursor=True)
-            self._on_cursor_changed()
+            self._on_cursor_change()
         elif self._event_is_in_frame_axes(event):
             loc = float(event.xdata)
             dist_to_head = abs(loc - self.state_model.head_s)
             dist_to_tail = abs(loc - self.state_model.tail_s)
-            thres_dist = 0.025 * self.state_model.selected_value.duration_s
+            thres_dist = (
+                self.state_model.min_sel_dur_s
+                * self.state_model.selected_value.duration_s
+            )
             if dist_to_head < dist_to_tail and dist_to_head < thres_dist:
                 self.dragging = "head"
                 self.state_model.head_s = loc
@@ -335,20 +335,26 @@ class TemporalView(ttk.Frame):
             if self._event_is_in_cursor_axes(event):
                 self.state_model.cursor_s = float(event.xdata)
                 self.update_plot(cursor=True)
-                self._on_cursor_changed()
+                self._on_cursor_change()
             else:
                 # Cancel drag if moved outside of axes
                 self.dragging = None
         elif self.dragging == "head":
             if self._event_is_in_frame_axes(event):
-                loc = min(float(event.xdata), self.state_model.tail_s - 0.025)
+                loc = min(
+                    float(event.xdata),
+                    self.state_model.tail_s - self.state_model.min_sel_dur_s,
+                )
                 self.state_model.head_s = loc
                 self.update_plot(frame=True)
             else:
                 self.dragging = None
         elif self.dragging == "tail":
             if self._event_is_in_frame_axes(event):
-                loc = max(float(event.xdata), self.state_model.head_s + 0.025)
+                loc = max(
+                    float(event.xdata),
+                    self.state_model.head_s + self.state_model.min_sel_dur_s,
+                )
                 self.state_model.tail_s = loc
                 self.update_plot(frame=True)
             else:

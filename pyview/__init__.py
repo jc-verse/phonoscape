@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 
 from .data.parse import load_variables, normalize_args, PyViewArgs
 from .data.process import get_plotting_data
+from .menu.menu_bar import MenuBar
 from .state import PyViewState, ScalarTrajDisplay
-from .widgets.play_button import PlayButton, configure_menu as configure_play_menu, modes as play_modes
+from .widgets.play_button import PlayButton, modes as play_modes
 from .views.temporal_view import TemporalView
 from .views.spatial_view import SpatialView
 from .views.freq_domain_view import FreqDomainView
@@ -73,11 +74,10 @@ class PyViewTk(tk.Tk):
             play_mode=tk.StringVar(value=play_modes[0]),
         )
 
-        self.title(f"pyview - {path.name}")
+        self.title(f"PyView - {path.name}")
         self.geometry("1440x1000")
 
         self._build_ui()
-        self._build_menu()
 
     def _build_ui(self) -> None:
         self.rowconfigure(0, weight=0)
@@ -107,12 +107,9 @@ class PyViewTk(tk.Tk):
 
         self.spatial_view = SpatialView(left, state_model=self.state_model)
         self.spatial_view.grid(row=0, column=0, sticky="nsew")
-        self.spatial_view.reset_plot()
 
         self.freq_domain_view = FreqDomainView(left, state_model=self.state_model)
         self.freq_domain_view.grid(row=1, column=0, sticky="nsew")
-        if self.state_model.audio_spect is not None:
-            self.freq_domain_view.reset_plot()
 
         right = ttk.Frame(self)
         right.grid(row=1, column=1, sticky="nsew", padx=(2, 4), pady=(0, 4))
@@ -122,60 +119,18 @@ class PyViewTk(tk.Tk):
         self.temporal_view = TemporalView(
             right,
             state_model=self.state_model,
-            on_cursor_changed=self._on_cursor_changed,
+            on_cursor_change=self._on_cursor_change,
         )
         self.temporal_view.grid(row=0, column=0, sticky="nsew")
-        self.temporal_view.reset_plot()
 
-    def _build_menu(self) -> None:
-        self.menu_bar = tk.Menu(self)
-
-        configure_play_menu(self, self.menu_bar, self.state_model)
-
-        variables_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.selected_variable_var = tk.StringVar(value=self.state_model.selected_variable)
-        for name in self.state_model.variable_names:
-            variables_menu.add_radiobutton(
-                label=name,
-                variable=self.selected_variable_var,
-                value=name,
-                command=self._on_variable_change,
-            )
-        self.menu_bar.add_cascade(label="Variables", menu=variables_menu)
+        # Important: create menu bar after views, because it directly manipulates them
+        self.selected_variable_var = tk.StringVar(
+            value=self.state_model.selected_variable
+        )
+        self.menu_bar = MenuBar(self, self.state_model)
         self.config(menu=self.menu_bar)
 
-    def _on_variable_change(self) -> None:
-        name = self.selected_variable_var.get()
-        self.state_model.selected_variable = name
-        self.info_label.config(
-            text=f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
-        )
-        self.state_model.cursor_s = 0.0
-        self.state_model.audio_spect = (
-            get_plotting_data(
-                self.state_model.data[name].trajectories[
-                    self.state_model.config.audio_traj
-                ],
-                ScalarTrajDisplay(
-                    traj_name=self.state_model.config.audio_traj, content="SPECT"
-                ),
-            )
-            if self.state_model.config.audio_traj is not None
-            else None
-        )
-        self.state_model.head_s = min(
-            self.state_model.head_s,
-            max(0, self.state_model.data[name].duration_s - 0.025),
-        )
-        self.state_model.tail_s = min(
-            self.state_model.tail_s, self.state_model.data[name].duration_s
-        )
-        self.temporal_view.update_plot(cursor=True, variable=True)
-        if self.state_model.audio_spect is not None:
-            self.freq_domain_view.update_plot()
-        self.spatial_view.update_plot(points=True)
-
-    def _on_cursor_changed(self) -> None:
+    def _on_cursor_change(self) -> None:
         self.spatial_view.update_plot(points=True)
         if self.state_model.config.audio_traj is not None:
             self.freq_domain_view.update_plot()

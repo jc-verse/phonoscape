@@ -38,9 +38,6 @@ class SpatialView(ttk.Frame):
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.grid(row=0, column=0, sticky="nsew")
 
-        self.reset_plot()
-
-    def reset_plot(self) -> None:
         self.figure.clear()
         self.ax: Axes3D = self.figure.add_subplot(111, projection="3d")
         xmin, xmax, ymin, ymax, zmin, zmax = self.state_model.spatial_bounds
@@ -61,7 +58,6 @@ class SpatialView(ttk.Frame):
         self.ax.set_zlabel("z")
         self.ax.grid(False)
         self.ax.margins(0)
-        self.ax.view_init(elev=0, azim=-90)
 
         self.position_artists: dict[str, Path3DCollection] = {}
         self.text_artists: dict[str, Text3D] = {}

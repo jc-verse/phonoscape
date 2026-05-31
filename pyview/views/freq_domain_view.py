@@ -33,10 +33,8 @@ class FreqDomainView(ttk.Frame):
         self.canvas_widget = self.canvas.get_tk_widget()
         self.canvas_widget.grid(row=0, column=0, sticky="nsew")
 
-        self.reset_plot()
-
-    def reset_plot(self) -> None:
-        assert self.state_model.audio_spect is not None
+        if self.state_model.audio_spect is None:
+            return
         f, spect = self._get_current_spect()
 
         self.figure.clear()
