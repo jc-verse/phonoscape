@@ -40,6 +40,7 @@ class ViewMenu(tk.Menu):
             command=self._free_rotate,
         )
         self._free_rotate()
+        self.root.spatial_view.canvas.mpl_connect("button_release_event", self._on_spatial_axis_rotate)
         spatial_menu.add_separator()
 
         self.view_option = tk.StringVar(value="2D view (2)")
@@ -77,7 +78,6 @@ class ViewMenu(tk.Menu):
         self.root.spatial_view.canvas.draw_idle()
 
     def _specify_view(self) -> None:
-        self.view_option.set("")  # Clear selection in menu.
         dialog = tk.Toplevel(self)
         dialog.withdraw()
         dialog.title("Specify view")
@@ -92,6 +92,7 @@ class ViewMenu(tk.Menu):
 
         azim_var = tk.StringVar(value=str(self.root.spatial_view.ax.azim))
         elev_var = tk.StringVar(value=str(self.root.spatial_view.ax.elev))
+        roll_var = tk.StringVar(value=str(self.root.spatial_view.ax.roll))
 
         ttk.Label(main, text="azim").grid(
             row=0, column=0, sticky="e", padx=(0, 8), pady=4
@@ -105,25 +106,42 @@ class ViewMenu(tk.Menu):
         elev_entry = ttk.Entry(main, textvariable=elev_var, width=12)
         elev_entry.grid(row=1, column=1, sticky="ew", pady=4)
 
+        ttk.Label(main, text="roll").grid(
+            row=2, column=0, sticky="e", padx=(0, 8), pady=4
+        )
+        roll_entry = ttk.Entry(main, textvariable=roll_var, width=12)
+        roll_entry.grid(row=2, column=1, sticky="ew", pady=4)
+
         buttons = ttk.Frame(main)
-        buttons.grid(row=2, column=0, columnspan=2, sticky="e", pady=(12, 0))
+        buttons.grid(row=3, column=0, columnspan=2, sticky="e", pady=(12, 0))
 
         def on_ok() -> None:
             try:
                 azim = float(azim_var.get())
                 elev = float(elev_var.get())
+                roll = float(roll_var.get())
             except ValueError:
                 messagebox.showerror(
                     "Invalid view",
-                    "azim and elev must be numbers.",
+                    "azim, elev, and roll must be numbers.",
                     parent=dialog,
                 )
                 return
 
             dialog.destroy()
+            matching_view = None
+            for label, (velev, vazim, vroll) in views.items():
+                if azim == vazim and elev == velev and roll == vroll:
+                    matching_view = label
+                    break
+            if matching_view is not None:
+                self.view_option.set(matching_view)
+                self._view_init()
+            else:
+                self.view_option.set("")  # Clear selection in menu.
 
-            self.root.spatial_view.ax.view_init(elev=elev, azim=azim)
-            self.root.spatial_view.canvas.draw_idle()
+                self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
+                self.root.spatial_view.canvas.draw_idle()
 
         def on_cancel() -> None:
             dialog.destroy()
@@ -151,3 +169,30 @@ class ViewMenu(tk.Menu):
         dialog.deiconify()
 
         self.wait_window(dialog)
+
+    def _on_spatial_axis_rotate(self, event):
+        if not self.free_rotate_var.get():
+            return
+        if event.inaxes is not self.root.spatial_view.ax:
+            return
+
+        view = (
+            self.root.spatial_view.ax.elev,
+            self.root.spatial_view.ax.azim,
+            self.root.spatial_view.ax.roll,
+        )
+
+        matching_view = None
+        for label, (velev, vazim, vroll) in views.items():
+            if (
+                abs(view[0] - velev) < 5
+                and abs(view[1] - vazim) < 5
+                and abs(view[2] - vroll) < 5
+            ):
+                matching_view = label
+                break
+        if matching_view is not None:
+            self.view_option.set(matching_view)
+            self._view_init()
+        else:
+            self.view_option.set("")  # Clear selection in menu.
