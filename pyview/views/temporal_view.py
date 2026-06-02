@@ -277,7 +277,8 @@ class TemporalView(ttk.Frame):
             else SpatialTrajDisplay(
                 content="movement",
                 traj_name=framing_traj_name,
-                components=["x", "y", "z"],
+                traj_dims=self.state_model.dimensions,
+                components=["x", "y", "z"][:self.state_model.dimensions],
             )
         )
         return [framing_traj_spec] + self.state_model.config.temporal_disp_specs
@@ -288,6 +289,7 @@ class TemporalView(ttk.Frame):
                 get_plotting_data(
                     self.state_model.selected_value.trajectories[spec.traj_name],
                     spec,
+                    self.state_model.dimensions,
                 )
                 if spec.traj_name != self.state_model.config.audio_traj
                 or spec.content != "SPECT"

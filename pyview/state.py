@@ -31,12 +31,13 @@ class ScalarTrajDisplay:
 @dataclass
 class SpatialTrajDisplay:
     traj_name: str
+    traj_dims: int
     content: Literal["movement", "velocity", "acceleration"]
     components: list[Literal["x", "y", "z"]]
 
     def __str__(self) -> str:
         comp_str = "".join(self.components)
-        if comp_str == "xyz":
+        if self.traj_dims == 3 and comp_str == "xyz" or self.traj_dims == 2 and comp_str == "xy":
             comp_str = ""
         prefix = {"movement": "", "velocity": "v", "acceleration": "a"}[self.content]
         return f"{prefix}{self.traj_name}{comp_str}"
@@ -49,12 +50,11 @@ TrajDisplay = ScalarTrajDisplay | SpatialTrajDisplay
 class Trajectory:
     name: str
     kind: Literal["scalar", "spatial"]
-    color: str
     sample_rate_hz: float
-    dimensions: int
     n_samples: int
-    # TODO: migrate to a storage ref?
+    color: str | tuple[float, float, float]
     data: np.ndarray
+    angles: np.ndarray | None
 
 
 @dataclass
@@ -78,7 +78,8 @@ class PyViewState:
     audio_spect: tuple[Any, np.ndarray] | None
     selected_variable: str
     dpi: float
-    spatial_bounds: tuple[float, float, float, float, float, float]
+    dimensions: Literal[2, 3]
+    spatial_bounds: tuple[float, float, float, float, float, float] | tuple[float, float, float, float]
     config: PyViewConfig
     cursor_s: float
     head_s: float

@@ -9,7 +9,7 @@ if __name__ == "__main__":
     # [ ] HEAD
     # [ ] LABELS
     # [ ] LPROC
-    # [ ] IS3D
+    # [x] IS3D
     # [x] MAP / TEMPMAP
     # [x] PALATE
     # [ ] PHARYNX
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         "--spline",
         type=str,
         nargs="+",
-        help="List of trajectory names to apply spline interpolation (default: all trajectories starting with 'T').",
+        help="List of trajectory names to apply spline interpolation (default: all spatial trajectories starting with 'T').",
     )
     parser.add_argument(
         "--audio",
@@ -61,6 +61,12 @@ if __name__ == "__main__":
         nargs="+",
         help="List of variable names to include in temporal display (default: all plus {--audio}_SPECT).",
     )
+    parser.add_argument(
+        "--comps",
+        type=int,
+        nargs="+",
+        help="Number of dimensions for spatial trajectories, or list of column indices to use for each dimension (default: all dimensions, up to 3, are used for spatial view in x,y,z order).",
+    )
     args = parser.parse_args()
 
     pyview(
@@ -71,4 +77,5 @@ if __name__ == "__main__":
         audio=args.audio,
         framing=args.framing,
         temporal_disp_trajs=args.temporal_disp_trajs,
+        comps=None if not args.comps else args.comps[0] if len(args.comps) == 1 else args.comps,
     )

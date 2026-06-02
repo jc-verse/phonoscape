@@ -6,7 +6,7 @@ from scipy.signal import ShortTimeFFT, windows, filtfilt, lfilter
 from ..state import TrajDisplay, Trajectory
 
 
-def get_plotting_data(traj: Trajectory, spec: TrajDisplay):
+def get_plotting_data(traj: Trajectory, spec: TrajDisplay, dimensions: int):
     t = np.arange(traj.n_samples) / traj.sample_rate_hz
     if spec.content == "SPECT":
         window_ms = 25
@@ -51,7 +51,7 @@ def get_plotting_data(traj: Trajectory, spec: TrajDisplay):
             return t, ps
         vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
         if spec.content == "velocity":
-            if vs.shape[1] == traj.dimensions:
+            if vs.shape[1] == dimensions:
                 # Collapse if viewing all components
                 # TODO: currently this way for mview compatibility, but I think
                 # "velocity" and "speed" should be separate content types
@@ -59,7 +59,7 @@ def get_plotting_data(traj: Trajectory, spec: TrajDisplay):
                 return t, np.array([np.linalg.norm(vs, axis=1)]).T
             return t, vs
         accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
-        if accs.shape[1] == traj.dimensions:
+        if accs.shape[1] == dimensions:
             return t, np.array([np.linalg.norm(accs, axis=1)]).T
         return t, accs
     else:

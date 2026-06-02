@@ -2,7 +2,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
-from typing import Unpack
+from typing import cast, Literal, Unpack
 import matplotlib.pyplot as plt
 
 from .data.parse import load_variables, normalize_args, PyViewArgs
@@ -11,7 +11,8 @@ from .menu.menu_bar import MenuBar
 from .state import PyViewState, ScalarTrajDisplay
 from .widgets.play_button import PlayButton, modes as play_modes
 from .views.temporal_view import TemporalView
-from .views.spatial_view import SpatialView
+from .views.spatial_view_3d import SpatialView3D
+from .views.spatial_view_2d import SpatialView2D
 from .views.freq_domain_view import FreqDomainView
 
 
@@ -32,12 +33,14 @@ class PyViewTk(tk.Tk):
             self.bind_class("Listbox", "<Control-Button-1>", "")
 
         path = Path(file)
-        data, other_data = load_variables(path, variables)
+        data, other_data, dimensions = load_variables(
+            path, variables, comps=kwargs.get("comps")
+        )
 
         if not data:
             raise ValueError(f"No matching variables found for pattern {variables!r}")
 
-        config = normalize_args(kwargs, data, other_data)
+        config = normalize_args(kwargs, data, other_data, dimensions)
 
         min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
         max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
@@ -45,16 +48,26 @@ class PyViewTk(tk.Tk):
             for traj in variable.trajectories.values():
                 if traj.kind != "spatial":
                     continue
-                x, y, z = traj.data[:, :3].T
+                if dimensions == 3:
+                    x, y, z = traj.data.T
+                    min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+                    min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+                    min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
+                else:
+                    x, y = traj.data.T
+                    min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+                    min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+        if config.palate_trace is not None:
+            palate_trace = config.palate_trace
+            if dimensions == 3:
+                x, y, z = palate_trace.T
                 min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
                 min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
                 min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
-        if config.palate_trace is not None:
-            palate_trace = config.palate_trace
-            x, y, z = palate_trace[:, :3].T
-            min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
-            min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
-            min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
+            else:
+                x, y = palate_trace.T
+                min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+                min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
 
         selected_variable = next(iter(data.keys()))
 
@@ -67,13 +80,19 @@ class PyViewTk(tk.Tk):
                 get_plotting_data(
                     data[selected_variable].trajectories[config.audio_traj],
                     ScalarTrajDisplay(traj_name=config.audio_traj, content="SPECT"),
+                    dimensions,
                 )
                 if config.audio_traj is not None
                 else None
             ),
             selected_variable=selected_variable,
             dpi=self.winfo_fpixels("1i"),
-            spatial_bounds=(min_x, max_x, min_y, max_y, min_z, max_z),
+            dimensions=cast(Literal[2, 3], dimensions),
+            spatial_bounds=(
+                (min_x, max_x, min_y, max_y, min_z, max_z)
+                if dimensions == 3
+                else (min_x, max_x, min_y, max_y)
+            ),
             config=config,
             cursor_s=0.0,
             head_s=0.0,
@@ -112,7 +131,10 @@ class PyViewTk(tk.Tk):
         left.rowconfigure(1, weight=1)
         left.columnconfigure(0, weight=1)
 
-        self.spatial_view = SpatialView(left, state_model=self.state_model)
+        if self.state_model.dimensions == 3:
+            self.spatial_view = SpatialView3D(left, state_model=self.state_model)
+        else:
+            self.spatial_view = SpatialView2D(left, state_model=self.state_model)
         self.spatial_view.grid(row=0, column=0, sticky="nsew")
 
         self.freq_domain_view = FreqDomainView(left, state_model=self.state_model)

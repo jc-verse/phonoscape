@@ -93,15 +93,19 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
     x_var = tk.BooleanVar(value=False)
     y_var = tk.BooleanVar(value=False)
-    z_var = tk.BooleanVar(value=False)
 
     x_check = ttk.Checkbutton(comps, text="X", variable=x_var)
     y_check = ttk.Checkbutton(comps, text="Y", variable=y_var)
-    z_check = ttk.Checkbutton(comps, text="Z", variable=z_var)
-
     x_check.grid(row=0, column=1, sticky="w")
     y_check.grid(row=0, column=2, sticky="w")
-    z_check.grid(row=0, column=3, sticky="w")
+
+    if parent.state_model.dimensions >= 3:
+        z_var = tk.BooleanVar(value=False)
+        z_check = ttk.Checkbutton(comps, text="Z", variable=z_var)
+        z_check.grid(row=0, column=3, sticky="w")
+    else:
+        z_var = None
+        z_check = None
 
     buttons = ttk.Frame(main)
     buttons.grid(row=7, column=0, columnspan=3, pady=(16, 0))
@@ -121,7 +125,8 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     def set_component_state(state: Literal["normal", "disabled"]) -> None:
         x_check.configure(state=state)
         y_check.configure(state=state)
-        z_check.configure(state=state)
+        if z_check:
+            z_check.configure(state=state)
 
     def refresh_displayed_listbox() -> None:
         displayed_var.set([str(spec) for spec in displayed_specs])
@@ -150,7 +155,8 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             content_var.set("")
             x_var.set(False)
             y_var.set(False)
-            z_var.set(False)
+            if z_var:
+                z_var.set(False)
             set_component_state("disabled")
             return
 
@@ -164,7 +170,8 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             content_var.set(spec.content)
             x_var.set(False)
             y_var.set(False)
-            z_var.set(False)
+            if z_var:
+                z_var.set(False)
             set_component_state("disabled")
 
         elif isinstance(spec, SpatialTrajDisplay):
@@ -175,7 +182,8 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             content_var.set(spec.content)
             x_var.set("x" in spec.components)
             y_var.set("y" in spec.components)
-            z_var.set("z" in spec.components)
+            if z_var:
+                z_var.set("z" in spec.components)
             set_component_state("normal")
 
         else:
@@ -200,7 +208,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                 components.append("x")
             if y_var.get():
                 components.append("y")
-            if z_var.get():
+            if z_var and z_var.get():
                 components.append("z")
 
             # Avoid invalid empty component list.
@@ -209,6 +217,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
             displayed_specs[idx] = SpatialTrajDisplay(
                 traj_name=old.traj_name,
+                traj_dims=old.traj_dims,
                 content=content_var.get(),
                 components=components,
             )
@@ -237,8 +246,9 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                 displayed_specs.append(
                     SpatialTrajDisplay(
                         traj_name=traj_name,
+                        traj_dims=parent.state_model.dimensions,
                         content="movement",
-                        components=["x", "y", "z"][: traj.dimensions],
+                        components=["x", "y", "z"][: parent.state_model.dimensions],
                     )
                 )
             else:
@@ -302,7 +312,8 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     content_combo.bind("<<ComboboxSelected>>", lambda _event: rewrite_selected_spec())
     x_check.configure(command=rewrite_selected_spec)
     y_check.configure(command=rewrite_selected_spec)
-    z_check.configure(command=rewrite_selected_spec)
+    if z_check:
+        z_check.configure(command=rewrite_selected_spec)
 
     ok_button.configure(command=on_ok)
     cancel_button.configure(command=on_cancel)

@@ -14,7 +14,7 @@ from scipy.interpolate import splprep, splev
 from ..state import PyViewState
 
 
-class SpatialView(ttk.Frame):
+class SpatialView3D(ttk.Frame):
     def __init__(self, parent: tk.Widget, state_model: PyViewState):
         super().__init__(parent)
 
@@ -41,7 +41,10 @@ class SpatialView(ttk.Frame):
         self.figure.clear()
         self.ax: Axes3D = self.figure.add_subplot(111, projection="3d")
 
-        xmin, xmax, ymin, ymax, zmin, zmax = self.state_model.spatial_bounds
+        xmin, xmax, ymin, ymax, zmin, zmax = cast(
+            tuple[float, float, float, float, float, float],
+            self.state_model.spatial_bounds,
+        )
         xmin -= (xmax - xmin) * 0.05
         xmax += (xmax - xmin) * 0.05
         ymin -= (ymax - ymin) * 0.05

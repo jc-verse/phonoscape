@@ -139,6 +139,7 @@ class MenuBar(tk.Menu):
                 ScalarTrajDisplay(
                     traj_name=self.state_model.config.audio_traj, content="SPECT"
                 ),
+                self.state_model.dimensions,
             )
             if self.state_model.config.audio_traj is not None
             else None
