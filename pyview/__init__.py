@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
@@ -23,6 +24,12 @@ class PyViewTk(tk.Tk):
     ):
         super().__init__()
         plt.style.use("dark_background")
+        # Listbox still uses Control-click for toggling on mac. Swap it to Command-click
+        if sys.platform == "darwin" and (
+            ctrl_script := self.bind_class("Listbox", "<Control-Button-1>")
+        ):
+            self.bind_class("Listbox", "<Command-Button-1>", ctrl_script)
+            self.bind_class("Listbox", "<Control-Button-1>", "")
 
         path = Path(file)
         data, other_data = load_variables(path, variables)

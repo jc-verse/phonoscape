@@ -57,6 +57,9 @@ class TemporalView(ttk.Frame):
         self.canvas.mpl_connect("button_release_event", self._on_release)
         self.canvas.mpl_connect("figure_leave_event", self._on_figure_leave)
 
+        self.reset_plot()
+
+    def reset_plot(self) -> None:
         self.figure.clear()
         self.figure.subplots_adjust(
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
@@ -86,6 +89,8 @@ class TemporalView(ttk.Frame):
             self.artists.append(artist)
             self.zero_artists.append(zero_artist)
             self.cursor_artists.append(cursor_artist)
+
+        self.canvas.draw_idle()
 
     def update_plot(
         self,

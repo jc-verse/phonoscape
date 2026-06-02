@@ -40,7 +40,7 @@ class SpatialView(ttk.Frame):
 
         self.figure.clear()
         self.ax: Axes3D = self.figure.add_subplot(111, projection="3d")
-        
+
         xmin, xmax, ymin, ymax, zmin, zmax = self.state_model.spatial_bounds
         xmin -= (xmax - xmin) * 0.05
         xmax += (xmax - xmin) * 0.05
