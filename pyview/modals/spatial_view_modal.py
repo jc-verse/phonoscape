@@ -31,16 +31,13 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     roll_var = tk.StringVar(value=str(parent.root.spatial_view.ax.roll))
 
     ttk.Label(main, text="azim").grid(row=0, column=0, sticky="e", padx=(0, 8), pady=4)
-    azim_entry = ttk.Entry(main, textvariable=azim_var, width=12)
-    azim_entry.grid(row=0, column=1, sticky="ew", pady=4)
+    ttk.Entry(main, textvariable=azim_var, width=12).grid(row=0, column=1, sticky="ew", pady=4)
 
     ttk.Label(main, text="elev").grid(row=1, column=0, sticky="e", padx=(0, 8), pady=4)
-    elev_entry = ttk.Entry(main, textvariable=elev_var, width=12)
-    elev_entry.grid(row=1, column=1, sticky="ew", pady=4)
+    ttk.Entry(main, textvariable=elev_var, width=12).grid(row=1, column=1, sticky="ew", pady=4)
 
     ttk.Label(main, text="roll").grid(row=2, column=0, sticky="e", padx=(0, 8), pady=4)
-    roll_entry = ttk.Entry(main, textvariable=roll_var, width=12)
-    roll_entry.grid(row=2, column=1, sticky="ew", pady=4)
+    ttk.Entry(main, textvariable=roll_var, width=12).grid(row=2, column=1, sticky="ew", pady=4)
 
     buttons = ttk.Frame(main)
     buttons.grid(row=3, column=0, columnspan=2, sticky="e", pady=(12, 0))
@@ -81,6 +78,7 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
 
     dialog.bind("<Return>", lambda _event: on_ok())
     dialog.bind("<Escape>", lambda _event: on_cancel())
+    dialog.protocol("WM_DELETE_WINDOW", on_cancel)
 
     dialog.update_idletasks()
     x = (
@@ -94,4 +92,6 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     dialog.geometry(f"+{x}+{y}")
     dialog.deiconify()
     dialog.grab_set()
+    dialog.lift()
+    dialog.focus_set()
     parent.wait_window(dialog)

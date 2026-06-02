@@ -4,6 +4,7 @@ import tkinter as tk
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 from ..state import PyViewState
+from ..modals.common_scaling_modal import open_common_scaling_dialog
 from ..modals.temporal_config_modal import open_tempcfg_dialog
 from ..modals.spatial_view_modal import open_spatial_view_dialog, views
 
@@ -52,7 +53,7 @@ class ViewMenu(tk.Menu):
         self.add_cascade(label="Spatial options", menu=spatial_menu)
         self.add_command(
             label="Set common scaling...",
-            command=self.parent._todo("Set common scaling"),
+            command=lambda: open_common_scaling_dialog(self),
         )
 
     def _hide_spline(self):
