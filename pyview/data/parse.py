@@ -112,7 +112,13 @@ def load_variables(
                 angles=angles,
             )
             estimated_durations.append(signal.shape[0] / float(srate))
-        seen_dimensions.add(max(traj.data.shape[1] for traj in trajectories.values() if traj.kind == "spatial"))
+        seen_dimensions.add(
+            max(
+                traj.data.shape[1]
+                for traj in trajectories.values()
+                if traj.kind == "spatial"
+            )
+        )
         structured_data[k] = DatasetVariable(
             name=k,
             duration_s=min(estimated_durations) if estimated_durations else 0.0,
@@ -159,7 +165,9 @@ def parse_trajectory_display_spec(
             components.append("y")
         if z:
             if dimensions < 3:
-                raise ValueError(f"Trajectory '{name}' specifies z component but data has only {dimensions} dimensions")
+                raise ValueError(
+                    f"Trajectory '{name}' specifies z component but data has only {dimensions} dimensions"
+                )
             components.append("z")
         if not components:
             components = ["x", "y", "z"][:dimensions]

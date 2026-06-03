@@ -37,7 +37,12 @@ class SpatialTrajDisplay:
 
     def __str__(self) -> str:
         comp_str = "".join(self.components)
-        if self.traj_dims == 3 and comp_str == "xyz" or self.traj_dims == 2 and comp_str == "xy":
+        if (
+            self.traj_dims == 3
+            and comp_str == "xyz"
+            or self.traj_dims == 2
+            and comp_str == "xy"
+        ):
             comp_str = ""
         prefix = {"movement": "", "velocity": "v", "acceleration": "a"}[self.content]
         return f"{prefix}{self.traj_name}{comp_str}"
@@ -65,21 +70,31 @@ class DatasetVariable:
     # embedded_labels
 
 
+@dataclass(frozen=True, eq=True)
+class Label:
+    name: str
+    offset_s: float
+    # MVIEW calls this "hook"
+    note: str
+
+
 @dataclass
 class PyViewState:
     file: Path
     variables_pattern: str
     data: dict[str, DatasetVariable]
     other_data: dict[str, Any]
-    """
-    Precomputed because it's also used for the spectrogram cross-section.
-    Avoids two FFTs, one for each view.
-    """
+    labels: list[Label]
+    # Precomputed because it's also used for the spectrogram cross-section.
+    # Avoids two FFTs, one for each view.
     audio_spect: tuple[Any, np.ndarray] | None
     selected_variable: str
     dpi: float
     dimensions: Literal[2, 3]
-    spatial_bounds: tuple[float, float, float, float, float, float] | tuple[float, float, float, float]
+    spatial_bounds: (
+        tuple[float, float, float, float, float, float]
+        | tuple[float, float, float, float]
+    )
     config: PyViewConfig
     cursor_s: float
     head_s: float
@@ -95,3 +110,14 @@ class PyViewState:
     @property
     def selected_value(self) -> DatasetVariable:
         return self.data[self.selected_variable]
+
+    def add_label(self, name: str, offset_s: float, note: str):
+        new_label = Label(name=name, offset_s=offset_s, note=note)
+        self.labels.append(new_label)
+        return new_label
+
+    def edit_label(self, label_idx: int, name: str, offset_s: float, note: str):
+        old_label = self.labels[label_idx]
+        new_label = Label(name=name, offset_s=offset_s, note=note)
+        self.labels[label_idx] = new_label
+        return new_label, old_label

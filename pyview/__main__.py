@@ -77,5 +77,9 @@ if __name__ == "__main__":
         audio=args.audio,
         framing=args.framing,
         temporal_disp_trajs=args.temporal_disp_trajs,
-        comps=None if not args.comps else args.comps[0] if len(args.comps) == 1 else args.comps,
+        comps=(
+            None
+            if not args.comps
+            else args.comps[0] if len(args.comps) == 1 else args.comps
+        ),
     )

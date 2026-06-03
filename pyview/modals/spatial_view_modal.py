@@ -31,13 +31,19 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     roll_var = tk.StringVar(value=str(parent.root.spatial_view.ax.roll))
 
     ttk.Label(main, text="azim").grid(row=0, column=0, sticky="e", padx=(0, 8), pady=4)
-    ttk.Entry(main, textvariable=azim_var, width=12).grid(row=0, column=1, sticky="ew", pady=4)
+    ttk.Entry(main, textvariable=azim_var, width=12).grid(
+        row=0, column=1, sticky="ew", pady=4
+    )
 
     ttk.Label(main, text="elev").grid(row=1, column=0, sticky="e", padx=(0, 8), pady=4)
-    ttk.Entry(main, textvariable=elev_var, width=12).grid(row=1, column=1, sticky="ew", pady=4)
+    ttk.Entry(main, textvariable=elev_var, width=12).grid(
+        row=1, column=1, sticky="ew", pady=4
+    )
 
     ttk.Label(main, text="roll").grid(row=2, column=0, sticky="e", padx=(0, 8), pady=4)
-    ttk.Entry(main, textvariable=roll_var, width=12).grid(row=2, column=1, sticky="ew", pady=4)
+    ttk.Entry(main, textvariable=roll_var, width=12).grid(
+        row=2, column=1, sticky="ew", pady=4
+    )
 
     buttons = ttk.Frame(main)
     buttons.grid(row=3, column=0, columnspan=2, sticky="e", pady=(12, 0))

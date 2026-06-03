@@ -76,6 +76,7 @@ class PyViewTk(tk.Tk):
             variables_pattern=variables,
             data=data,
             other_data=other_data,
+            labels=[],
             audio_spect=(
                 get_plotting_data(
                     data[selected_variable].trajectories[config.audio_traj],

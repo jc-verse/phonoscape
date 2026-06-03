@@ -8,11 +8,19 @@ import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
+from matplotlib.text import Text
 from matplotlib.image import AxesImage
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from ..state import PyViewState, TrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay
+from ..state import (
+    PyViewState,
+    TrajDisplay,
+    ScalarTrajDisplay,
+    SpatialTrajDisplay,
+    Label,
+)
 from ..data.process import get_plotting_data
+from ..modals.label_modal import open_label_dialog
 
 ArtistType = (
     tuple[Literal["spatial"], list[Line2D]]
@@ -31,6 +39,7 @@ class TemporalView(ttk.Frame):
     ):
         super().__init__(parent)
 
+        self.parent = parent
         self._on_cursor_change = on_cursor_change
         self.dragging: (
             Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float]
@@ -82,13 +91,18 @@ class TemporalView(ttk.Frame):
         self.artists: list[ArtistType] = []
         self.zero_artists: list[Line2D | None] = []
         self.cursor_artists: list[Line2D] = []
+        self.label_artists: list[dict[Label, Line2D]] = []
+        self.label_text_artists: list[dict[Label, Text]] = []
         for i, ax, spec in zip(range(n + 1), self.axes, self._get_temp_disp_specs()):
-            artist, zero_artist, cursor_artist = self._plot_one_axis(
-                ax, spec, i=i, duration_s=duration_s
+            artist, zero_artist, cursor_artist, label_artists, label_text_artists = (
+                self._plot_one_axis(ax, spec, i=i, duration_s=duration_s)
             )
             self.artists.append(artist)
             self.zero_artists.append(zero_artist)
             self.cursor_artists.append(cursor_artist)
+            self.label_artists.append(label_artists)
+            if label_text_artists is not None:
+                self.label_text_artists.append(label_text_artists)
 
         self.canvas.draw_idle()
 
@@ -98,6 +112,7 @@ class TemporalView(ttk.Frame):
         trajectories: bool = False,
         variable: bool = False,
         frame: bool = False,
+        labels: list[Label] | None = None,
     ) -> None:
         if cursor:
             for line in self.cursor_artists:
@@ -146,7 +161,49 @@ class TemporalView(ttk.Frame):
                     ]
                 ]
             )
-        if cursor or trajectories or frame:
+        if labels:
+            for label in labels:
+                if label not in self.state_model.labels:
+                    # Label deleted
+                    for label_artists in self.label_artists:
+                        if label in label_artists:
+                            label_artists[label].remove()
+                            del label_artists[label]
+                    for label_text_artists in self.label_text_artists:
+                        if label in label_text_artists:
+                            label_text_artists[label].remove()
+                            del label_text_artists[label]
+                else:
+                    # Label added or updated
+                    for i, label_artists in enumerate(self.label_artists):
+                        if label in label_artists:
+                            la = label_artists[label]
+                            la.set_xdata([label.offset_s, label.offset_s])
+                        else:
+                            ax = self.axes[i]
+                            label_artists[label] = ax.axvline(
+                                label.offset_s,
+                                color="red",
+                                linewidth=0.8,
+                                zorder=999,
+                                clip_on=True,
+                            )
+                    for i, label_text_artists in enumerate(self.label_text_artists):
+                        if label in label_text_artists:
+                            lta = label_text_artists[label]
+                            lta.set_x(label.offset_s)
+                        else:
+                            ax = self.axes[i]
+                            text = ax.text(
+                                label.offset_s,
+                                0.5,
+                                label.name,
+                                color="red",
+                                zorder=999,
+                                clip_on=True,
+                            )
+                            label_text_artists[label] = text
+        if cursor or trajectories or frame or labels:
             self.canvas.draw_idle()
 
     def _plot_one_axis(
@@ -266,7 +323,31 @@ class TemporalView(ttk.Frame):
                 clip_on=True,
             )
 
-        return artist, zero_artist, cursor_artist
+        label_artists: dict[Label, Line2D] = {}
+        for label in self.state_model.labels:
+            label_artists[label] = ax.axvline(
+                label.offset_s, color="red", linewidth=0.8, zorder=999, clip_on=True
+            )
+
+        if i == 0 or i == 1:
+            label_text_artists: dict[Label, Text] | None = {}
+            # Only plot label for framing and first real data trajectory
+            for label in self.state_model.labels:
+                text = ax.text(
+                    label.offset_s,
+                    0.98,
+                    label.name,
+                    ha="left",
+                    va="top",
+                    color="red",
+                    zorder=999,
+                    clip_on=False,
+                )
+                label_text_artists[label] = text
+        else:
+            label_text_artists = None
+
+        return artist, zero_artist, cursor_artist, label_artists, label_text_artists
 
     def _get_temp_disp_specs(self):
         framing_traj_name = self.state_model.config.framing_traj
@@ -278,7 +359,7 @@ class TemporalView(ttk.Frame):
                 content="movement",
                 traj_name=framing_traj_name,
                 traj_dims=self.state_model.dimensions,
-                components=["x", "y", "z"][:self.state_model.dimensions],
+                components=["x", "y", "z"][: self.state_model.dimensions],
             )
         )
         return [framing_traj_spec] + self.state_model.config.temporal_disp_specs
@@ -309,7 +390,12 @@ class TemporalView(ttk.Frame):
         return toolbar is not None and bool(getattr(toolbar, "mode", ""))
 
     def _on_press(self, event) -> None:
-        if event.button != 1 or self._toolbar_is_active() or event.xdata is None:
+        if self._toolbar_is_active() or event.xdata is None:
+            return
+        if event.button == 3 and self._event_is_in_cursor_axes(event):
+            open_label_dialog(self, event.xdata, "create")
+            return
+        if event.button != 1:
             return
         if self._event_is_in_cursor_axes(event):
             self.dragging = "cursor"
