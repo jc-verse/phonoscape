@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QMenu, QMenuBar
 from .play_menu import PlayMenu
 from .selection_menu import SelectionMenu
 from .view_menu import ViewMenu
+from .label_menu import LabelMenu
 
 if TYPE_CHECKING:
     from .. import PyViewQt
@@ -80,29 +81,7 @@ class MenuBar(QMenuBar):
         movement_menu.addAction("Cycle backward", self._todo("Cycle backward"))
         movement_menu.addAction("Stop cycling", self._todo("Stop cycling"))
         self.addMenu(movement_menu)
-
-        label_menu = QMenu("Labels", self)
-        label_menu.addAction("Make label...", self._todo("Make label..."))
-        label_menu.addAction("Edit labels...", self._todo("Edit labels..."))
-        label_menu.addAction("Clear all labels", self._todo("Clear all labels"))
-        label_menu.addSeparator()
-        label_menu.addAction("Export labels...", self._todo("Export labels..."))
-        label_menu.addAction("Import labels...", self._todo("Import labels..."))
-        label_menu.addSeparator()
-        label_menu.addAction("Save labels...", self._todo("Save labels..."))
-        label_menu.addAction("Load labels...", self._todo("Load labels..."))
-        label_menu.addAction(
-            "Set selection to label pair",
-            self._todo("Set selection to label pair"),
-        )
-
-        labeling_behavior_menu = QMenu("Labeling behavior", label_menu)
-        labeling_behavior_menu.addAction("Clear", self._todo("Clear"))
-        labeling_behavior_menu.addAction("Select...", self._todo("Select..."))
-        labeling_behavior_menu.addAction("Configure...", self._todo("Configure..."))
-
-        label_menu.addMenu(labeling_behavior_menu)
-        self.addMenu(label_menu)
+        self.addMenu(LabelMenu(self, self.state_model))
 
     def _on_variable_change(self, name: str) -> None:
         self.root.selected_variable_var.set(name)

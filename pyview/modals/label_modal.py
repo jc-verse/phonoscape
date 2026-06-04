@@ -18,13 +18,10 @@ if TYPE_CHECKING:
 
 def open_label_dialog(
     parent: TemporalView,
-    cursor_s: float,
-    action: Literal["create"] | tuple[Literal["edit"], int],
+    action: tuple[Literal["create"], float] | tuple[Literal["edit"], int],
 ) -> None:
-    title_action = action[0] if isinstance(action, tuple) else action
-
     dialog = QDialog(parent)
-    dialog.setWindowTitle(f"{title_action.capitalize()} label")
+    dialog.setWindowTitle(f"{action[0].capitalize()} label")
     dialog.setModal(True)
     dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
@@ -37,9 +34,13 @@ def open_label_dialog(
     main_layout.setHorizontalSpacing(6)
     main_layout.setVerticalSpacing(8)
 
-    name_entry = QLineEdit("", dialog)
-    offset_ms_entry = QLineEdit(f"{cursor_s * 1000.0:.1f}", dialog)
-    note_entry = QLineEdit("", dialog)
+    init_label = parent.state_model.labels[action[1]] if action[0] == "edit" else None
+    init_name = init_label.name if init_label else ""
+    init_offset_s = init_label.offset_s if init_label else action[1] if action[0] == "create" else 0.0
+    init_note = init_label.note if init_label else ""
+    name_entry = QLineEdit(init_name, dialog)
+    offset_ms_entry = QLineEdit(f"{init_offset_s * 1000.0:.1f}", dialog)
+    note_entry = QLineEdit(init_note, dialog)
 
     name_entry.setFixedWidth(120)
     offset_ms_entry.setFixedWidth(90)
@@ -89,7 +90,7 @@ def open_label_dialog(
 
         note = note_entry.text().strip()
 
-        if action == "create":
+        if action[0] == "create":
             new_label = parent.state_model.add_label(name, offset_ms / 1000.0, note)
             parent.update_plot(labels=[new_label])
         else:

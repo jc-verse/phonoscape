@@ -391,12 +391,7 @@ class TemporalView(QWidget):
         return toolbar is not None and bool(getattr(toolbar, "mode", ""))
 
     def _on_press(self, event) -> None:
-        if self._toolbar_is_active() or event.xdata is None:
-            return
-        if event.button == 3 and self._event_is_in_cursor_axes(event):
-            open_label_dialog(self, float(event.xdata), "create")
-            return
-        if event.button != 1:
+        if self._toolbar_is_active() or event.xdata is None or event.button != 1:
             return
         if self._event_is_in_cursor_axes(event):
             self.dragging = "cursor"
@@ -477,6 +472,8 @@ class TemporalView(QWidget):
 
     def _on_release(self, event) -> None:
         self.dragging = None
+        if event.button == 3 and self._event_is_in_cursor_axes(event) and event.xdata is not None:
+            open_label_dialog(self, ("create", float(event.xdata)))
 
     def _on_figure_leave(self, event) -> None:
         self.dragging = None

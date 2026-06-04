@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
@@ -21,15 +21,13 @@ class SelectionMenu(QMenu):
         self.addAction("Shrink selection", self._shrink_selection)
         self.addAction("Expand selection", self._expand_selection)
 
-        shift_left_action = QAction("Shift selection left", self)
-        shift_left_action.setShortcut(QKeySequence("Ctrl+L"))
-        shift_left_action.triggered.connect(self._shift_selection_left)
-        self.addAction(shift_left_action)
+        self.addAction("Shift selection left", self._shift_selection_left).setShortcut(
+            QKeySequence("Ctrl+L")
+        )
 
-        shift_right_action = QAction("Shift selection right", self)
-        shift_right_action.setShortcut(QKeySequence("Ctrl+R"))
-        shift_right_action.triggered.connect(self._shift_selection_right)
-        self.addAction(shift_right_action)
+        self.addAction(
+            "Shift selection right", self._shift_selection_right
+        ).setShortcut(QKeySequence("Ctrl+R"))
 
         self.addAction("Reset selection", self._reset_selection)
 

@@ -15,12 +15,9 @@ class PlayMenu(QMenu):
         super().__init__("Play", parent)
 
         self.state_model = state_model
-        self.root = parent.parent
+        self.root = parent.root
 
-        play_action = QAction("Play", self)
-        play_action.setShortcut(QKeySequence("Ctrl+P"))
-        play_action.triggered.connect(self._play)
-        self.addAction(play_action)
+        self.addAction("Play", self._play).setShortcut(QKeySequence("Ctrl+P"))
         self.addSeparator()
 
         self.mode_action_group = QActionGroup(self)

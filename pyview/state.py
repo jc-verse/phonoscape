@@ -138,3 +138,6 @@ class PyViewState:
         new_label = Label(name=name, offset_s=offset_s, note=note)
         self.labels[label_idx] = new_label
         return new_label, old_label
+
+    def delete_labels(self, label_idx: list[int]):
+        return [self.labels.pop(i) for i in sorted(label_idx, reverse=True)]
