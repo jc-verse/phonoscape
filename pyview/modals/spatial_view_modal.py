@@ -1,6 +1,16 @@
 from typing import TYPE_CHECKING
-import tkinter as tk
-from tkinter import ttk, messagebox
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 if TYPE_CHECKING:
     from ..menu.view_menu import ViewMenu
@@ -17,87 +27,103 @@ views = {
 
 
 def open_spatial_view_dialog(parent: ViewMenu) -> None:
-    dialog = tk.Toplevel(parent)
-    dialog.withdraw()
-    dialog.title("Specify view")
-    dialog.transient(parent)
-    dialog.resizable(False, False)
+    dialog = QDialog(parent.root)
+    dialog.setWindowTitle("Specify view")
+    dialog.setModal(True)
+    dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
-    main = ttk.Frame(dialog, padding=12)
-    main.grid(row=0, column=0, sticky="nsew")
+    outer_layout = QVBoxLayout(dialog)
+    outer_layout.setContentsMargins(12, 12, 12, 12)
+    outer_layout.setSpacing(12)
 
-    azim_var = tk.StringVar(value=str(parent.root.spatial_view.ax.azim))
-    elev_var = tk.StringVar(value=str(parent.root.spatial_view.ax.elev))
-    roll_var = tk.StringVar(value=str(parent.root.spatial_view.ax.roll))
+    main_layout = QGridLayout()
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setHorizontalSpacing(8)
+    main_layout.setVerticalSpacing(8)
 
-    ttk.Label(main, text="azim").grid(row=0, column=0, sticky="e", padx=(0, 8), pady=4)
-    ttk.Entry(main, textvariable=azim_var, width=12).grid(
-        row=0, column=1, sticky="ew", pady=4
+    azim_entry = QLineEdit(str(parent.root.spatial_view.ax.azim), dialog)
+    elev_entry = QLineEdit(str(parent.root.spatial_view.ax.elev), dialog)
+    roll_entry = QLineEdit(str(parent.root.spatial_view.ax.roll), dialog)
+
+    azim_entry.setFixedWidth(100)
+    elev_entry.setFixedWidth(100)
+    roll_entry.setFixedWidth(100)
+
+    main_layout.addWidget(
+        QLabel("azim", dialog),
+        0,
+        0,
+        alignment=Qt.AlignmentFlag.AlignRight,
     )
+    main_layout.addWidget(azim_entry, 0, 1)
 
-    ttk.Label(main, text="elev").grid(row=1, column=0, sticky="e", padx=(0, 8), pady=4)
-    ttk.Entry(main, textvariable=elev_var, width=12).grid(
-        row=1, column=1, sticky="ew", pady=4
+    main_layout.addWidget(
+        QLabel("elev", dialog), 1, 0, alignment=Qt.AlignmentFlag.AlignRight
     )
+    main_layout.addWidget(elev_entry, 1, 1)
 
-    ttk.Label(main, text="roll").grid(row=2, column=0, sticky="e", padx=(0, 8), pady=4)
-    ttk.Entry(main, textvariable=roll_var, width=12).grid(
-        row=2, column=1, sticky="ew", pady=4
+    main_layout.addWidget(
+        QLabel("roll", dialog), 2, 0, alignment=Qt.AlignmentFlag.AlignRight
     )
+    main_layout.addWidget(roll_entry, 2, 1)
 
-    buttons = ttk.Frame(main)
-    buttons.grid(row=3, column=0, columnspan=2, sticky="e", pady=(12, 0))
+    outer_layout.addLayout(main_layout)
+
+    buttons_layout = QHBoxLayout()
+    buttons_layout.setContentsMargins(0, 0, 0, 0)
+    buttons_layout.setSpacing(6)
+    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+    ok_button = QPushButton("OK", dialog)
+    cancel_button = QPushButton("Cancel", dialog)
+
+    buttons_layout.addWidget(ok_button)
+    buttons_layout.addWidget(cancel_button)
+
+    outer_layout.addLayout(buttons_layout)
 
     def on_ok() -> None:
         try:
-            azim = float(azim_var.get())
-            elev = float(elev_var.get())
-            roll = float(roll_var.get())
+            azim = float(azim_entry.text())
+            elev = float(elev_entry.text())
+            roll = float(roll_entry.text())
         except ValueError:
-            messagebox.showerror(
-                "Invalid view",
-                "azim, elev, and roll must be numbers.",
-                parent=dialog,
+            QMessageBox.critical(
+                dialog, "Invalid view", "azim, elev, and roll must be numbers."
             )
             return
 
-        dialog.destroy()
+        dialog.accept()
+
         matching_view = None
         for label, (velev, vazim, vroll) in views.items():
             if azim == vazim and elev == velev and roll == vroll:
                 matching_view = label
                 break
-        if matching_view is not None:
-            parent.view_option.set(matching_view)
-            parent._view_init()
-        else:
-            parent.view_option.set("")  # Clear selection in menu.
 
+        if matching_view is not None:
+            parent._set_view_option(matching_view)
+        else:
+            parent._clear_view_selection()
             parent.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
             parent.root.spatial_view.canvas.draw_idle()
 
     def on_cancel() -> None:
-        dialog.destroy()
+        dialog.reject()
 
-    ttk.Button(buttons, text="OK", command=on_ok).grid(row=0, column=0, padx=(0, 6))
-    ttk.Button(buttons, text="Cancel", command=on_cancel).grid(row=0, column=1)
+    ok_button.clicked.connect(on_ok)
+    cancel_button.clicked.connect(on_cancel)
 
-    dialog.bind("<Return>", lambda _event: on_ok())
-    dialog.bind("<Escape>", lambda _event: on_cancel())
-    dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+    ok_button.setDefault(True)
+    ok_button.setAutoDefault(True)
+    cancel_button.setAutoDefault(False)
 
-    dialog.update_idletasks()
-    x = (
-        parent.root.winfo_x()
-        + (parent.root.winfo_width() - dialog.winfo_reqwidth()) // 2
-    )
-    y = (
-        parent.root.winfo_y()
-        + (parent.root.winfo_height() - dialog.winfo_reqheight()) // 2
-    )
-    dialog.geometry(f"+{x}+{y}")
-    dialog.deiconify()
-    dialog.grab_set()
-    dialog.lift()
-    dialog.focus_set()
-    parent.wait_window(dialog)
+    dialog.adjustSize()
+    dialog.setFixedSize(dialog.sizeHint())
+
+    root_geometry = parent.root.frameGeometry()
+    dialog_geometry = dialog.frameGeometry()
+    dialog_geometry.moveCenter(root_geometry.center())
+    dialog.move(dialog_geometry.topLeft())
+
+    dialog.exec()

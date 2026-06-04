@@ -1,42 +1,43 @@
 from typing import cast, Any
 
 import numpy as np
-import tkinter as tk
-from tkinter import ttk
-
-from mpl_toolkits.mplot3d.axes3d import Axes3D
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from mpl_toolkits.mplot3d.art3d import Path3DCollection, Line3D, Text3D
 from scipy.interpolate import splprep, splev
+
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+from mpl_toolkits.mplot3d.axes3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Path3DCollection, Line3D, Text3D
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import PyViewState
 
 
-class SpatialView3D(ttk.Frame):
-    def __init__(self, parent: tk.Widget, state_model: PyViewState):
+class SpatialView3D(QWidget):
+    def __init__(self, parent: QWidget, state_model: PyViewState):
         super().__init__(parent)
 
         self.state_model = state_model
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
 
-        self.width = parent.winfo_width()
-        self.height = parent.winfo_height()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        width = parent.width() if parent.width() > 1 else 600
+        height = parent.height() if parent.height() > 1 else 400
+
         self.figure = Figure(
             figsize=(
-                self.width / self.state_model.dpi,
-                self.height / self.state_model.dpi,
+                width / self.state_model.dpi,
+                height / self.state_model.dpi,
             ),
             dpi=state_model.dpi,
             frameon=True,
         )
         self.figure.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.grid(row=0, column=0, sticky="nsew")
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        layout.addWidget(self.canvas)
 
         self.figure.clear()
         self.ax: Axes3D = self.figure.add_subplot(111, projection="3d")

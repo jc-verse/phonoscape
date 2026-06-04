@@ -1,37 +1,39 @@
-import tkinter as tk
-from tkinter import ttk
-
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import PyViewState
 
 
-class FreqDomainView(ttk.Frame):
-    def __init__(self, parent: tk.Widget, state_model: PyViewState):
+class FreqDomainView(QWidget):
+    def __init__(self, parent: QWidget, state_model: PyViewState):
         super().__init__(parent)
 
         self.state_model = state_model
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
 
-        self.width = parent.winfo_width()
-        self.height = parent.winfo_height()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # At construction time, Qt widgets often still report very small sizes.
+        # Keep the old structure, but fall back to a reasonable initial figure size.
+        width = parent.width() if parent.width() > 1 else 600
+        height = parent.height() if parent.height() > 1 else 400
+
         self.figure = Figure(
             figsize=(
-                self.width / self.state_model.dpi,
-                self.height / self.state_model.dpi,
+                width / self.state_model.dpi,
+                height / self.state_model.dpi,
             ),
             dpi=state_model.dpi,
             frameon=True,
         )
         self.figure.tight_layout()
 
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.grid(row=0, column=0, sticky="nsew")
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        layout.addWidget(self.canvas)
 
         if self.state_model.audio_spect is None:
             return
@@ -76,5 +78,6 @@ class FreqDomainView(ttk.Frame):
         delta_t = hop / traj.sample_rate_hz
         extent, spect_db = self.state_model.audio_spect
         frame_idx = round(self.state_model.cursor_s / delta_t)
+        frame_idx = max(0, min(frame_idx, spect_db.shape[1] - 1))
         f = np.linspace(extent[2], extent[3], spect_db.shape[0])
         return f, spect_db[:, frame_idx]

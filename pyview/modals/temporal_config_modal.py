@@ -1,192 +1,247 @@
 from typing import Literal, TYPE_CHECKING
 
-import tkinter as tk
-from tkinter import ttk
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QPushButton,
+    QVBoxLayout,
+)
 
 if TYPE_CHECKING:
     from ..menu.view_menu import ViewMenu
+
 from ..state import ScalarTrajDisplay, SpatialTrajDisplay
 
 
 def open_tempcfg_dialog(parent: ViewMenu) -> None:
-    dialog = tk.Toplevel(parent)
-    dialog.withdraw()
-    dialog.title("Configure temporal layout")
-    dialog.transient(parent)
-    dialog.rowconfigure(0, weight=1)
-    dialog.columnconfigure(0, weight=1)
+    dialog = QDialog(parent.root)
+    dialog.setWindowTitle("Configure temporal layout")
+    dialog.setModal(True)
+    dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
     loaded_names = list(parent.state_model.selected_value.trajectories.keys())
     displayed_specs = list(parent.state_model.config.temporal_disp_specs)
 
-    main = ttk.Frame(dialog, padding=12)
-    main.grid(row=0, column=0, sticky="nsew")
-    main.columnconfigure(0, weight=1)
-    main.columnconfigure(1, weight=0)
-    main.columnconfigure(2, weight=1)
+    outer_layout = QVBoxLayout(dialog)
+    outer_layout.setContentsMargins(12, 12, 12, 12)
+    outer_layout.setSpacing(0)
 
-    main.rowconfigure(0, weight=0)
-    main.rowconfigure(1, weight=1)
-    main.rowconfigure(5, weight=0)
-    main.rowconfigure(6, weight=0)
-    main.rowconfigure(7, weight=0)
+    main = QFrame(dialog)
+    main_layout = QGridLayout(main)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setHorizontalSpacing(10)
+    main_layout.setVerticalSpacing(4)
 
-    ttk.Label(main, text="Loaded").grid(row=0, column=0, sticky="w")
-    ttk.Label(main, text="Displayed").grid(row=0, column=2, sticky="w")
+    outer_layout.addWidget(main)
 
-    loaded_var = tk.Variable(value=loaded_names)
-    displayed_var = tk.Variable(value=[str(spec) for spec in displayed_specs])
+    main_layout.setColumnStretch(0, 1)
+    main_layout.setColumnStretch(1, 0)
+    main_layout.setColumnStretch(2, 1)
 
-    loaded_list = tk.Listbox(
-        main,
-        listvariable=loaded_var,
-        selectmode="extended",
-        exportselection=False,
-        height=9,
-        width=22,
-    )
-    displayed_list = tk.Listbox(
-        main,
-        listvariable=displayed_var,
-        selectmode="extended",
-        exportselection=False,
-        height=9,
-        width=22,
-    )
+    main_layout.setRowStretch(0, 0)
+    main_layout.setRowStretch(1, 1)
+    main_layout.setRowStretch(5, 0)
+    main_layout.setRowStretch(6, 0)
+    main_layout.setRowStretch(7, 0)
 
-    loaded_list.grid(row=1, column=0, sticky="nsew", pady=(4, 10))
-    displayed_list.grid(row=1, column=2, sticky="nsew", pady=(4, 10))
+    main_layout.addWidget(QLabel("Loaded", main), 0, 0)
+    main_layout.addWidget(QLabel("Displayed", main), 0, 2)
 
-    middle = ttk.Frame(main)
-    middle.grid(row=1, column=1, padx=10, pady=(18, 10), sticky="n")
+    loaded_list = QListWidget(main)
+    displayed_list = QListWidget(main)
 
-    xfer_button = ttk.Button(middle, text=">", width=1)
-    delete_button = ttk.Button(middle, text="x", width=1)
-    up_button = ttk.Button(middle, text="^", width=1)
-    down_button = ttk.Button(middle, text="v", width=1)
+    loaded_list.addItems(loaded_names)
+    displayed_list.addItems([str(spec) for spec in displayed_specs])
 
-    xfer_button.grid(row=0, column=0, pady=3)
-    delete_button.grid(row=1, column=0, pady=3)
-    up_button.grid(row=2, column=0, pady=3)
-    down_button.grid(row=3, column=0, pady=3)
+    loaded_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+    displayed_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
 
-    detail = ttk.Frame(main)
-    detail.grid(row=5, column=0, columnspan=3, sticky="ew", pady=(4, 0))
-    detail.columnconfigure(1, weight=1)
+    loaded_list.setMinimumWidth(180)
+    displayed_list.setMinimumWidth(180)
+    loaded_list.setMinimumHeight(180)
+    displayed_list.setMinimumHeight(180)
 
-    ttk.Label(detail, text="Content:").grid(row=0, column=0, sticky="e", padx=(0, 8))
+    main_layout.addWidget(loaded_list, 1, 0)
+    main_layout.addWidget(displayed_list, 1, 2)
 
-    content_var = tk.StringVar()
-    content_combo = ttk.Combobox(
-        detail,
-        textvariable=content_var,
-        state="disabled",
-        values=[],
-        width=22,
-    )
-    content_combo.grid(row=0, column=1, sticky="w")
+    middle = QFrame(main)
+    middle_layout = QVBoxLayout(middle)
+    middle_layout.setContentsMargins(0, 18, 0, 10)
+    middle_layout.setSpacing(6)
+    middle_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-    comps = ttk.Frame(main)
-    comps.grid(row=6, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+    xfer_button = QPushButton(">", middle)
+    delete_button = QPushButton("x", middle)
+    up_button = QPushButton("^", middle)
+    down_button = QPushButton("v", middle)
 
-    ttk.Label(comps, text="Components:").grid(row=0, column=0, sticky="e", padx=(0, 8))
+    for button in (xfer_button, delete_button, up_button, down_button):
+        button.setFixedWidth(28)
+        button.setFixedHeight(28)
+        middle_layout.addWidget(button)
 
-    x_var = tk.BooleanVar(value=False)
-    y_var = tk.BooleanVar(value=False)
+    main_layout.addWidget(middle, 1, 1, alignment=Qt.AlignmentFlag.AlignTop)
 
-    x_check = ttk.Checkbutton(comps, text="X", variable=x_var)
-    y_check = ttk.Checkbutton(comps, text="Y", variable=y_var)
-    x_check.grid(row=0, column=1, sticky="w")
-    y_check.grid(row=0, column=2, sticky="w")
+    detail = QFrame(main)
+    detail_layout = QHBoxLayout(detail)
+    detail_layout.setContentsMargins(0, 4, 0, 0)
+    detail_layout.setSpacing(8)
+
+    detail_layout.addWidget(QLabel("Content:", detail))
+
+    content_combo = QComboBox(detail)
+    content_combo.setEnabled(False)
+    content_combo.setMinimumWidth(180)
+    detail_layout.addWidget(content_combo)
+    detail_layout.addStretch(1)
+
+    main_layout.addWidget(detail, 5, 0, 1, 3)
+
+    comps = QFrame(main)
+    comps_layout = QHBoxLayout(comps)
+    comps_layout.setContentsMargins(0, 10, 0, 0)
+    comps_layout.setSpacing(8)
+
+    comps_layout.addWidget(QLabel("Components:", comps))
+
+    x_check = QCheckBox("X", comps)
+    y_check = QCheckBox("Y", comps)
+    comps_layout.addWidget(x_check)
+    comps_layout.addWidget(y_check)
 
     if parent.state_model.dimensions >= 3:
-        z_var = tk.BooleanVar(value=False)
-        z_check = ttk.Checkbutton(comps, text="Z", variable=z_var)
-        z_check.grid(row=0, column=3, sticky="w")
+        z_check = QCheckBox("Z", comps)
+        comps_layout.addWidget(z_check)
     else:
-        z_var = None
         z_check = None
 
-    buttons = ttk.Frame(main)
-    buttons.grid(row=7, column=0, columnspan=3, pady=(16, 0))
+    comps_layout.addStretch(1)
+    main_layout.addWidget(comps, 6, 0, 1, 3)
 
-    ok_button = ttk.Button(buttons, text="OK")
-    cancel_button = ttk.Button(buttons, text="Cancel")
+    buttons = QFrame(main)
+    buttons_layout = QHBoxLayout(buttons)
+    buttons_layout.setContentsMargins(0, 16, 0, 0)
+    buttons_layout.setSpacing(12)
+    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-    ok_button.grid(row=0, column=0, padx=6)
-    cancel_button.grid(row=0, column=1, padx=6)
+    ok_button = QPushButton("OK", buttons)
+    cancel_button = QPushButton("Cancel", buttons)
+
+    buttons_layout.addWidget(ok_button)
+    buttons_layout.addWidget(cancel_button)
+
+    main_layout.addWidget(buttons, 7, 0, 1, 3)
 
     def selected_displayed_index() -> int | None:
-        indices = displayed_list.curselection()
-        if len(indices) != 1:
+        selected_items = displayed_list.selectedItems()
+        if len(selected_items) != 1:
             return None
-        return indices[0]
+        return displayed_list.row(selected_items[0])
 
-    def set_component_state(state: Literal["normal", "disabled"]) -> None:
-        x_check.configure(state=state)
-        y_check.configure(state=state)
-        if z_check:
-            z_check.configure(state=state)
+    def set_component_state(enabled: bool) -> None:
+        x_check.setEnabled(enabled)
+        y_check.setEnabled(enabled)
+        if z_check is not None:
+            z_check.setEnabled(enabled)
 
     def refresh_displayed_listbox() -> None:
-        displayed_var.set([str(spec) for spec in displayed_specs])
+        displayed_list.clear()
+        displayed_list.addItems([str(spec) for spec in displayed_specs])
 
     def refresh_button_states() -> None:
-        loaded_sel = loaded_list.curselection()
-        displayed_sel = displayed_list.curselection()
+        loaded_sel = loaded_list.selectedItems()
+        displayed_sel = displayed_list.selectedItems()
 
-        xfer_button.configure(state="normal" if loaded_sel else "disabled")
-        delete_button.configure(state="normal" if displayed_sel else "disabled")
+        xfer_button.setEnabled(bool(loaded_sel))
+        delete_button.setEnabled(bool(displayed_sel))
 
         if len(displayed_sel) == 1:
-            idx = displayed_sel[0]
-            up_button.configure(state="normal" if idx > 0 else "disabled")
-            down_button.configure(
-                state="normal" if idx < len(displayed_specs) - 1 else "disabled"
-            )
+            idx = displayed_list.row(displayed_sel[0])
+            up_button.setEnabled(idx > 0)
+            down_button.setEnabled(idx < len(displayed_specs) - 1)
         else:
-            up_button.configure(state="disabled")
-            down_button.configure(state="disabled")
+            up_button.setEnabled(False)
+            down_button.setEnabled(False)
 
     def refresh_detail_controls() -> None:
         idx = selected_displayed_index()
+
         if idx is None:
-            content_combo.configure(state="disabled", values=[])
-            content_var.set("")
-            x_var.set(False)
-            y_var.set(False)
-            if z_var:
-                z_var.set(False)
-            set_component_state("disabled")
+            content_combo.blockSignals(True)
+            content_combo.clear()
+            content_combo.setEnabled(False)
+            content_combo.blockSignals(False)
+
+            x_check.blockSignals(True)
+            y_check.blockSignals(True)
+            x_check.setChecked(False)
+            y_check.setChecked(False)
+            x_check.blockSignals(False)
+            y_check.blockSignals(False)
+
+            if z_check is not None:
+                z_check.blockSignals(True)
+                z_check.setChecked(False)
+                z_check.blockSignals(False)
+
+            set_component_state(False)
             return
 
         spec = displayed_specs[idx]
 
+        content_combo.blockSignals(True)
+        content_combo.clear()
+
         if isinstance(spec, ScalarTrajDisplay):
-            content_combo.configure(
-                state="readonly",
-                values=["SIGNAL", "SPECT", "RMS", "ZC", "VEL", "ABSVEL"],
-            )
-            content_var.set(spec.content)
-            x_var.set(False)
-            y_var.set(False)
-            if z_var:
-                z_var.set(False)
-            set_component_state("disabled")
+            content_combo.addItems(["SIGNAL", "SPECT", "RMS", "ZC", "VEL", "ABSVEL"])
+            content_combo.setCurrentText(spec.content)
+            content_combo.setEnabled(True)
+            content_combo.blockSignals(False)
+
+            x_check.blockSignals(True)
+            y_check.blockSignals(True)
+            x_check.setChecked(False)
+            y_check.setChecked(False)
+            x_check.blockSignals(False)
+            y_check.blockSignals(False)
+
+            if z_check is not None:
+                z_check.blockSignals(True)
+                z_check.setChecked(False)
+                z_check.blockSignals(False)
+
+            set_component_state(False)
 
         elif isinstance(spec, SpatialTrajDisplay):
-            content_combo.configure(
-                state="readonly",
-                values=["movement", "velocity", "acceleration"],
-            )
-            content_var.set(spec.content)
-            x_var.set("x" in spec.components)
-            y_var.set("y" in spec.components)
-            if z_var:
-                z_var.set("z" in spec.components)
-            set_component_state("normal")
+            content_combo.addItems(["movement", "velocity", "acceleration"])
+            content_combo.setCurrentText(spec.content)
+            content_combo.setEnabled(True)
+            content_combo.blockSignals(False)
+
+            x_check.blockSignals(True)
+            y_check.blockSignals(True)
+            x_check.setChecked("x" in spec.components)
+            y_check.setChecked("y" in spec.components)
+            x_check.blockSignals(False)
+            y_check.blockSignals(False)
+
+            if z_check is not None:
+                z_check.blockSignals(True)
+                z_check.setChecked("z" in spec.components)
+                z_check.blockSignals(False)
+
+            set_component_state(True)
 
         else:
+            content_combo.blockSignals(False)
             raise Exception(f"Unknown spec type: {spec}")
 
     def rewrite_selected_spec() -> None:
@@ -199,16 +254,16 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         if isinstance(old, ScalarTrajDisplay):
             displayed_specs[idx] = ScalarTrajDisplay(
                 traj_name=old.traj_name,
-                content=content_var.get(),
+                content=content_combo.currentText(),
             )
 
         elif isinstance(old, SpatialTrajDisplay):
             components = []
-            if x_var.get():
+            if x_check.isChecked():
                 components.append("x")
-            if y_var.get():
+            if y_check.isChecked():
                 components.append("y")
-            if z_var and z_var.get():
+            if z_check is not None and z_check.isChecked():
                 components.append("z")
 
             # Avoid invalid empty component list.
@@ -218,30 +273,34 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             displayed_specs[idx] = SpatialTrajDisplay(
                 traj_name=old.traj_name,
                 traj_dims=old.traj_dims,
-                content=content_var.get(),
+                content=content_combo.currentText(),
                 components=components,
             )
 
         refresh_displayed_listbox()
-        displayed_list.selection_set(idx)
-        displayed_list.activate(idx)
+        displayed_list.setCurrentRow(idx)
         refresh_detail_controls()
         refresh_button_states()
 
-    def on_loaded_select(_event=None) -> None:
-        displayed_list.selection_clear(0, tk.END)
+    def on_loaded_select() -> None:
+        displayed_list.clearSelection()
         refresh_detail_controls()
         refresh_button_states()
 
-    def on_displayed_select(_event=None) -> None:
-        loaded_list.selection_clear(0, tk.END)
+    def on_displayed_select() -> None:
+        loaded_list.clearSelection()
         refresh_detail_controls()
         refresh_button_states()
 
     def on_xfer() -> None:
-        for idx in loaded_list.curselection():
-            traj_name = loaded_list.get(idx)
+        selected_rows = sorted(
+            loaded_list.row(item) for item in loaded_list.selectedItems()
+        )
+
+        for idx in selected_rows:
+            traj_name = loaded_list.item(idx).text()
             traj = parent.state_model.selected_value.trajectories[traj_name]
+
             if traj.kind == "spatial":
                 displayed_specs.append(
                     SpatialTrajDisplay(
@@ -257,15 +316,17 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                 )
 
         refresh_displayed_listbox()
-        # No need to refresh_detail_controls because the selection is the same
         refresh_button_states()
 
     def on_delete() -> None:
-        indices = displayed_list.curselection()
+        indices = sorted(
+            (displayed_list.row(item) for item in displayed_list.selectedItems()),
+            reverse=True,
+        )
         if not indices:
             return
 
-        for idx in reversed(indices):
+        for idx in indices:
             del displayed_specs[idx]
 
         refresh_displayed_listbox()
@@ -287,55 +348,47 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         )
 
         refresh_displayed_listbox()
-        displayed_list.selection_clear(0, tk.END)
-        displayed_list.selection_set(new_idx)
-        displayed_list.activate(new_idx)
+        displayed_list.setCurrentRow(new_idx)
         refresh_detail_controls()
         refresh_button_states()
 
     def on_ok() -> None:
         parent.state_model.config.temporal_disp_specs = displayed_specs
         parent.root.temporal_view.reset_plot()
-        dialog.destroy()
+        dialog.accept()
 
     def on_cancel() -> None:
-        dialog.destroy()
+        dialog.reject()
 
-    loaded_list.bind("<<ListboxSelect>>", on_loaded_select)
-    displayed_list.bind("<<ListboxSelect>>", on_displayed_select)
+    loaded_list.itemSelectionChanged.connect(on_loaded_select)
+    displayed_list.itemSelectionChanged.connect(on_displayed_select)
 
-    xfer_button.configure(command=on_xfer)
-    delete_button.configure(command=on_delete)
-    up_button.configure(command=lambda: on_move(-1))
-    down_button.configure(command=lambda: on_move(1))
+    xfer_button.clicked.connect(on_xfer)
+    delete_button.clicked.connect(on_delete)
+    up_button.clicked.connect(lambda: on_move(-1))
+    down_button.clicked.connect(lambda: on_move(1))
 
-    content_combo.bind("<<ComboboxSelected>>", lambda _event: rewrite_selected_spec())
-    x_check.configure(command=rewrite_selected_spec)
-    y_check.configure(command=rewrite_selected_spec)
-    if z_check:
-        z_check.configure(command=rewrite_selected_spec)
+    content_combo.currentIndexChanged.connect(lambda _idx: rewrite_selected_spec())
+    x_check.toggled.connect(lambda _checked: rewrite_selected_spec())
+    y_check.toggled.connect(lambda _checked: rewrite_selected_spec())
+    if z_check is not None:
+        z_check.toggled.connect(lambda _checked: rewrite_selected_spec())
 
-    ok_button.configure(command=on_ok)
-    cancel_button.configure(command=on_cancel)
+    ok_button.clicked.connect(on_ok)
+    cancel_button.clicked.connect(on_cancel)
 
-    dialog.bind("<Return>", lambda _event: on_ok())
-    dialog.bind("<Escape>", lambda _event: on_cancel())
-    dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+    ok_button.setDefault(True)
+    ok_button.setAutoDefault(True)
+    cancel_button.setAutoDefault(False)
 
     refresh_detail_controls()
+    refresh_button_states()
 
-    dialog.update_idletasks()
-    x = (
-        parent.root.winfo_x()
-        + (parent.root.winfo_width() - dialog.winfo_reqwidth()) // 2
-    )
-    y = (
-        parent.root.winfo_y()
-        + (parent.root.winfo_height() - dialog.winfo_reqheight()) // 2
-    )
-    dialog.geometry(f"+{x}+{y}")
-    dialog.deiconify()
-    dialog.lift()
-    dialog.focus_set()
-    dialog.grab_set()
-    parent.wait_window(dialog)
+    dialog.resize(520, 420)
+
+    root_geometry = parent.root.frameGeometry()
+    dialog_geometry = dialog.frameGeometry()
+    dialog_geometry.moveCenter(root_geometry.center())
+    dialog.move(dialog_geometry.topLeft())
+
+    dialog.exec()

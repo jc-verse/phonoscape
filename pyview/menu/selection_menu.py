@@ -1,53 +1,53 @@
 from typing import TYPE_CHECKING
-import tkinter as tk
+
+from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
-from .utils import make_accelerator
+
 from ..state import PyViewState
 
 
-class SelectionMenu(tk.Menu):
+class SelectionMenu(QMenu):
     def __init__(self, parent: MenuBar, state_model: PyViewState):
-        super().__init__(parent, tearoff=False)
-        self.state_model = state_model
-        self.parent = parent
-        self.root = parent.parent
-        self.add_command(label="Set head to cursor", command=self._set_head_to_cursor)
-        self.add_command(label="Set tail to cursor", command=self._set_tail_to_cursor)
-        self.add_command(label="Shrink selection", command=self._shrink_selection)
-        self.add_command(label="Expand selection", command=self._expand_selection)
-        self.add_command(
-            label="Shift selection left",
-            command=self._shift_selection_left,
-            accelerator=make_accelerator(
-                "L", self.root, action=self._shift_selection_left
-            ),
-        )
-        self.add_command(
-            label="Shift selection right",
-            command=self._shift_selection_right,
-            accelerator=make_accelerator(
-                "R", self.root, action=self._shift_selection_right
-            ),
-        )
-        self.add_command(label="Reset selection", command=self._reset_selection)
+        super().__init__("Selection", parent)
 
-    def _set_head_to_cursor(self):
+        self.state_model = state_model
+        self.root = parent.root
+
+        self.addAction("Set head to cursor", self._set_head_to_cursor)
+        self.addAction("Set tail to cursor", self._set_tail_to_cursor)
+        self.addAction("Shrink selection", self._shrink_selection)
+        self.addAction("Expand selection", self._expand_selection)
+
+        shift_left_action = QAction("Shift selection left", self)
+        shift_left_action.setShortcut(QKeySequence("Ctrl+L"))
+        shift_left_action.triggered.connect(self._shift_selection_left)
+        self.addAction(shift_left_action)
+
+        shift_right_action = QAction("Shift selection right", self)
+        shift_right_action.setShortcut(QKeySequence("Ctrl+R"))
+        shift_right_action.triggered.connect(self._shift_selection_right)
+        self.addAction(shift_right_action)
+
+        self.addAction("Reset selection", self._reset_selection)
+
+    def _set_head_to_cursor(self) -> None:
         self.state_model.head_s = min(
             self.state_model.cursor_s,
             self.state_model.tail_s - self.state_model.min_sel_dur_s,
         )
         self.root.temporal_view.update_plot(frame=True)
 
-    def _set_tail_to_cursor(self):
+    def _set_tail_to_cursor(self) -> None:
         self.state_model.tail_s = max(
             self.state_model.cursor_s,
             self.state_model.head_s + self.state_model.min_sel_dur_s,
         )
         self.root.temporal_view.update_plot(frame=True)
 
-    def _shrink_selection(self):
+    def _shrink_selection(self) -> None:
         nudge = 0.1 * (self.state_model.tail_s - self.state_model.head_s)
         new_head = self.state_model.head_s + nudge
         new_tail = self.state_model.tail_s - nudge
@@ -60,15 +60,16 @@ class SelectionMenu(tk.Menu):
             self.state_model.tail_s = mid + self.state_model.min_sel_dur_s / 2
         self.root.temporal_view.update_plot(frame=True)
 
-    def _expand_selection(self):
+    def _expand_selection(self) -> None:
         nudge = 0.1 * (self.state_model.tail_s - self.state_model.head_s)
         self.state_model.head_s = max(0, self.state_model.head_s - nudge)
         self.state_model.tail_s = min(
-            self.state_model.selected_value.duration_s, self.state_model.tail_s + nudge
+            self.state_model.selected_value.duration_s,
+            self.state_model.tail_s + nudge,
         )
         self.root.temporal_view.update_plot(frame=True)
 
-    def _shift_selection_left(self):
+    def _shift_selection_left(self) -> None:
         sel_len = self.state_model.tail_s - self.state_model.head_s
         new_head = max(0, self.state_model.head_s - sel_len)
         new_tail = new_head + sel_len
@@ -76,7 +77,7 @@ class SelectionMenu(tk.Menu):
         self.state_model.tail_s = new_tail
         self.root.temporal_view.update_plot(frame=True)
 
-    def _shift_selection_right(self):
+    def _shift_selection_right(self) -> None:
         sel_len = self.state_model.tail_s - self.state_model.head_s
         new_tail = min(
             self.state_model.selected_value.duration_s,
@@ -87,7 +88,7 @@ class SelectionMenu(tk.Menu):
         self.state_model.tail_s = new_tail
         self.root.temporal_view.update_plot(frame=True)
 
-    def _reset_selection(self):
+    def _reset_selection(self) -> None:
         self.state_model.head_s = 0.0
         self.state_model.tail_s = self.state_model.selected_value.duration_s
         self.root.temporal_view.update_plot(frame=True)

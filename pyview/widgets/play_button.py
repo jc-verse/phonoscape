@@ -1,6 +1,7 @@
-import tkinter as tk
-from tkinter import ttk
 import sounddevice as sd
+from PySide6.QtCore import QPoint, Qt
+from PySide6.QtWidgets import QFrame, QGridLayout, QMenu, QPushButton, QWidget
+from PySide6.QtGui import QAction, QActionGroup
 
 from ..state import PyViewState
 
@@ -48,32 +49,47 @@ def play(state_model: PyViewState) -> None:
     else:
         print(f"Unknown play mode: {mode}")
         return
+
     if play_data is not None and len(play_data) > 0:
         sd.play(play_data, samplerate=traj.sample_rate_hz)
 
 
-class PlayButton(ttk.Frame):
+class PlayButton(QFrame):
     def __init__(
         self,
-        parent: tk.Widget,
+        parent: QWidget,
         state_model: PyViewState,
     ):
         super().__init__(parent)
 
         self.state_model = state_model
 
-        self.menu = tk.Menu(self, tearoff=False)
+        layout = QGridLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.menu = QMenu(self)
+        self.action_group = QActionGroup(self)
+        self.action_group.setExclusive(True)
+
+        current_mode = self.state_model.play_mode.get()
+
         for mode in modes:
-            self.menu.add_radiobutton(
-                label=mode, variable=self.state_model.play_mode, value=mode
+            action = QAction(mode, self)
+            action.setCheckable(True)
+            action.setChecked(mode == current_mode)
+            action.triggered.connect(
+                lambda checked=False, mode=mode: self.state_model.play_mode.set(mode)
             )
+            self.action_group.addAction(action)
+            self.menu.addAction(action)
 
-        btn = ttk.Button(self, text="Play", command=lambda: play(self.state_model))
-        btn.grid(row=0, column=0, sticky="nsew")
-        btn.bind("<Button-3>", self._show_menu)
-        btn.bind("<Button-2>", self._show_menu)
-        btn.bind("<Control-Button-1>", self._show_menu)
-        self.columnconfigure(0, weight=1)
+        self.btn = QPushButton("Play", self)
+        self.btn.clicked.connect(lambda: play(self.state_model))
+        self.btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.btn.customContextMenuRequested.connect(self._show_menu)
 
-    def _show_menu(self, event: tk.Event) -> None:
-        self.menu.tk_popup(event.x_root, event.y_root)
+        layout.addWidget(self.btn, 0, 0)
+
+    def _show_menu(self, pos: QPoint) -> None:
+        self.menu.popup(self.btn.mapToGlobal(pos))

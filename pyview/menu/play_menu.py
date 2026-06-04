@@ -1,30 +1,43 @@
-import sys
 from typing import TYPE_CHECKING
 
-import tkinter as tk
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence
+from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
-from .utils import make_accelerator
+
 from ..state import PyViewState
 from ..widgets.play_button import play, modes
 
 
-class PlayMenu(tk.Menu):
+class PlayMenu(QMenu):
     def __init__(self, parent: MenuBar, state_model: PyViewState):
-        super().__init__(parent, tearoff=False)
+        super().__init__("Play", parent)
+
         self.state_model = state_model
         self.root = parent.parent
 
-        self.add_command(
-            label="Play",
-            command=self._play,
-            accelerator=make_accelerator("P", self.root, self._play),
-        )
-        self.add_separator()
+        play_action = QAction("Play", self)
+        play_action.setShortcut(QKeySequence("Ctrl+P"))
+        play_action.triggered.connect(self._play)
+        self.addAction(play_action)
+        self.addSeparator()
+
+        self.mode_action_group = QActionGroup(self)
+        self.mode_action_group.setExclusive(True)
+
+        current_mode = state_model.play_mode.get()
 
         for mode in modes:
-            self.add_radiobutton(label=mode, variable=state_model.play_mode, value=mode)
+            action = QAction(mode, self)
+            action.setCheckable(True)
+            action.setChecked(mode == current_mode)
+            action.triggered.connect(
+                lambda checked=False, mode=mode: state_model.play_mode.set(mode)
+            )
 
-    def _play(self):
+            self.mode_action_group.addAction(action)
+            self.addAction(action)
+
+    def _play(self) -> None:
         play(self.state_model)

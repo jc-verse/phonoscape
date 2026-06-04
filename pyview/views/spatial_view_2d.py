@@ -1,43 +1,46 @@
 from typing import cast, Any
 
 import numpy as np
-import tkinter as tk
-from tkinter import ttk
+from scipy.interpolate import splprep, splev
 
 import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.collections import PathCollection
-from matplotlib.text import Text
+from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
-from scipy.interpolate import splprep, splev
+from matplotlib.text import Text
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import PyViewState
 
 
-class SpatialView2D(ttk.Frame):
-    def __init__(self, parent: tk.Widget, state_model: PyViewState):
+class SpatialView2D(QWidget):
+    def __init__(self, parent: QWidget, state_model: PyViewState):
         super().__init__(parent)
 
         self.state_model = state_model
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
 
-        self.width = parent.winfo_width()
-        self.height = parent.winfo_height()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # At construction time, Qt widgets often still report very small sizes.
+        # Keep the old structure, but fall back to a reasonable initial figure size.
+        width = parent.width() if parent.width() > 1 else 600
+        height = parent.height() if parent.height() > 1 else 400
+
         self.figure = Figure(
             figsize=(
-                self.width / self.state_model.dpi,
-                self.height / self.state_model.dpi,
+                width / self.state_model.dpi,
+                height / self.state_model.dpi,
             ),
             dpi=state_model.dpi,
             frameon=True,
         )
         self.figure.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.grid(row=0, column=0, sticky="nsew")
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        layout.addWidget(self.canvas)
 
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
@@ -108,7 +111,8 @@ class SpatialView2D(ttk.Frame):
 
                 x, y = traj.data[pos, 0], traj.data[pos, 1]
                 positions_by_name[traj.name] = (x, y)
-                self.position_artists[traj.name].set_offsets(list(zip([x], [y])))
+
+                self.position_artists[traj.name].set_offsets([(x, y)])
                 self.text_artists[traj.name].set_position((x, y))
 
             if self.spline_artist is not None:

@@ -1,6 +1,16 @@
 from typing import TYPE_CHECKING, Literal
-import tkinter as tk
-from tkinter import ttk, messagebox
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QDialog,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+)
 
 if TYPE_CHECKING:
     from ..views.temporal_view import TemporalView
@@ -11,58 +21,74 @@ def open_label_dialog(
     cursor_s: float,
     action: Literal["create"] | tuple[Literal["edit"], int],
 ) -> None:
-    dialog = tk.Toplevel(parent)
-    dialog.withdraw()
-    dialog.title(
-        f"{action[0].capitalize() if isinstance(action, tuple) else action.capitalize()} label"
-    )
-    dialog.transient(parent.winfo_toplevel())
-    dialog.resizable(False, False)
+    title_action = action[0] if isinstance(action, tuple) else action
 
-    main = ttk.Frame(dialog, padding=12)
-    main.grid(row=0, column=0, sticky="nsew")
+    dialog = QDialog(parent)
+    dialog.setWindowTitle(f"{title_action.capitalize()} label")
+    dialog.setModal(True)
+    dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
-    name_var = tk.StringVar(value="")
-    offset_ms_var = tk.StringVar(value=f"{cursor_s * 1000.0:.1f}")
-    note_var = tk.StringVar(value="")
+    outer_layout = QVBoxLayout(dialog)
+    outer_layout.setContentsMargins(12, 12, 12, 12)
+    outer_layout.setSpacing(16)
 
-    ttk.Label(main, text="Name:", anchor="e").grid(
-        row=0, column=0, sticky="e", padx=(0, 5), pady=(0, 8)
-    )
-    ttk.Entry(main, textvariable=name_var, width=14).grid(
-        row=0, column=1, sticky="ew", pady=(0, 8)
-    )
+    main_layout = QGridLayout()
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setHorizontalSpacing(6)
+    main_layout.setVerticalSpacing(8)
 
-    ttk.Label(main, text="Offset (ms):", anchor="e").grid(
-        row=0, column=2, sticky="e", padx=(12, 5), pady=(0, 8)
-    )
-    ttk.Entry(main, textvariable=offset_ms_var, width=10).grid(
-        row=0, column=3, sticky="ew", pady=(0, 8)
-    )
+    name_entry = QLineEdit("", dialog)
+    offset_ms_entry = QLineEdit(f"{cursor_s * 1000.0:.1f}", dialog)
+    note_entry = QLineEdit("", dialog)
 
-    ttk.Label(main, text="Note:", anchor="e").grid(
-        row=1, column=0, sticky="e", padx=(0, 5), pady=(0, 16)
-    )
-    ttk.Entry(main, textvariable=note_var, width=30).grid(
-        row=1, column=1, columnspan=3, sticky="ew", pady=(0, 16)
-    )
+    name_entry.setFixedWidth(120)
+    offset_ms_entry.setFixedWidth(90)
+    note_entry.setFixedWidth(260)
 
-    buttons = ttk.Frame(main)
-    buttons.grid(row=2, column=0, columnspan=4)
+    main_layout.addWidget(
+        QLabel("Name:", dialog), 0, 0, alignment=Qt.AlignmentFlag.AlignRight
+    )
+    main_layout.addWidget(name_entry, 0, 1)
+
+    main_layout.addWidget(
+        QLabel("Offset (ms):", dialog), 0, 2, alignment=Qt.AlignmentFlag.AlignRight
+    )
+    main_layout.addWidget(offset_ms_entry, 0, 3)
+
+    main_layout.addWidget(
+        QLabel("Note:", dialog), 1, 0, alignment=Qt.AlignmentFlag.AlignRight
+    )
+    main_layout.addWidget(note_entry, 1, 1, 1, 3)
+
+    outer_layout.addLayout(main_layout)
+
+    buttons_layout = QHBoxLayout()
+    buttons_layout.setContentsMargins(0, 0, 0, 0)
+    buttons_layout.setSpacing(6)
+    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    ok_button = QPushButton("OK", dialog)
+    cancel_button = QPushButton("Cancel", dialog)
+
+    buttons_layout.addWidget(ok_button)
+    buttons_layout.addWidget(cancel_button)
+
+    outer_layout.addLayout(buttons_layout)
 
     def on_ok() -> None:
         try:
-            offset_ms = float(offset_ms_var.get())
+            offset_ms = float(offset_ms_entry.text())
         except ValueError:
-            messagebox.showerror(
-                "Invalid offset", "Offset must be a number.", parent=dialog
-            )
+            QMessageBox.critical(dialog, "Invalid offset", "Offset must be a number.")
             return
-        name = name_var.get().strip()
+
+        name = name_entry.text().strip()
         if not name:
-            messagebox.showerror("Invalid name", "Name cannot be empty.", parent=dialog)
+            QMessageBox.critical(dialog, "Invalid name", "Name cannot be empty.")
             return
-        note = note_var.get().strip()
+
+        note = note_entry.text().strip()
+
         if action == "create":
             new_label = parent.state_model.add_label(name, offset_ms / 1000.0, note)
             parent.update_plot(labels=[new_label])
@@ -71,30 +97,26 @@ def open_label_dialog(
                 action[1], name, offset_ms / 1000.0, note
             )
             parent.update_plot(labels=[new_label, old_label])
-        dialog.destroy()
+
+        dialog.accept()
 
     def on_cancel() -> None:
-        dialog.destroy()
+        dialog.reject()
 
-    ttk.Button(buttons, text="OK", command=on_ok).grid(row=0, column=0, padx=(0, 6))
-    ttk.Button(buttons, text="Cancel", command=on_cancel).grid(row=0, column=1)
+    ok_button.clicked.connect(on_ok)
+    cancel_button.clicked.connect(on_cancel)
 
-    dialog.bind("<Return>", lambda _event: on_ok())
-    dialog.bind("<Escape>", lambda _event: on_cancel())
-    dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+    ok_button.setDefault(True)
+    ok_button.setAutoDefault(True)
+    cancel_button.setAutoDefault(False)
 
-    dialog.update_idletasks()
-    x = (
-        parent.parent.winfo_x()
-        + (parent.parent.winfo_width() - dialog.winfo_reqwidth()) // 2
-    )
-    y = (
-        parent.parent.winfo_y()
-        + (parent.parent.winfo_height() - dialog.winfo_reqheight()) // 2
-    )
-    dialog.geometry(f"+{x}+{y}")
-    dialog.deiconify()
-    dialog.grab_set()
-    dialog.lift()
-    dialog.focus_set()
-    parent.wait_window(dialog)
+    dialog.adjustSize()
+    dialog.setFixedSize(dialog.sizeHint())
+
+    parent_window = parent.window()
+    root_geometry = parent_window.frameGeometry()
+    dialog_geometry = dialog.frameGeometry()
+    dialog_geometry.moveCenter(root_geometry.center())
+    dialog.move(dialog_geometry.topLeft())
+
+    dialog.exec()

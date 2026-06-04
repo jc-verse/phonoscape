@@ -1,70 +1,98 @@
 from typing import TYPE_CHECKING
-import tkinter as tk
-from tkinter import ttk, messagebox
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QDialog,
+    QFrame,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+)
 
 if TYPE_CHECKING:
     from ..menu.view_menu import ViewMenu
 
 
 def open_common_scaling_dialog(parent: ViewMenu) -> None:
-    dialog = tk.Toplevel(parent)
-    dialog.withdraw()
-    dialog.title("Set Common Scaling")
-    dialog.transient(parent)
-    dialog.resizable(False, False)
+    dialog = QDialog(parent.root)
+    dialog.setWindowTitle("Set common scaling")
+    dialog.setModal(True)
+    dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
+    dialog.setFixedSize(dialog.sizeHint())
 
-    main = ttk.Frame(dialog, padding=12)
-    main.grid(row=0, column=0, sticky="nsew")
+    outer_layout = QVBoxLayout(dialog)
+    outer_layout.setContentsMargins(12, 12, 12, 12)
+    outer_layout.setSpacing(16)
+
+    main = QFrame(dialog)
+    main_layout = QGridLayout(main)
+    main_layout.setContentsMargins(0, 0, 0, 0)
+    main_layout.setHorizontalSpacing(6)
+    main_layout.setVerticalSpacing(0)
 
     # TODO: Real state
     scaling = [0.0, 0.0, 0.0]
 
-    mvt_var = tk.StringVar(value=f"{scaling[0]:.2f}")
-    vel_var = tk.StringVar(value=f"{scaling[1]:.2f}")
-    acc_var = tk.StringVar(value=f"{scaling[2]:.2f}")
+    mvt_entry = QLineEdit(f"{scaling[0]:.2f}", main)
+    vel_entry = QLineEdit(f"{scaling[1]:.2f}", main)
+    acc_entry = QLineEdit(f"{scaling[2]:.2f}", main)
 
-    ttk.Label(main, text="Mvt").grid(row=0, column=0, sticky="e", padx=(0, 6))
-    ttk.Entry(main, textvariable=mvt_var, width=10).grid(
-        row=0, column=1, sticky="w", padx=(0, 12)
+    mvt_entry.setFixedWidth(80)
+    vel_entry.setFixedWidth(80)
+    acc_entry.setFixedWidth(80)
+
+    main_layout.addWidget(
+        QLabel("Mvt", main), 0, 0, alignment=Qt.AlignmentFlag.AlignRight
     )
-
-    ttk.Label(main, text="Vel").grid(row=0, column=2, sticky="e", padx=(0, 6))
-    ttk.Entry(main, textvariable=vel_var, width=10).grid(
-        row=0, column=3, sticky="w", padx=(0, 12)
+    main_layout.addWidget(mvt_entry, 0, 1)
+    main_layout.addWidget(
+        QLabel("Vel", main), 0, 2, alignment=Qt.AlignmentFlag.AlignRight
     )
+    main_layout.addWidget(vel_entry, 0, 3)
+    main_layout.addWidget(
+        QLabel("Acc", main), 0, 4, alignment=Qt.AlignmentFlag.AlignRight
+    )
+    main_layout.addWidget(acc_entry, 0, 5)
 
-    ttk.Label(main, text="Acc").grid(row=0, column=4, sticky="e", padx=(0, 6))
-    ttk.Entry(main, textvariable=acc_var, width=10).grid(row=0, column=5, sticky="w")
+    outer_layout.addWidget(main)
 
-    buttons = ttk.Frame(main)
-    buttons.grid(row=1, column=0, columnspan=6, pady=(16, 0))
+    buttons = QFrame(dialog)
+    buttons_layout = QHBoxLayout(buttons)
+    buttons_layout.setContentsMargins(0, 0, 0, 0)
+    buttons_layout.setSpacing(6)
+    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    ok_button = QPushButton("OK", buttons)
+    cancel_button = QPushButton("Cancel", buttons)
+
+    buttons_layout.addWidget(ok_button)
+    buttons_layout.addWidget(cancel_button)
+
+    outer_layout.addWidget(buttons)
 
     def on_ok() -> None:
         # TODO: Update state
-        dialog.destroy()
+        dialog.accept()
 
     def on_cancel() -> None:
-        dialog.destroy()
+        dialog.reject()
 
-    ttk.Button(buttons, text="OK", command=on_ok).grid(row=0, column=0, padx=(0, 6))
-    ttk.Button(buttons, text="Cancel", command=on_cancel).grid(row=0, column=1)
+    ok_button.clicked.connect(on_ok)
+    cancel_button.clicked.connect(on_cancel)
 
-    dialog.bind("<Return>", lambda _event: on_ok())
-    dialog.bind("<Escape>", lambda _event: on_cancel())
-    dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+    ok_button.setDefault(True)
+    ok_button.setAutoDefault(True)
+    cancel_button.setAutoDefault(False)
 
-    dialog.update_idletasks()
-    x = (
-        parent.root.winfo_x()
-        + (parent.root.winfo_width() - dialog.winfo_reqwidth()) // 2
-    )
-    y = (
-        parent.root.winfo_y()
-        + (parent.root.winfo_height() - dialog.winfo_reqheight()) // 2
-    )
-    dialog.geometry(f"+{x}+{y}")
-    dialog.deiconify()
-    dialog.grab_set()
-    dialog.lift()
-    dialog.focus_set()
-    parent.wait_window(dialog)
+    dialog.adjustSize()
+    dialog.setFixedSize(dialog.sizeHint())
+
+    root_geometry = parent.root.frameGeometry()
+    dialog_geometry = dialog.frameGeometry()
+    dialog_geometry.moveCenter(root_geometry.center())
+    dialog.move(dialog_geometry.topLeft())
+
+    dialog.exec()

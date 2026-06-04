@@ -1,14 +1,15 @@
 import sys
-import tkinter as tk
-from tkinter import ttk
 from pathlib import Path
 from typing import cast, Literal, Unpack
+
 import matplotlib.pyplot as plt
+from PySide6.QtWidgets import QApplication, QFrame, QLabel, QMainWindow, QWidget
+from PySide6.QtWidgets import QGridLayout, QVBoxLayout, QHBoxLayout
 
 from .data.parse import load_variables, normalize_args, PyViewArgs
 from .data.process import get_plotting_data
 from .menu.menu_bar import MenuBar
-from .state import PyViewState, ScalarTrajDisplay
+from .state import PyViewState, ScalarTrajDisplay, StringVar
 from .widgets.play_button import PlayButton, modes as play_modes
 from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
@@ -16,7 +17,7 @@ from .views.spatial_view_2d import SpatialView2D
 from .views.freq_domain_view import FreqDomainView
 
 
-class PyViewTk(tk.Tk):
+class PyViewQt(QMainWindow):
     def __init__(
         self,
         file: str | Path,
@@ -25,12 +26,6 @@ class PyViewTk(tk.Tk):
     ):
         super().__init__()
         plt.style.use("dark_background")
-        # Listbox still uses Control-click for toggling on mac. Swap it to Command-click
-        if sys.platform == "darwin" and (
-            ctrl_script := self.bind_class("Listbox", "<Control-Button-1>")
-        ):
-            self.bind_class("Listbox", "<Command-Button-1>", ctrl_script)
-            self.bind_class("Listbox", "<Control-Button-1>", "")
 
         path = Path(file)
         data, other_data, dimensions = load_variables(
@@ -71,6 +66,9 @@ class PyViewTk(tk.Tk):
 
         selected_variable = next(iter(data.keys()))
 
+        screen = QApplication.primaryScreen()
+        dpi = screen.logicalDotsPerInch() if screen is not None else 96.0
+
         self.state_model = PyViewState(
             file=path,
             variables_pattern=variables,
@@ -87,7 +85,7 @@ class PyViewTk(tk.Tk):
                 else None
             ),
             selected_variable=selected_variable,
-            dpi=self.winfo_fpixels("1i"),
+            dpi=dpi,
             dimensions=cast(Literal[2, 3], dimensions),
             spatial_bounds=(
                 (min_x, max_x, min_y, max_y, min_z, max_z)
@@ -98,67 +96,81 @@ class PyViewTk(tk.Tk):
             cursor_s=0.0,
             head_s=0.0,
             tail_s=data[selected_variable].duration_s,
-            play_mode=tk.StringVar(value=play_modes[0]),
+            play_mode=StringVar(value=play_modes[0]),
         )
 
-        self.title(f"PyView - {path.name}")
-        self.geometry("1440x1000")
+        self.setWindowTitle(f"PyView - {path.name}")
+        self.resize(1440, 1000)
 
         self._build_ui()
 
     def _build_ui(self) -> None:
-        self.rowconfigure(0, weight=0)
-        self.rowconfigure(1, weight=1)
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, weight=2)
+        central = QWidget(self)
+        self.setCentralWidget(central)
 
-        navbar = ttk.Frame(self)
-        navbar.grid(row=0, column=0, columnspan=2, sticky="ew", padx=8, pady=6)
-        navbar.columnconfigure(3, weight=1)
+        root_layout = QGridLayout(central)
+        root_layout.setContentsMargins(4, 0, 4, 4)
+        root_layout.setHorizontalSpacing(4)
+        root_layout.setVerticalSpacing(4)
+
+        root_layout.setRowStretch(0, 0)
+        root_layout.setRowStretch(1, 1)
+        root_layout.setColumnStretch(0, 1)
+        root_layout.setColumnStretch(1, 2)
+
+        navbar = QFrame(central)
+        navbar_layout = QHBoxLayout(navbar)
+        navbar_layout.setContentsMargins(8, 6, 8, 6)
+        navbar_layout.setSpacing(12)
+
+        root_layout.addWidget(navbar, 0, 0, 1, 2)
 
         if self.state_model.config.audio_traj is not None:
             play_button = PlayButton(navbar, self.state_model)
-            play_button.grid(row=0, column=0, sticky="w", padx=(0, 12))
+            navbar_layout.addWidget(play_button)
 
-        self.info_label = ttk.Label(
+        self.info_label = QLabel(
+            f"{self.state_model.selected_variable} "
+            f"({self.state_model.data[self.state_model.selected_variable].duration_s:.2f}s)",
             navbar,
-            text=f"{self.state_model.selected_variable} ({self.state_model.data[self.state_model.selected_variable].duration_s:.2f}s)",
         )
-        self.info_label.grid(row=0, column=1, sticky="w")
+        navbar_layout.addWidget(self.info_label)
+        navbar_layout.addStretch(1)
 
-        left = ttk.Frame(self)
-        left.grid(row=1, column=0, sticky="nsew", padx=(4, 2), pady=(0, 4))
-        left.rowconfigure(0, weight=1)
-        left.rowconfigure(1, weight=1)
-        left.columnconfigure(0, weight=1)
+        left = QFrame(central)
+        left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(4)
+
+        root_layout.addWidget(left, 1, 0)
 
         if self.state_model.dimensions == 3:
             self.spatial_view = SpatialView3D(left, state_model=self.state_model)
         else:
             self.spatial_view = SpatialView2D(left, state_model=self.state_model)
-        self.spatial_view.grid(row=0, column=0, sticky="nsew")
+        left_layout.addWidget(self.spatial_view, stretch=1)
 
         self.freq_domain_view = FreqDomainView(left, state_model=self.state_model)
-        self.freq_domain_view.grid(row=1, column=0, sticky="nsew")
+        left_layout.addWidget(self.freq_domain_view, stretch=1)
 
-        right = ttk.Frame(self)
-        right.grid(row=1, column=1, sticky="nsew", padx=(2, 4), pady=(0, 4))
-        right.rowconfigure(0, weight=1)
-        right.columnconfigure(0, weight=1)
+        right = QFrame(central)
+        right_layout = QVBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
+
+        root_layout.addWidget(right, 1, 1)
 
         self.temporal_view = TemporalView(
             right,
             state_model=self.state_model,
             on_cursor_change=self._on_cursor_change,
         )
-        self.temporal_view.grid(row=0, column=0, sticky="nsew")
+        right_layout.addWidget(self.temporal_view, stretch=1)
 
-        # Important: create menu bar after views, because it directly manipulates them
-        self.selected_variable_var = tk.StringVar(
-            value=self.state_model.selected_variable
-        )
+        # Important: create menu bar after views, because it directly manipulates them.
+        self.selected_variable_var = StringVar(value=self.state_model.selected_variable)
         self.menu_bar = MenuBar(self, self.state_model)
-        self.config(menu=self.menu_bar)
+        self.setMenuBar(self.menu_bar)
 
     def _on_cursor_change(self) -> None:
         self.spatial_view.update_plot(points=True)
@@ -167,5 +179,14 @@ class PyViewTk(tk.Tk):
 
 
 def pyview(file: str, variables: str = "*", **kwargs: Unpack[PyViewArgs]) -> None:
-    app = PyViewTk(file, variables, **kwargs)
-    app.mainloop()
+    app = QApplication.instance()
+    owns_app = app is None
+
+    if app is None:
+        app = QApplication(sys.argv)
+
+    window = PyViewQt(file, variables, **kwargs)
+    window.show()
+
+    if owns_app:
+        sys.exit(app.exec())

@@ -2,7 +2,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 import numpy as np
-import tkinter as tk
+from PySide6.QtCore import QObject, Signal
+
+
+class StringVar(QObject):
+    changed = Signal(str)
+
+    def __init__(self, value: str = ""):
+        super().__init__()
+        self._value = value
+
+    def get(self) -> str:
+        return self._value
+
+    def set(self, value: str) -> None:
+        if value == self._value:
+            return
+        self._value = value
+        self.changed.emit(value)
 
 
 @dataclass
@@ -99,7 +116,7 @@ class PyViewState:
     cursor_s: float
     head_s: float
     tail_s: float
-    play_mode: tk.StringVar
+    play_mode: StringVar
     # TODO: should this be configurable? Should this have a minimum of 1/sr?
     min_sel_dur_s: float = 0.025
 

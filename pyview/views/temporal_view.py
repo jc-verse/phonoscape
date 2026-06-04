@@ -1,16 +1,15 @@
 from typing import Callable, cast, Any, Literal
 
-import tkinter as tk
-from tkinter import ttk
-
 import numpy as np
+
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
-from matplotlib.image import AxesImage
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import (
     PyViewState,
@@ -29,37 +28,39 @@ ArtistType = (
 )
 
 
-class TemporalView(ttk.Frame):
+class TemporalView(QWidget):
     def __init__(
         self,
-        parent: tk.Widget,
+        parent: QWidget,
         state_model: PyViewState,
         *,
         on_cursor_change: Callable[[], None],
     ):
         super().__init__(parent)
 
-        self.parent = parent
         self._on_cursor_change = on_cursor_change
         self.dragging: (
             Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float]
         ) = None
         self.state_model = state_model
-        self.rowconfigure(0, weight=1)
-        self.columnconfigure(0, weight=1)
 
-        self.width = parent.winfo_width()
-        self.height = parent.winfo_height()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        width = parent.width() if parent.width() > 1 else 600
+        height = parent.height() if parent.height() > 1 else 400
+
         self.figure = Figure(
             figsize=(
-                self.width / self.state_model.dpi,
-                self.height / self.state_model.dpi,
+                width / self.state_model.dpi,
+                height / self.state_model.dpi,
             ),
             dpi=state_model.dpi,
         )
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.grid(row=0, column=0, sticky="nsew")
+
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        layout.addWidget(self.canvas)
 
         self.canvas.mpl_connect("button_press_event", self._on_press)
         self.canvas.mpl_connect("motion_notify_event", self._on_motion)
@@ -393,7 +394,7 @@ class TemporalView(ttk.Frame):
         if self._toolbar_is_active() or event.xdata is None:
             return
         if event.button == 3 and self._event_is_in_cursor_axes(event):
-            open_label_dialog(self, event.xdata, "create")
+            open_label_dialog(self, float(event.xdata), "create")
             return
         if event.button != 1:
             return
