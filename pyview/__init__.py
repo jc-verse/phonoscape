@@ -169,7 +169,7 @@ class PyViewQt(QMainWindow):
 
         # Important: create menu bar after views, because it directly manipulates them.
         self.selected_variable_var = StringVar(value=self.state_model.selected_variable)
-        self.menu_bar = MenuBar(self, self.state_model)
+        self.menu_bar = MenuBar(self)
         self.setMenuBar(self.menu_bar)
 
     def _on_cursor_change(self) -> None:

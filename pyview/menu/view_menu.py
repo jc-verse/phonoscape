@@ -6,17 +6,16 @@ from PySide6.QtWidgets import QMenu
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 
-from ..state import PyViewState
 from ..modals.common_scaling_modal import open_common_scaling_dialog
 from ..modals.temporal_config_modal import open_tempcfg_dialog
 from ..modals.spatial_view_modal import open_spatial_view_dialog, views
 
 
 class ViewMenu(QMenu):
-    def __init__(self, parent: MenuBar, state_model: PyViewState):
+    def __init__(self, parent: MenuBar):
         super().__init__("View", parent)
 
-        self.state_model = state_model
+        self.state_model = parent.state_model
         self.root = parent.root
 
         self.addAction("Temporal layout...", lambda: open_tempcfg_dialog(self))

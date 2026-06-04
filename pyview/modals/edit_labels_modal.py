@@ -94,7 +94,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
         n_selected = len(label_list.selectedItems())
         edit_button.setEnabled(n_selected == 1)
         delete_button.setEnabled(n_selected > 0)
-    
+
     def refresh_labels() -> None:
         label_list.clear()
         for label in parent.state_model.labels:

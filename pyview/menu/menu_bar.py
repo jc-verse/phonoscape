@@ -1,126 +1,33 @@
 from typing import TYPE_CHECKING
 
-from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QMenu, QMenuBar
+from PySide6.QtWidgets import QMenuBar
 
+from .file_menu import FileMenu
+from .data_menu import DataMenu
 from .play_menu import PlayMenu
 from .selection_menu import SelectionMenu
 from .view_menu import ViewMenu
+from .movement_menu import MovementMenu
 from .label_menu import LabelMenu
 
 if TYPE_CHECKING:
     from .. import PyViewQt
 
-from ..data.process import get_plotting_data
-from ..state import PyViewState, ScalarTrajDisplay
-
 
 class MenuBar(QMenuBar):
-    def __init__(self, parent: PyViewQt, state_model: PyViewState) -> None:
+    def __init__(self, parent: PyViewQt) -> None:
         super().__init__(parent)
 
         self.root = parent
-        self.state_model = state_model
+        self.state_model = parent.state_model
 
-        file_menu = QMenu("File", self)
-
-        variables_menu = QMenu("Variables", file_menu)
-        self.variable_action_group = QActionGroup(self)
-        self.variable_action_group.setExclusive(True)
-
-        current_variable = parent.selected_variable_var.get()
-
-        for name in self.state_model.variable_names:
-            action = QAction(name, self)
-            action.setCheckable(True)
-            action.setChecked(name == current_variable)
-            action.triggered.connect(
-                lambda checked=False, name=name: self._on_variable_change(name)
-            )
-
-            self.variable_action_group.addAction(action)
-            variables_menu.addAction(action)
-
-        file_menu.addMenu(variables_menu)
-        file_menu.addSeparator()
-
-        save_menu = QMenu("Save", file_menu)
-        save_menu.addAction(
-            "Save all but selection...",
-            self._todo("Save all but selection"),
-        )
-        save_menu.addAction(
-            "Save selection only...",
-            self._todo("Save selection only"),
-        )
-
-        file_menu.addMenu(save_menu)
-        file_menu.addAction("Export...", self._todo("Export"))
-        file_menu.addAction("Close window", self._todo("Close window"))
-        file_menu.addAction("Close all", self._todo("Close all"))
-        self.addMenu(file_menu)
-
-        data_menu = QMenu("Data", self)
-        data_menu.addAction("Report", self._todo("Report"))
-        data_menu.addAction("Track formants", self._todo("Track formants"))
-        data_menu.addAction("Spectral analysis...", self._todo("Spectral analysis"))
-        self.addMenu(data_menu)
-
-        self.addMenu(ViewMenu(self, self.state_model))
-        self.addMenu(SelectionMenu(self, self.state_model))
-        self.addMenu(PlayMenu(self, self.state_model))
-
-        movement_menu = QMenu("Movement", self)
-        movement_menu.addAction("Step forward", self._todo("Step forward"))
-        movement_menu.addAction("Step backward", self._todo("Step backward"))
-        movement_menu.addAction("Shift forward", self._todo("Shift forward"))
-        movement_menu.addAction("Shift backward", self._todo("Shift backward"))
-        movement_menu.addSeparator()
-        movement_menu.addAction("Reflective cycling", self._todo("Reflective cycling"))
-        movement_menu.addAction("Cycle forward", self._todo("Cycle forward"))
-        movement_menu.addAction("Cycle backward", self._todo("Cycle backward"))
-        movement_menu.addAction("Stop cycling", self._todo("Stop cycling"))
-        self.addMenu(movement_menu)
-        self.addMenu(LabelMenu(self, self.state_model))
-
-    def _on_variable_change(self, name: str) -> None:
-        self.root.selected_variable_var.set(name)
-        self.state_model.selected_variable = name
-
-        self.root.info_label.setText(
-            f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
-        )
-        self.state_model.cursor_s = 0.0
-        self.state_model.audio_spect = (
-            get_plotting_data(
-                self.state_model.data[name].trajectories[
-                    self.state_model.config.audio_traj
-                ],
-                ScalarTrajDisplay(
-                    traj_name=self.state_model.config.audio_traj,
-                    content="SPECT",
-                ),
-                self.state_model.dimensions,
-            )
-            if self.state_model.config.audio_traj is not None
-            else None
-        )
-        self.state_model.head_s = min(
-            self.state_model.head_s,
-            max(
-                0,
-                self.state_model.data[name].duration_s - self.state_model.min_sel_dur_s,
-            ),
-        )
-        self.state_model.tail_s = min(
-            self.state_model.tail_s,
-            self.state_model.data[name].duration_s,
-        )
-
-        self.root.temporal_view.update_plot(cursor=True, variable=True)
-        if self.state_model.audio_spect is not None:
-            self.root.freq_domain_view.update_plot()
-        self.root.spatial_view.update_plot(points=True)
+        self.addMenu(FileMenu(self))
+        self.addMenu(DataMenu(self))
+        self.addMenu(ViewMenu(self))
+        self.addMenu(SelectionMenu(self))
+        self.addMenu(PlayMenu(self))
+        self.addMenu(MovementMenu(self))
+        self.addMenu(LabelMenu(self))
 
     def _todo(self, action: str):
         return lambda: print(f"TODO: {action}")

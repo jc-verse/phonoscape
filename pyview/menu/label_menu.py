@@ -7,14 +7,13 @@ if TYPE_CHECKING:
     from .menu_bar import MenuBar
 from ..modals.label_modal import open_label_dialog
 from ..modals.edit_labels_modal import open_edit_labels_dialog
-from ..state import PyViewState
 
 
 class LabelMenu(QMenu):
-    def __init__(self, parent: MenuBar, state_model: PyViewState):
+    def __init__(self, parent: MenuBar):
         super().__init__("Label", parent)
 
-        self.state_model = state_model
+        self.state_model = parent.state_model
         self.root = parent.root
 
         self.addAction(

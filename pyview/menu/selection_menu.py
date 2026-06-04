@@ -6,14 +6,12 @@ from PySide6.QtWidgets import QMenu
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 
-from ..state import PyViewState
-
 
 class SelectionMenu(QMenu):
-    def __init__(self, parent: MenuBar, state_model: PyViewState):
+    def __init__(self, parent: MenuBar):
         super().__init__("Selection", parent)
 
-        self.state_model = state_model
+        self.state_model = parent.state_model
         self.root = parent.root
 
         self.addAction("Set head to cursor", self._set_head_to_cursor)

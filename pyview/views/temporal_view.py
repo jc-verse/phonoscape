@@ -472,7 +472,11 @@ class TemporalView(QWidget):
 
     def _on_release(self, event) -> None:
         self.dragging = None
-        if event.button == 3 and self._event_is_in_cursor_axes(event) and event.xdata is not None:
+        if (
+            event.button == 3
+            and self._event_is_in_cursor_axes(event)
+            and event.xdata is not None
+        ):
             open_label_dialog(self, ("create", float(event.xdata)))
 
     def _on_figure_leave(self, event) -> None:

@@ -36,7 +36,11 @@ def open_label_dialog(
 
     init_label = parent.state_model.labels[action[1]] if action[0] == "edit" else None
     init_name = init_label.name if init_label else ""
-    init_offset_s = init_label.offset_s if init_label else action[1] if action[0] == "create" else 0.0
+    init_offset_s = (
+        init_label.offset_s
+        if init_label
+        else action[1] if action[0] == "create" else 0.0
+    )
     init_note = init_label.note if init_label else ""
     name_entry = QLineEdit(init_name, dialog)
     offset_ms_entry = QLineEdit(f"{init_offset_s * 1000.0:.1f}", dialog)
