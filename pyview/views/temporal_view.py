@@ -115,13 +115,15 @@ class TemporalView(QWidget):
         frame: bool = False,
         labels: list[Label] | None = None,
     ) -> None:
+        if variable:
+            cursor = True
+            trajectories = True
+            frame = True
+            labels = list(self.label_artists[0].keys())
+            self._refresh_plotting_data()
         if cursor:
             for line in self.cursor_artists:
                 line.set_xdata([self.state_model.cursor_s, self.state_model.cursor_s])
-        if variable:
-            trajectories = True
-            frame = True
-            self._refresh_plotting_data()
         if trajectories:
             for i, artist in enumerate(self.artists):
                 t, data = self.plotting_data[i]

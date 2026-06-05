@@ -16,18 +16,20 @@ class SelectionMenu(QMenu):
 
         self.addAction("Set head to cursor", self._set_head_to_cursor)
         self.addAction("Set tail to cursor", self._set_tail_to_cursor)
+        self.addAction("Set selection to label pair", self._set_sel_to_lbl_pair)
+        self.addAction("Reset selection", self._reset_selection)
+
+        self.addSeparator()
         self.addAction("Shrink selection", self._shrink_selection)
         self.addAction("Expand selection", self._expand_selection)
 
+        self.addSeparator()
         self.addAction("Shift selection left", self._shift_selection_left).setShortcut(
             QKeySequence("Ctrl+L")
         )
-
         self.addAction(
             "Shift selection right", self._shift_selection_right
         ).setShortcut(QKeySequence("Ctrl+R"))
-
-        self.addAction("Reset selection", self._reset_selection)
 
     def _set_head_to_cursor(self) -> None:
         self.state_model.head_s = min(
@@ -83,6 +85,17 @@ class SelectionMenu(QMenu):
         self.state_model.head_s = new_head
         self.state_model.tail_s = new_tail
         self.root.temporal_view.update_plot(frame=True)
+
+    def _set_sel_to_lbl_pair(self) -> None:
+        labels = sorted(self.state_model.labels, key=lambda lbl: lbl.offset_s)
+        if len(labels) < 2:
+            return
+        for left, right in zip(labels, labels[1:]):
+            if left.offset_s <= self.state_model.cursor_s <= right.offset_s:
+                self.state_model.head_s = left.offset_s
+                self.state_model.tail_s = right.offset_s
+                self.root.temporal_view.update_plot(frame=True)
+                return
 
     def _reset_selection(self) -> None:
         self.state_model.head_s = 0.0

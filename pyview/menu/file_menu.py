@@ -85,8 +85,10 @@ class FileMenu(QMenu):
             self.state_model.tail_s,
             self.state_model.data[name].duration_s,
         )
+        # TODO: show a confirmation dialog if there are unsaved labels?
+        self.state_model.labels = []
 
-        self.root.temporal_view.update_plot(cursor=True, variable=True)
+        self.root.temporal_view.update_plot(variable=True)
         if self.state_model.audio_spect is not None:
             self.root.freq_domain_view.update_plot()
         self.root.spatial_view.update_plot(points=True)

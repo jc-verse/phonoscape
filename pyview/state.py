@@ -101,6 +101,7 @@ class PyViewState:
     variables_pattern: str
     data: dict[str, DatasetVariable]
     other_data: dict[str, Any]
+    custom: dict[str, tuple[str, Any]]
     labels: list[Label]
     # Precomputed because it's also used for the spectrogram cross-section.
     # Avoids two FFTs, one for each view.

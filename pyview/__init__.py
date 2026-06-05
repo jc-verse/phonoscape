@@ -74,6 +74,7 @@ class PyViewQt(QMainWindow):
             variables_pattern=variables,
             data=data,
             other_data=other_data,
+            custom={},
             labels=[],
             audio_spect=(
                 get_plotting_data(
