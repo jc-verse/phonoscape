@@ -12,7 +12,7 @@ from matplotlib.text import Text
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 if TYPE_CHECKING:
-    from .. import PyViewQt
+    from .. import PyViewWindow
 
 from ..state import (
     PyViewState,
@@ -35,7 +35,7 @@ class TemporalView(QWidget):
     def __init__(
         self,
         parent: QWidget,
-        root: PyViewQt,
+        root: PyViewWindow,
     ):
         super().__init__(parent)
 
@@ -112,20 +112,14 @@ class TemporalView(QWidget):
         self,
         cursor: bool = False,
         trajectories: bool = False,
-        variable: bool = False,
         frame: bool = False,
         labels: list[Label] | None = None,
     ) -> None:
-        if variable:
-            cursor = True
-            trajectories = True
-            frame = True
-            labels = list(self.label_artists[0].keys())
-            self._refresh_plotting_data()
         if cursor:
             for line in self.cursor_artists:
                 line.set_xdata([self.state_model.cursor_s, self.state_model.cursor_s])
         if trajectories:
+            self._refresh_plotting_data()
             for i, artist in enumerate(self.artists):
                 t, data = self.plotting_data[i]
                 if artist[0] == "image":
@@ -404,18 +398,14 @@ class TemporalView(QWidget):
             loc = float(event.xdata)
             dist_to_head = abs(loc - self.state_model.head_s)
             dist_to_tail = abs(loc - self.state_model.tail_s)
-            thres_dist = (
-                self.state_model.min_sel_dur_s
-                * self.state_model.selected_value.duration_s
-            )
+            # Allow a 5% hitbox around each edge
+            thres_dist = 0.025 * self.state_model.selected_value.duration_s
             if dist_to_head < dist_to_tail and dist_to_head < thres_dist:
                 self.dragging = "head"
-                self.state_model.head_s = loc
-                self.update_plot(frame=True)
+                self.root.set_head(loc)
             elif dist_to_tail < dist_to_head and dist_to_tail < thres_dist:
                 self.dragging = "tail"
-                self.state_model.tail_s = loc
-                self.update_plot(frame=True)
+                self.root.set_tail(loc)
             elif self.state_model.head_s < loc < self.state_model.tail_s:
                 self.dragging = ("frame", loc)
 
@@ -430,42 +420,19 @@ class TemporalView(QWidget):
                 self.dragging = None
         elif self.dragging == "head":
             if self._event_is_in_frame_axes(event):
-                loc = min(
-                    float(event.xdata),
-                    self.state_model.tail_s - self.state_model.min_sel_dur_s,
-                )
-                self.state_model.head_s = loc
-                self.update_plot(frame=True)
+                self.root.set_head(float(event.xdata))
             else:
                 self.dragging = None
         elif self.dragging == "tail":
             if self._event_is_in_frame_axes(event):
-                loc = max(
-                    float(event.xdata),
-                    self.state_model.head_s + self.state_model.min_sel_dur_s,
-                )
-                self.state_model.tail_s = loc
-                self.update_plot(frame=True)
+                self.root.set_tail(float(event.xdata))
             else:
                 self.dragging = None
         else:
             old_loc = self.dragging[1]
             if self._event_is_in_frame_axes(event):
                 loc = float(event.xdata)
-                delta = loc - old_loc
-                if self.state_model.head_s + delta < 0:
-                    delta = -self.state_model.head_s
-                elif (
-                    self.state_model.tail_s + delta
-                    > self.state_model.selected_value.duration_s
-                ):
-                    delta = (
-                        self.state_model.selected_value.duration_s
-                        - self.state_model.tail_s
-                    )
-                self.state_model.head_s += delta
-                self.state_model.tail_s += delta
-                self.update_plot(frame=True)
+                self.root.move_selection(loc - old_loc)
                 self.dragging = ("frame", loc)
             else:
                 self.dragging = None

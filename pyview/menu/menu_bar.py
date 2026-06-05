@@ -4,18 +4,18 @@ from PySide6.QtWidgets import QMenuBar
 
 from .file_menu import FileMenu
 from .data_menu import DataMenu
+from .view_menu import ViewMenu
 from .play_menu import PlayMenu
 from .selection_menu import SelectionMenu
-from .view_menu import ViewMenu
 from .movement_menu import MovementMenu
 from .label_menu import LabelMenu
 
 if TYPE_CHECKING:
-    from .. import PyViewQt
+    from .. import PyViewWindow
 
 
 class MenuBar(QMenuBar):
-    def __init__(self, parent: PyViewQt) -> None:
+    def __init__(self, parent: PyViewWindow) -> None:
         super().__init__(parent)
 
         self.root = parent
@@ -24,8 +24,8 @@ class MenuBar(QMenuBar):
         self.addMenu(FileMenu(self))
         self.addMenu(DataMenu(self))
         self.addMenu(ViewMenu(self))
-        self.addMenu(SelectionMenu(self))
         self.addMenu(PlayMenu(self))
+        self.addMenu(SelectionMenu(self))
         self.addMenu(MovementMenu(self))
         self.addMenu(LabelMenu(self))
 

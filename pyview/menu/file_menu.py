@@ -59,7 +59,7 @@ class FileMenu(QMenu):
         self.root.info_label.setText(
             f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
         )
-        self.state_model.cursor_s = 0.0
+        self.root.set_cursor(0.0)
         self.state_model.audio_spect = (
             get_plotting_data(
                 self.state_model.data[name].trajectories[
@@ -74,21 +74,17 @@ class FileMenu(QMenu):
             if self.state_model.config.audio_traj is not None
             else None
         )
-        self.state_model.head_s = min(
+        new_tail = min(self.state_model.tail_s, self.state_model.data[name].duration_s)
+        new_head = min(
             self.state_model.head_s,
-            max(
-                0,
-                self.state_model.data[name].duration_s - self.state_model.min_sel_dur_s,
-            ),
+            max(0, new_tail - self.state_model.min_sel_dur_s),
         )
-        self.state_model.tail_s = min(
-            self.state_model.tail_s,
-            self.state_model.data[name].duration_s,
-        )
+        self.root.set_selection(new_head, new_tail)
         # TODO: show a confirmation dialog if there are unsaved labels?
+        old_labels = self.state_model.labels
         self.state_model.labels = []
 
-        self.root.temporal_view.update_plot(variable=True)
+        self.root.temporal_view.update_plot(trajectories=True, labels=old_labels)
         if self.state_model.audio_spect is not None:
             self.root.freq_domain_view.update_plot()
         self.root.spatial_view.update_plot(points=True)

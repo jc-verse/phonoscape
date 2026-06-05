@@ -93,18 +93,8 @@ class MovementMenu(QMenu):
         else:
             cursor_rel = 0.0
 
-        if direction < 0:
-            new_head = max(0.0, old_head - width)
-            new_tail = new_head + width
-        else:
-            new_tail = min(self.state_model.selected_value.duration_s, old_tail + width)
-            new_head = new_tail - width
-
-        self.state_model.head_s = new_head
-        self.state_model.tail_s = new_tail
-
-        self.root.set_cursor(new_head + cursor_rel)
-        self.root.temporal_view.update_plot(frame=True)
+        self.root.move_selection(direction * width)
+        self.root.set_cursor(self.state_model.head_s + cursor_rel)
 
     def _set_cycling_mode(self, mode: CyclingMode) -> None:
         self._cycling_mode = mode

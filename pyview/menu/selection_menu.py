@@ -14,77 +14,49 @@ class SelectionMenu(QMenu):
         self.state_model = parent.state_model
         self.root = parent.root
 
-        self.addAction("Set head to cursor", self._set_head_to_cursor)
-        self.addAction("Set tail to cursor", self._set_tail_to_cursor)
+        self.addAction(
+            "Set head to cursor", lambda: self.root.set_head(self.state_model.cursor_s)
+        )
+        self.addAction(
+            "Set tail to cursor", lambda: self.root.set_tail(self.state_model.cursor_s)
+        )
         self.addAction("Set selection to label pair", self._set_sel_to_lbl_pair)
-        self.addAction("Reset selection", self._reset_selection)
+        self.addAction(
+            "Reset selection",
+            lambda: self.root.set_selection(
+                0.0, self.state_model.selected_value.duration_s
+            ),
+        )
 
         self.addSeparator()
         self.addAction("Shrink selection", self._shrink_selection)
         self.addAction("Expand selection", self._expand_selection)
 
         self.addSeparator()
-        self.addAction("Shift selection left", self._shift_selection_left).setShortcut(
-            QKeySequence("Ctrl+L")
-        )
         self.addAction(
-            "Shift selection right", self._shift_selection_right
+            "Shift selection left",
+            lambda: self.root.move_selection(
+                self.state_model.head_s - self.state_model.tail_s
+            ),
+        ).setShortcut(QKeySequence("Ctrl+L"))
+        self.addAction(
+            "Shift selection right",
+            lambda: self.root.move_selection(
+                self.state_model.tail_s - self.state_model.head_s
+            ),
         ).setShortcut(QKeySequence("Ctrl+R"))
-
-    def _set_head_to_cursor(self) -> None:
-        self.state_model.head_s = min(
-            self.state_model.cursor_s,
-            self.state_model.tail_s - self.state_model.min_sel_dur_s,
-        )
-        self.root.temporal_view.update_plot(frame=True)
-
-    def _set_tail_to_cursor(self) -> None:
-        self.state_model.tail_s = max(
-            self.state_model.cursor_s,
-            self.state_model.head_s + self.state_model.min_sel_dur_s,
-        )
-        self.root.temporal_view.update_plot(frame=True)
 
     def _shrink_selection(self) -> None:
         nudge = 0.1 * (self.state_model.tail_s - self.state_model.head_s)
-        new_head = self.state_model.head_s + nudge
-        new_tail = self.state_model.tail_s - nudge
-        if new_tail - new_head >= self.state_model.min_sel_dur_s:
-            self.state_model.head_s = new_head
-            self.state_model.tail_s = new_tail
-        else:
-            mid = (self.state_model.head_s + self.state_model.tail_s) / 2
-            self.state_model.head_s = mid - self.state_model.min_sel_dur_s / 2
-            self.state_model.tail_s = mid + self.state_model.min_sel_dur_s / 2
-        self.root.temporal_view.update_plot(frame=True)
+        self.root.set_selection(
+            self.state_model.head_s + nudge, self.state_model.tail_s - nudge
+        )
 
     def _expand_selection(self) -> None:
         nudge = 0.1 * (self.state_model.tail_s - self.state_model.head_s)
-        self.state_model.head_s = max(0, self.state_model.head_s - nudge)
-        self.state_model.tail_s = min(
-            self.state_model.selected_value.duration_s,
-            self.state_model.tail_s + nudge,
+        self.root.set_selection(
+            self.state_model.head_s - nudge, self.state_model.tail_s + nudge
         )
-        self.root.temporal_view.update_plot(frame=True)
-
-    def _shift_selection_left(self) -> None:
-        sel_len = self.state_model.tail_s - self.state_model.head_s
-        new_head = max(0, self.state_model.head_s - sel_len)
-        new_tail = new_head + sel_len
-        self.state_model.head_s = new_head
-        self.state_model.tail_s = new_tail
-        self.root.temporal_view.update_plot(frame=True)
-
-    def _shift_selection_right(self) -> None:
-        sel_len = self.state_model.tail_s - self.state_model.head_s
-        new_tail = min(
-            self.state_model.selected_value.duration_s,
-            self.state_model.tail_s + sel_len,
-        )
-        new_head = new_tail - sel_len
-        self.state_model.head_s = new_head
-        self.state_model.tail_s = new_tail
-        self.root.temporal_view.update_plot(frame=True)
 
     def _set_sel_to_lbl_pair(self) -> None:
         labels = sorted(self.state_model.labels, key=lambda lbl: lbl.offset_s)
@@ -92,12 +64,5 @@ class SelectionMenu(QMenu):
             return
         for left, right in zip(labels, labels[1:]):
             if left.offset_s <= self.state_model.cursor_s <= right.offset_s:
-                self.state_model.head_s = left.offset_s
-                self.state_model.tail_s = right.offset_s
-                self.root.temporal_view.update_plot(frame=True)
+                self.root.set_selection(left.offset_s, right.offset_s)
                 return
-
-    def _reset_selection(self) -> None:
-        self.state_model.head_s = 0.0
-        self.state_model.tail_s = self.state_model.selected_value.duration_s
-        self.root.temporal_view.update_plot(frame=True)
