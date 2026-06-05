@@ -69,6 +69,28 @@ class PyViewQt(QMainWindow):
         screen = QApplication.primaryScreen()
         dpi = screen.logicalDotsPerInch() if screen is not None else 96.0
 
+        head_s = (kwargs.get("head") or 0) / 1000
+        tail_s = (
+            kwargs.get("tail") or data[selected_variable].duration_s * 1000
+        ) / 1000
+        tail_s = min(tail_s, data[selected_variable].duration_s)
+        if head_s < 0:
+            raise ValueError(
+                f"--head must be a non-negative number of milliseconds, but got {head_s * 1000}"
+            )
+        if tail_s < 0:
+            raise ValueError(
+                f"--tail must be a non-negative number of milliseconds, but got {tail_s * 1000}"
+            )
+        if head_s >= tail_s:
+            raise ValueError(
+                f"--head must be less than --tail, but got head={head_s * 1000} and tail={tail_s * 1000}"
+            )
+        elif tail_s - head_s < 0.025:
+            raise ValueError(
+                f"The duration of the selection (tail - head) must be at least 25 milliseconds, but got head={head_s * 1000} and tail={tail_s * 1000} ({(tail_s - head_s) * 1000:.1f} ms)"
+            )
+
         self.state_model = PyViewState(
             file=path,
             variables_pattern=variables,
@@ -95,8 +117,8 @@ class PyViewQt(QMainWindow):
             ),
             config=config,
             cursor_s=0.0,
-            head_s=0.0,
-            tail_s=data[selected_variable].duration_s,
+            head_s=head_s,
+            tail_s=tail_s,
             play_mode=StringVar(value=play_modes[0]),
         )
 
@@ -161,11 +183,7 @@ class PyViewQt(QMainWindow):
 
         root_layout.addWidget(right, 1, 1)
 
-        self.temporal_view = TemporalView(
-            right,
-            state_model=self.state_model,
-            on_cursor_change=self._on_cursor_change,
-        )
+        self.temporal_view = TemporalView(right, self)
         right_layout.addWidget(self.temporal_view, stretch=1)
 
         # Important: create menu bar after views, because it directly manipulates them.
@@ -173,7 +191,9 @@ class PyViewQt(QMainWindow):
         self.menu_bar = MenuBar(self)
         self.setMenuBar(self.menu_bar)
 
-    def _on_cursor_change(self) -> None:
+    def set_cursor(self, cursor_s: float) -> None:
+        self.state_model.cursor_s = cursor_s
+        self.temporal_view.update_plot(cursor=True)
         self.spatial_view.update_plot(points=True)
         if self.state_model.config.audio_traj is not None:
             self.freq_domain_view.update_plot()

@@ -1,4 +1,4 @@
-from typing import Callable, cast, Any, Literal
+from typing import cast, Any, Literal, TYPE_CHECKING
 
 import numpy as np
 
@@ -10,6 +10,9 @@ from matplotlib.image import AxesImage
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
 from PySide6.QtWidgets import QWidget, QVBoxLayout
+
+if TYPE_CHECKING:
+    from .. import PyViewQt
 
 from ..state import (
     PyViewState,
@@ -32,17 +35,15 @@ class TemporalView(QWidget):
     def __init__(
         self,
         parent: QWidget,
-        state_model: PyViewState,
-        *,
-        on_cursor_change: Callable[[], None],
+        root: PyViewQt,
     ):
         super().__init__(parent)
 
-        self._on_cursor_change = on_cursor_change
+        self.root = root
         self.dragging: (
             Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float]
         ) = None
-        self.state_model = state_model
+        self.state_model = root.state_model
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -56,7 +57,7 @@ class TemporalView(QWidget):
                 width / self.state_model.dpi,
                 height / self.state_model.dpi,
             ),
-            dpi=state_model.dpi,
+            dpi=self.state_model.dpi,
         )
 
         self.canvas = FigureCanvasQTAgg(self.figure)
@@ -396,10 +397,9 @@ class TemporalView(QWidget):
         if self._toolbar_is_active() or event.xdata is None or event.button != 1:
             return
         if self._event_is_in_cursor_axes(event):
+            # TODO: labels need to be draggable too
             self.dragging = "cursor"
-            self.state_model.cursor_s = float(event.xdata)
-            self.update_plot(cursor=True)
-            self._on_cursor_change()
+            self.root.set_cursor(float(event.xdata))
         elif self._event_is_in_frame_axes(event):
             loc = float(event.xdata)
             dist_to_head = abs(loc - self.state_model.head_s)
@@ -424,9 +424,7 @@ class TemporalView(QWidget):
             return
         if self.dragging == "cursor":
             if self._event_is_in_cursor_axes(event):
-                self.state_model.cursor_s = float(event.xdata)
-                self.update_plot(cursor=True)
-                self._on_cursor_change()
+                self.root.set_cursor(float(event.xdata))
             else:
                 # Cancel drag if moved outside of axes
                 self.dragging = None

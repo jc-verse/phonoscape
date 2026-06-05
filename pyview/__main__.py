@@ -6,7 +6,7 @@ if __name__ == "__main__":
     # [ ] CONFIG
     # [ ] DPROC
     # [x] FTRAJ
-    # [ ] HEAD
+    # [x] HEAD
     # [ ] LABELS
     # [ ] LPROC
     # [x] IS3D
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # [ ] SEX
     # [x] SPLINE
     # [ ] SPREAD
-    # [ ] TAIL
+    # [x] TAIL
     # [ ] SPATEX
     # [ ] VIEW
     # [ ] NAME
@@ -67,6 +67,16 @@ if __name__ == "__main__":
         nargs="+",
         help="Number of dimensions for spatial trajectories, or list of column indices to use for each dimension (default: all dimensions, up to 3, are used for spatial view in x,y,z order).",
     )
+    parser.add_argument(
+        "--head",
+        type=float,
+        help="Start of selection (ms) for the temporal view (default: 0).",
+    )
+    parser.add_argument(
+        "--tail",
+        type=float,
+        help="End of selection (ms) for the temporal view (default: duration of the current trajectory).",
+    )
     args = parser.parse_args()
 
     pyview(
@@ -82,4 +92,6 @@ if __name__ == "__main__":
             if not args.comps
             else args.comps[0] if len(args.comps) == 1 else args.comps
         ),
+        head=args.head,
+        tail=args.tail,
     )

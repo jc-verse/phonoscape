@@ -24,6 +24,8 @@ class PyViewArgs(TypedDict, total=False):
     framing: str | None
     temporal_disp_trajs: list[str] | None
     comps: int | list[int] | None
+    head: float | None
+    tail: float | None
 
 
 def get_optional(arr: np.ndarray, name: str) -> np.ndarray | list[None]:
