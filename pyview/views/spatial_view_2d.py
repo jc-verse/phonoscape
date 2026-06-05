@@ -78,7 +78,7 @@ class SpatialView2D(QWidget):
             if traj.kind != "spatial":
                 continue
 
-            pos = int(self.state_model.cursor_s * traj.sample_rate_hz)
+            pos = round(self.state_model.cursor_s * traj.sample_rate_hz)
             pos = max(0, min(traj.n_samples - 1, pos))
 
             x, y = traj.data[pos, 0], traj.data[pos, 1]
@@ -106,7 +106,7 @@ class SpatialView2D(QWidget):
                 if traj.kind != "spatial":
                     continue
 
-                pos = int(self.state_model.cursor_s * traj.sample_rate_hz)
+                pos = round(self.state_model.cursor_s * traj.sample_rate_hz)
                 pos = max(0, min(traj.n_samples - 1, pos))
 
                 x, y = traj.data[pos, 0], traj.data[pos, 1]

@@ -21,9 +21,9 @@ def play(state_model: PyViewState) -> None:
         return
     traj = state_model.selected_value.trajectories[audio_traj]
     play_data = None
-    head_index = int(state_model.head_s * traj.sample_rate_hz)
-    cursor_index = int(state_model.cursor_s * traj.sample_rate_hz)
-    tail_index = int(state_model.tail_s * traj.sample_rate_hz)
+    head_index = round(state_model.head_s * traj.sample_rate_hz)
+    cursor_index = round(state_model.cursor_s * traj.sample_rate_hz)
+    tail_index = round(state_model.tail_s * traj.sample_rate_hz)
     mode = state_model.play_mode.get()
     if mode == "Selection":
         play_data = traj.data[head_index:tail_index]
@@ -42,7 +42,7 @@ def play(state_model: PyViewState) -> None:
             else traj.data[head_index:tail_index]
         )
     elif mode == "150ms @ cursor":
-        half_window = int(0.15 * traj.sample_rate_hz / 2)
+        half_window = round(0.15 * traj.sample_rate_hz / 2)
         start = max(head_index, cursor_index - half_window)
         end = min(tail_index, cursor_index + half_window)
         play_data = traj.data[start:end]

@@ -137,7 +137,6 @@ class MovementMenu(QMenu):
         tail = self.state_model.tail_s
         cursor = self.state_model.cursor_s
 
-
         step_s = (1000 // self.frame_rate) / 1000 * self.playback_speed
         new_cursor = cursor + step_s * self._cycling_direction
 

@@ -1,4 +1,5 @@
 from typing import cast
+from dataclasses import dataclass
 
 import numpy as np
 from scipy.signal import ShortTimeFFT, windows, filtfilt, lfilter
@@ -66,3 +67,41 @@ def get_plotting_data(traj: Trajectory, spec: TrajDisplay, dimensions: int):
         raise ValueError(
             f"Unexpected content type for temporal display: {spec.content}"
         )
+
+
+@dataclass
+class LocalMeasures:
+    zero_crossings: int
+    rms: float
+    rms_db: float
+    f0_hz: float
+    L1: float
+    skew: float
+    kurt: float
+    formants: list[tuple[float, float]]  # (frequency, bandwidth)
+
+
+def get_local_measures(traj: Trajectory, cursor_s: float, window_ms: float):
+    section_samples = round(traj.sample_rate_hz * window_ms / 1000)
+    center_sample = round(cursor_s * traj.sample_rate_hz)
+    start_sample = max(0, center_sample - section_samples // 2)
+    end_sample = min(traj.n_samples, center_sample + section_samples // 2)
+    section = traj.data[start_sample:end_sample]
+    zero_crossings = np.sum(np.abs(np.diff(section >= 0)))
+    rms = np.sqrt(np.mean(section**2))
+    rms_db = 20 * np.log10(rms + np.finfo(float).eps)
+    f0_hz = 0.0  # TODO: pitch detection
+    L1 = 0.0  # TODO: spectral center of gravity
+    skew = 0.0  # TODO: spectral skewness
+    kurt = 0.0  # TODO: spectral kurtosis
+    formants = []  # TODO: formant estimation
+    return LocalMeasures(
+        zero_crossings=zero_crossings,
+        rms=rms,
+        rms_db=rms_db,
+        f0_hz=f0_hz,
+        L1=L1,
+        skew=skew,
+        kurt=kurt,
+        formants=formants,
+    )
