@@ -21,9 +21,9 @@ class FileMenu(QMenu):
         self.variable_action_group = QActionGroup(self)
         self.variable_action_group.setExclusive(True)
 
-        current_variable = parent.root.selected_variable_var.get()
+        current_variable = self.state_model.selected_variable
 
-        for name in self.state_model.variable_names:
+        for name in self.state_model.data.keys():
             action = QAction(name, self)
             action.setCheckable(True)
             action.setChecked(name == current_variable)
@@ -53,7 +53,6 @@ class FileMenu(QMenu):
         self.addAction("Close all", parent._todo("Close all"))
 
     def _on_variable_change(self, name: str) -> None:
-        self.root.selected_variable_var.set(name)
         self.state_model.selected_variable = name
 
         self.root.info_label.setText(

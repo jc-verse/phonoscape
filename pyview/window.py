@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from .data.parse import load_variables, normalize_args, PyViewArgs
 from .data.process import get_plotting_data
 from .menu.menu_bar import MenuBar
-from .state import PyViewState, ScalarTrajDisplay, StringVar
+from .state import PyViewState, ScalarTrajDisplay
 from .widgets.play_button import PlayButton, modes as play_modes
 from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
@@ -75,9 +75,6 @@ class PyViewWindow(QMainWindow):
 
         selected_variable = next(iter(data.keys()))
 
-        screen = QApplication.primaryScreen()
-        dpi = screen.logicalDotsPerInch() if screen is not None else 96.0
-
         head_s = (kwargs.get("head") or 0) / 1000
         tail_s = (
             kwargs.get("tail") or data[selected_variable].duration_s * 1000
@@ -102,7 +99,6 @@ class PyViewWindow(QMainWindow):
 
         self.state_model = PyViewState(
             file=path,
-            variables_pattern=variables,
             data=data,
             other_data=other_data,
             custom={},
@@ -117,7 +113,6 @@ class PyViewWindow(QMainWindow):
                 else None
             ),
             selected_variable=selected_variable,
-            dpi=dpi,
             dimensions=cast(Literal[2, 3], dimensions),
             spatial_bounds=(
                 (min_x, max_x, min_y, max_y, min_z, max_z)
@@ -128,7 +123,7 @@ class PyViewWindow(QMainWindow):
             cursor_s=0.0,
             head_s=head_s,
             tail_s=tail_s,
-            play_mode=StringVar(value=play_modes[0]),
+            play_mode=play_modes[0],
         )
 
         self.setWindowTitle(f"PyView - {path.name}")
@@ -231,7 +226,6 @@ class PyViewWindow(QMainWindow):
         right_layout.addWidget(self.temporal_view, stretch=1)
 
         # Important: create menu bar after views, because it directly manipulates them.
-        self.selected_variable_var = StringVar(value=self.state_model.selected_variable)
         self.menu_bar = MenuBar(self)
         self.setMenuBar(self.menu_bar)
 

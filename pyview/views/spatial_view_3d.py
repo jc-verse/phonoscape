@@ -25,15 +25,9 @@ class SpatialView3D(QWidget):
 
         width = parent.width() if parent.width() > 1 else 600
         height = parent.height() if parent.height() > 1 else 400
+        dpi = self.screen().logicalDotsPerInch()
 
-        self.figure = Figure(
-            figsize=(
-                width / self.state_model.dpi,
-                height / self.state_model.dpi,
-            ),
-            dpi=state_model.dpi,
-            frameon=True,
-        )
+        self.figure = Figure(figsize=(width / dpi, height / dpi), dpi=dpi, frameon=True)
         self.figure.subplots_adjust(left=0, right=1, top=1, bottom=0)
 
         self.canvas = FigureCanvasQTAgg(self.figure)

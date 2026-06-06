@@ -51,14 +51,9 @@ class TemporalView(QWidget):
 
         width = parent.width() if parent.width() > 1 else 600
         height = parent.height() if parent.height() > 1 else 400
+        dpi = self.screen().logicalDotsPerInch()
 
-        self.figure = Figure(
-            figsize=(
-                width / self.state_model.dpi,
-                height / self.state_model.dpi,
-            ),
-            dpi=self.state_model.dpi,
-        )
+        self.figure = Figure(figsize=(width / dpi, height / dpi), dpi=dpi, frameon=True)
 
         self.canvas = FigureCanvasQTAgg(self.figure)
         layout.addWidget(self.canvas)
