@@ -172,7 +172,7 @@ class PyViewWindow(QMainWindow):
             box.setText(f"{value:.1f}")
             box.setFixedWidth(70)
             box.setAlignment(Qt.AlignmentFlag.AlignRight)
-            box.returnPressed.connect(callback)
+            box.returnPressed.connect(lambda: callback(float(box.text()) / 1000))
 
             label.setBuddy(box)
 

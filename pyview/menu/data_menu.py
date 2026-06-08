@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QMenu
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 from ..state import ScalarTrajDisplay
+from ..data.process import get_cog
 
 
 class DataMenu(QMenu):
@@ -24,8 +25,9 @@ class DataMenu(QMenu):
         )
         if traj := self.state_model.selected_value.audio_traj:
             idx = round(self.state_model.cursor_s * traj.sample_rate_hz)
+            cog = get_cog(traj, self.state_model.cursor_s)
             print(
-                f"Window {20:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {traj.l1[idx]:.2f}, skew = {traj.skew[idx]:.2f}, kurt = {traj.kurt[idx]:.2f}"
+                f"Window {20:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {cog.l1:.2f}, skew = {cog.skew:.2f}, kurt = {cog.kurt:.2f}"
             )
             print("Formants (BW):", end="")
             nf = len(traj.formants)
