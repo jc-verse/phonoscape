@@ -2,6 +2,7 @@ from typing import cast
 
 import librosa
 import numpy as np
+from numpy.typing import NDArray
 from scipy.signal import ShortTimeFFT, windows, filtfilt, lfilter
 from scipy.ndimage import gaussian_filter1d
 
@@ -20,14 +21,14 @@ def get_spect(traj: Trajectory):
     )
     S = stft.spectrogram(traj.data)
     S_db = 20 * np.log10(S + np.finfo(float).eps)
-    extent = [0, traj.n_samples / traj.sample_rate_hz, 0, traj.sample_rate_hz / 2]
+    extent: list[float] = [0, traj.n_samples / traj.sample_rate_hz, 0, traj.sample_rate_hz / 2]
     return extent, S_db
 
 
 def get_rms(traj: Trajectory):
     window = round(20 * traj.sample_rate_hz / 1000)  # 20 msec filter window
     b = np.ones(window) / window  # rectwin(window) ./ window
-    rms: np.ndarray = np.sqrt(np.abs(filtfilt(b, [1], traj.data**2)))
+    rms: NDArray[np.float64] = np.sqrt(np.abs(filtfilt(b, [1], traj.data**2)))
     return rms
 
 
@@ -36,15 +37,15 @@ def get_zc(traj: Trajectory):
     wl2 = int(np.ceil(wl / 2))
     s = np.concatenate([np.zeros(wl2), traj.data, np.zeros(wl2)])
     zc = cast(
-        np.ndarray,
+        NDArray[np.float64],
         lfilter(np.ones(wl), [1], np.concatenate([[0], np.abs(np.diff(s >= 0))])),
     )
-    zc: np.ndarray = zc[wl2 * 2 :]
+    zc = zc[wl2 * 2 :]
     return zc
 
 
-def _fill_and_smooth_f0(raw_hz: np.ndarray, smooth_sigma: float = 1.5) -> np.ndarray:
-    f0 = raw_hz.astype(np.float64, copy=True)
+def _fill_and_smooth_f0(f0: NDArray[np.float64], smooth_sigma: float = 1.5) -> NDArray[np.float64]:
+    f0 = f0.copy()
     f0[f0 == 0] = np.nan
 
     good = np.isfinite(f0)
@@ -62,10 +63,10 @@ def _fill_and_smooth_f0(raw_hz: np.ndarray, smooth_sigma: float = 1.5) -> np.nda
 
 def get_f0(
     traj: Trajectory,
-    frame_ms: float = 40.0,
+    frame_ms: float = 35.0,
     hop_ms: float = 10.0,
-    fmin_hz: float = 50.0,
-    fmax_hz: float = 500.0,
+    fmin_hz: float = 60.0,
+    fmax_hz: float = 400.0,
     smooth_sigma: float = 1.5,
 ) -> F0Track:
     y = np.ravel(traj.data)
@@ -147,10 +148,10 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
         case "SIGNAL":
             return t, traj.data
         case "VEL":
-            vs: np.ndarray = np.gradient(traj.data) * traj.sample_rate_hz
+            vs: NDArray[np.float64] = np.gradient(traj.data) * traj.sample_rate_hz
             return t, vs
         case "ABSVEL":
-            vs: np.ndarray = np.abs(np.gradient(traj.data) * traj.sample_rate_hz)
+            vs: NDArray[np.float64] = np.abs(np.gradient(traj.data) * traj.sample_rate_hz)
             return t, vs
         case "RMS":
             return t, get_rms(traj)

@@ -1,7 +1,7 @@
 from pathlib import Path
 import re
 from fnmatch import fnmatch
-from typing import TypedDict, Literal, cast
+from typing import TypedDict, Literal, cast, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -41,7 +41,7 @@ def normalize_traj_name(name: str) -> str:
 
 def load_variables(
     file: str | Path, variables_pattern: str, comps: int | list[int] | None
-) -> tuple[dict[str, DatasetVariable], dict[str, np.ndarray], int]:
+) -> tuple[dict[str, DatasetVariable], dict[str, Any], int]:
     raw = loadmat(file, squeeze_me=True)
 
     raw = {k: v for k, v in raw.items() if not k.startswith("__")}
@@ -203,7 +203,7 @@ def parse_trajectory_display_spec(
 def normalize_args(
     args: PyViewArgs,
     data: dict[str, DatasetVariable],
-    other_data: dict[str, np.ndarray],
+    other_data: dict[str, Any],
     dimensions: int,
 ) -> PyViewConfig:
     first_variable = next(iter(data.values()))
@@ -218,6 +218,10 @@ def normalize_args(
     palate_trace = None
     if palate_variable is not None:
         palate_trace = other_data[palate_variable]
+        if not isinstance(palate_trace, np.ndarray):
+            raise ValueError(
+                f"Palate trace variable '{palate_variable}' found but is not a numpy array"
+            )
         if palate_trace.ndim != 2 or palate_trace.shape[1] < 2:
             raise ValueError(
                 f"Palate trace variable '{palate_variable}' must be a 2D array with at least 2 columns for spatial data, but has shape {palate_trace.shape}"

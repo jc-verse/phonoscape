@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 import numpy as np
+from numpy.typing import NDArray
 
 
 @dataclass
 class PyViewConfig:
-    palate_trace: np.ndarray | None
+    palate_trace: NDArray[np.float64] | None
     spline_trajs: list[str]
     audio_traj: str | None
     framing_traj: str
@@ -55,17 +56,17 @@ class Trajectory:
     sample_rate_hz: float
     n_samples: int
     color: str | tuple[float, float, float]
-    data: np.ndarray
-    angles: np.ndarray | None
+    data: NDArray[np.float64]
+    angles: NDArray[np.float64] | None
 
 
 @dataclass(frozen=True)
 class F0Track:
     sample_rate_hz: float
-    raw_hz: np.ndarray
-    interp_hz: np.ndarray
-    voiced_flag: np.ndarray
-    voiced_prob: np.ndarray
+    raw_hz: NDArray[np.float64]
+    interp_hz: NDArray[np.float64]
+    voiced_flag: NDArray[np.bool_]
+    voiced_prob: NDArray[np.float64]
 
 
 @dataclass
@@ -73,16 +74,16 @@ class Audio:
     name: str
     sample_rate_hz: float
     n_samples: int
-    signal: np.ndarray
-    spect: tuple[Any, np.ndarray]
-    rms: np.ndarray
-    rms_db: np.ndarray
-    zc: np.ndarray
+    signal: NDArray[np.float64]
+    spect: tuple[list[float], NDArray[np.float64]]
+    rms: NDArray[np.float64]
+    rms_db: NDArray[np.float64]
+    zc: NDArray[np.float64]
     f0: F0Track
-    l1: np.ndarray
-    skew: np.ndarray
-    kurt: np.ndarray
-    formants: list[tuple[np.ndarray, np.ndarray]]
+    l1: NDArray[np.float64]
+    skew: NDArray[np.float64]
+    kurt: NDArray[np.float64]
+    formants: list[tuple[NDArray[np.float64], NDArray[np.float64]]]
 
 
 @dataclass
