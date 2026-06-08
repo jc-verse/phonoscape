@@ -99,7 +99,7 @@ def open_label_dialog(
             parent.update_plot(labels=[new_label])
         else:
             new_label, old_label = parent.state_model.edit_label(
-                action[1], name, offset_ms / 1000.0, note
+                action[1], name=name, offset_s=offset_ms / 1000.0, note=note
             )
             parent.update_plot(labels=[new_label, old_label])
 

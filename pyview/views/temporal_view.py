@@ -33,7 +33,9 @@ class TemporalView(QWidget):
 
         self.root = root
         self.dragging: (
-            Literal["cursor", "head", "tail", None] | tuple[Literal["frame"], float]
+            Literal["cursor", "head", "tail", None]
+            | tuple[Literal["frame"], float]
+            | tuple[Literal["label"], int]
         ) = None
         self.state_model = root.state_model
 
@@ -372,7 +374,13 @@ class TemporalView(QWidget):
         if self._toolbar_is_active() or event.xdata is None or event.button != 1:
             return
         if self._event_is_in_cursor_axes(event):
-            # TODO: labels need to be draggable too
+            for i, label in enumerate(self.state_model.labels):
+                # Smaller hitbox for labels
+                if abs(event.xdata - label.offset_s) < 0.01 * (
+                    self.state_model.tail_s - self.state_model.head_s
+                ):
+                    self.dragging = ("label", i)
+                    return
             self.dragging = "cursor"
             self.root.set_cursor(float(event.xdata))
         elif self._event_is_in_frame_axes(event):
@@ -409,12 +417,22 @@ class TemporalView(QWidget):
                 self.root.set_tail(float(event.xdata))
             else:
                 self.dragging = None
-        else:
+        elif isinstance(self.dragging, tuple) and self.dragging[0] == "frame":
             old_loc = self.dragging[1]
             if self._event_is_in_frame_axes(event):
                 loc = float(event.xdata)
                 self.root.move_selection(loc - old_loc)
                 self.dragging = ("frame", loc)
+            else:
+                self.dragging = None
+        elif isinstance(self.dragging, tuple) and self.dragging[0] == "label":
+            label_idx = self.dragging[1]
+            if self._event_is_in_cursor_axes(event):
+                new_label, old_label = self.state_model.edit_label(
+                    label_idx, offset_s=float(event.xdata)
+                )
+                self.dragging = ("label", label_idx)
+                self.update_plot(labels=[new_label, old_label])
             else:
                 self.dragging = None
 

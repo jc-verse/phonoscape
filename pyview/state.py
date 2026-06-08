@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Unpack, TypedDict
 import numpy as np
 from numpy.typing import NDArray
 
@@ -102,6 +102,12 @@ class Label:
     note: str
 
 
+class LabelEdit(TypedDict, total=False):
+    name: str
+    offset_s: float
+    note: str
+
+
 @dataclass
 class PyViewState:
     file: Path
@@ -132,9 +138,11 @@ class PyViewState:
         self.labels.append(new_label)
         return new_label
 
-    def edit_label(self, label_idx: int, name: str, offset_s: float, note: str):
+    def edit_label(
+        self, label_idx: int, **kwargs: Unpack[LabelEdit]
+    ) -> tuple[Label, Label]:
         old_label = self.labels[label_idx]
-        new_label = Label(name=name, offset_s=offset_s, note=note)
+        new_label = Label(**{**vars(old_label), **kwargs})
         self.labels[label_idx] = new_label
         return new_label, old_label
 

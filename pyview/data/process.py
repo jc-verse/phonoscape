@@ -21,7 +21,12 @@ def get_spect(traj: Trajectory):
     )
     S = stft.spectrogram(traj.data)
     S_db = 20 * np.log10(S + np.finfo(float).eps)
-    extent: list[float] = [0, traj.n_samples / traj.sample_rate_hz, 0, traj.sample_rate_hz / 2]
+    extent: list[float] = [
+        0,
+        traj.n_samples / traj.sample_rate_hz,
+        0,
+        traj.sample_rate_hz / 2,
+    ]
     return extent, S_db
 
 
@@ -44,7 +49,9 @@ def get_zc(traj: Trajectory):
     return zc
 
 
-def _fill_and_smooth_f0(f0: NDArray[np.float64], smooth_sigma: float = 1.5) -> NDArray[np.float64]:
+def _fill_and_smooth_f0(
+    f0: NDArray[np.float64], smooth_sigma: float = 1.5
+) -> NDArray[np.float64]:
     f0 = f0.copy()
     f0[f0 == 0] = np.nan
 
@@ -151,7 +158,9 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
             vs: NDArray[np.float64] = np.gradient(traj.data) * traj.sample_rate_hz
             return t, vs
         case "ABSVEL":
-            vs: NDArray[np.float64] = np.abs(np.gradient(traj.data) * traj.sample_rate_hz)
+            vs: NDArray[np.float64] = np.abs(
+                np.gradient(traj.data) * traj.sample_rate_hz
+            )
             return t, vs
         case "RMS":
             return t, get_rms(traj)
