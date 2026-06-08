@@ -29,7 +29,7 @@ class PyViewArgs(TypedDict, total=False):
 
 
 def get_optional(arr: np.ndarray, name: str) -> np.ndarray | list[None]:
-    if name in arr.dtype.names:
+    if arr.dtype.names and name in arr.dtype.names:
         return arr[name]
     else:
         return [None] * len(arr)
@@ -78,7 +78,7 @@ def load_variables(
                     list(range(max(3, signal.shape[1]))) if signal.ndim == 2 else [0]
                 )
             if np.isscalar(nComps):
-                nComps = list(range(nComps))
+                nComps = list(range(int(nComps)))
             else:
                 nComps = list(nComps)
             if signal.ndim == 2:
@@ -123,6 +123,8 @@ def load_variables(
         )
         structured_data[k] = DatasetVariable(
             name=k,
+            # Added later because we only know the default audio traj *after* loading
+            audio_traj=None,
             duration_s=min(estimated_durations) if estimated_durations else 0.0,
             trajectories=trajectories,
         )

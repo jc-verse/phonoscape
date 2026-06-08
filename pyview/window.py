@@ -4,7 +4,6 @@ from typing import cast, Literal, Unpack
 import matplotlib.pyplot as plt
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QApplication,
     QFrame,
     QLabel,
     QMainWindow,
@@ -16,9 +15,9 @@ from PySide6.QtWidgets import (
 )
 
 from .data.parse import load_variables, normalize_args, PyViewArgs
-from .data.process import get_plotting_data
+from .data.process import analyze_audio
 from .menu.menu_bar import MenuBar
-from .state import PyViewState, ScalarTrajDisplay
+from .state import PyViewState
 from .widgets.play_button import PlayButton, modes as play_modes
 from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
@@ -45,6 +44,11 @@ class PyViewWindow(QMainWindow):
             raise ValueError(f"No matching variables found for pattern {variables!r}")
 
         config = normalize_args(kwargs, data, other_data, dimensions)
+
+        if config.audio_traj is not None:
+            for var in data.values():
+                if config.audio_traj in var.trajectories:
+                    var.audio_traj = analyze_audio(var.trajectories[config.audio_traj])
 
         min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
         max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
@@ -103,15 +107,6 @@ class PyViewWindow(QMainWindow):
             other_data=other_data,
             custom={},
             labels=[],
-            audio_spect=(
-                get_plotting_data(
-                    data[selected_variable].trajectories[config.audio_traj],
-                    ScalarTrajDisplay(traj_name=config.audio_traj, content="SPECT"),
-                    dimensions,
-                )
-                if config.audio_traj is not None
-                else None
-            ),
             selected_variable=selected_variable,
             dimensions=cast(Literal[2, 3], dimensions),
             spatial_bounds=(
@@ -251,7 +246,7 @@ class PyViewWindow(QMainWindow):
         self.state_model.tail_s = tail_s
         self.tail_box.setText(f"{tail_s * 1000:.1f}")
         self.temporal_view.update_plot(frame=True)
-    
+
     def set_selection(self, head_s: float, tail_s: float) -> None:
         width = tail_s - head_s
         if width < self.state_model.min_sel_dur_s:

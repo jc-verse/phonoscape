@@ -66,9 +66,16 @@ class Audio:
     name: str
     sample_rate_hz: float
     n_samples: int
-    color: str | tuple[float, float, float]
     signal: np.ndarray
     spect: tuple[Any, np.ndarray]
+    rms: np.ndarray
+    rms_db: np.ndarray
+    zc: np.ndarray
+    f0_hz: np.ndarray
+    l1: np.ndarray
+    skew: np.ndarray
+    kurt: np.ndarray
+    formants: list[tuple[np.ndarray, np.ndarray]]
 
 
 @dataclass
@@ -76,7 +83,7 @@ class DatasetVariable:
     name: str
     duration_s: float
     trajectories: dict[str, Trajectory]
-    # audio_traj: Audio | None
+    audio_traj: Audio | None
 
 
 @dataclass(frozen=True, eq=True)
@@ -94,7 +101,6 @@ class PyViewState:
     other_data: dict[str, Any]
     custom: dict[str, tuple[str, Any]]
     labels: list[Label]
-    audio_spect: tuple[Any, np.ndarray] | None
     selected_variable: str
     dimensions: Literal[2, 3]
     spatial_bounds: (

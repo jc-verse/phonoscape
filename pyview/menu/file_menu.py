@@ -6,9 +6,6 @@ from PySide6.QtWidgets import QMenu
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 
-from ..data.process import get_plotting_data
-from ..state import ScalarTrajDisplay
-
 
 class FileMenu(QMenu):
     def __init__(self, parent: MenuBar):
@@ -59,20 +56,6 @@ class FileMenu(QMenu):
             f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
         )
         self.root.set_cursor(0.0)
-        self.state_model.audio_spect = (
-            get_plotting_data(
-                self.state_model.data[name].trajectories[
-                    self.state_model.config.audio_traj
-                ],
-                ScalarTrajDisplay(
-                    traj_name=self.state_model.config.audio_traj,
-                    content="SPECT",
-                ),
-                self.state_model.dimensions,
-            )
-            if self.state_model.config.audio_traj is not None
-            else None
-        )
         new_tail = min(self.state_model.tail_s, self.state_model.data[name].duration_s)
         new_head = min(
             self.state_model.head_s,
@@ -84,6 +67,6 @@ class FileMenu(QMenu):
         self.state_model.labels = []
 
         self.root.temporal_view.update_plot(trajectories=True, labels=old_labels)
-        if self.state_model.audio_spect is not None:
+        if self.state_model.selected_value.audio_traj is not None:
             self.root.freq_domain_view.update_plot()
         self.root.spatial_view.update_plot(points=True)

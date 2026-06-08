@@ -29,7 +29,7 @@ class FreqDomainView(QWidget):
         self.canvas = FigureCanvasQTAgg(self.figure)
         layout.addWidget(self.canvas)
 
-        if self.state_model.audio_spect is None:
+        if self.state_model.selected_value.audio_traj is None:
             return
         f, spect = self._get_current_spect()
 
@@ -41,14 +41,14 @@ class FreqDomainView(QWidget):
         self.ax.set_xlabel("Hz")
         self.ax.set_ylabel("dB")
         self.ax.set_ylim(
-            self.state_model.audio_spect[1].min() - 5,
-            self.state_model.audio_spect[1].max() + 5,
+            self.state_model.selected_value.audio_traj.spect[1].min() - 5,
+            self.state_model.selected_value.audio_traj.spect[1].max() + 5,
         )
 
         self.canvas.draw_idle()
 
     def update_plot(self) -> None:
-        assert self.state_model.audio_spect is not None
+        assert self.state_model.selected_value.audio_traj is not None
         f, spect_db = self._get_current_spect()
 
         self.curve_artist.set_data(f, spect_db)
@@ -58,19 +58,16 @@ class FreqDomainView(QWidget):
         self.canvas.draw_idle()
 
     def _get_current_spect(self):
-        assert self.state_model.audio_spect is not None
-        assert self.state_model.config.audio_traj is not None
+        assert self.state_model.selected_value.audio_traj is not None
         # This must be in sync with data.process.get_plotting_data for SPECT.
         # TODO: refactor to avoid this duplication.
-        traj = self.state_model.data[self.state_model.selected_variable].trajectories[
-            self.state_model.config.audio_traj
-        ]
+        traj = self.state_model.selected_value.audio_traj
         window_ms = 25
         overlap = 0.75
         nperseg = round(traj.sample_rate_hz * window_ms / 1000)
         hop = max(1, round(nperseg * (1.0 - overlap)))
         delta_t = hop / traj.sample_rate_hz
-        extent, spect_db = self.state_model.audio_spect
+        extent, spect_db = traj.spect
         frame_idx = round(self.state_model.cursor_s / delta_t)
         frame_idx = max(0, min(frame_idx, spect_db.shape[1] - 1))
         f = np.linspace(extent[2], extent[3], spect_db.shape[0])

@@ -4,8 +4,7 @@ from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
-from ..data.process import get_local_measures
-from ..state import SpatialTrajDisplay, ScalarTrajDisplay
+from ..state import ScalarTrajDisplay
 
 
 class DataMenu(QMenu):
@@ -23,22 +22,16 @@ class DataMenu(QMenu):
         print(
             f"\n{self.state_model.selected_value.name}:  cursor @ {self.state_model.cursor_s * 1000:.1f} ms; selection is [{self.state_model.head_s * 1000:.1f} {self.state_model.tail_s * 1000:.1f}] ({self.state_model.tail_s * 1000 - self.state_model.head_s * 1000:.1f}) ms"
         )
-        if self.state_model.config.audio_traj:
-            traj = self.state_model.selected_value.trajectories[
-                self.state_model.config.audio_traj
-            ]
-            # TODO: configurable window size
-            audio_measures = get_local_measures(
-                traj, self.state_model.cursor_s, window_ms=20
-            )
+        if traj := self.state_model.selected_value.audio_traj:
+            idx = round(self.state_model.cursor_s * traj.sample_rate_hz)
             print(
-                f"Window {20:.1f} ms:  {audio_measures.zero_crossings} zero crossings, RMS = {audio_measures.rms:.2f} ({audio_measures.rms_db:.2f} dB), F0 = {audio_measures.f0_hz:.2f} Hz, L1 = {audio_measures.L1:.2f}, skew = {audio_measures.skew:.2f}, kurt = {audio_measures.kurt:.2f}"
+                f"Window {20:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0_hz[idx]:.2f} Hz, L1 = {traj.l1[idx]:.2f}, skew = {traj.skew[idx]:.2f}, kurt = {traj.kurt[idx]:.2f}"
             )
             print("Formants (BW):", end="")
-            nf = len(audio_measures.formants)
+            nf = len(traj.formants)
             for fi in range(nf):
-                formant, bw = audio_measures.formants[fi]
-                print(f"  F{fi + 1:d} = {formant:.0f} ({bw:.0f})", end="")
+                formant, bw = traj.formants[fi]
+                print(f"  F{fi + 1:d} = {formant[idx]:.0f} ({bw[idx]:.0f})", end="")
                 print()
         traj_measures: list[tuple[str, float]] = []
         for spec, (_, data) in zip(

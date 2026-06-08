@@ -1,6 +1,4 @@
-from typing import cast, Any, Literal, TYPE_CHECKING
-
-import numpy as np
+from typing import Literal, TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
@@ -14,13 +12,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 if TYPE_CHECKING:
     from .. import PyViewWindow
 
-from ..state import (
-    PyViewState,
-    TrajDisplay,
-    ScalarTrajDisplay,
-    SpatialTrajDisplay,
-    Label,
-)
+from ..state import TrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay, Label
 from ..data.process import get_plotting_data
 from ..modals.label_modal import open_label_dialog
 
@@ -359,15 +351,8 @@ class TemporalView(QWidget):
 
     def _refresh_plotting_data(self) -> None:
         self.plotting_data = [
-            (
-                get_plotting_data(
-                    self.state_model.selected_value.trajectories[spec.traj_name],
-                    spec,
-                    self.state_model.dimensions,
-                )
-                if spec.traj_name != self.state_model.config.audio_traj
-                or spec.content != "SPECT"
-                else cast(tuple[Any, np.ndarray], self.state_model.audio_spect)
+            get_plotting_data(
+                self.state_model.selected_value, spec, self.state_model.dimensions
             )
             for spec in self._get_temp_disp_specs()
         ]
