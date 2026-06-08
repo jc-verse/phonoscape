@@ -65,8 +65,6 @@ class F0Track:
     sample_rate_hz: float
     raw_hz: NDArray[np.float64]
     interp_hz: NDArray[np.float64]
-    voiced_flag: NDArray[np.bool_]
-    voiced_prob: NDArray[np.float64]
 
 
 @dataclass

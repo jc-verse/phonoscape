@@ -1,6 +1,7 @@
 from typing import cast
 
-import librosa
+from amfm_decompy import basic_tools
+from amfm_decompy import pYAAPT
 import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import ShortTimeFFT, windows, filtfilt, lfilter
@@ -49,9 +50,7 @@ def get_zc(traj: Trajectory):
     return zc
 
 
-def _fill_and_smooth_f0(
-    f0: NDArray[np.float64], smooth_sigma: float = 1.5
-) -> NDArray[np.float64]:
+def _interp_zeros(f0: NDArray[np.float64]) -> NDArray[np.float64]:
     f0 = f0.copy()
     f0[f0 == 0] = np.nan
 
@@ -61,10 +60,6 @@ def _fill_and_smooth_f0(
 
     x = np.arange(len(f0))
     f0[~good] = np.interp(x[~good], x[good], f0[good])
-
-    if len(f0) >= 3 and smooth_sigma > 0:
-        f0 = gaussian_filter1d(f0, sigma=smooth_sigma, mode="nearest")
-
     return f0
 
 
@@ -74,34 +69,29 @@ def get_f0(
     hop_ms: float = 10.0,
     fmin_hz: float = 60.0,
     fmax_hz: float = 400.0,
-    smooth_sigma: float = 1.5,
 ) -> F0Track:
-    y = np.ravel(traj.data)
+    signal = basic_tools.SignalObj(np.ravel(traj.data), traj.sample_rate_hz)
 
-    frame_length = max(3, round(frame_ms * traj.sample_rate_hz / 1000))
-    hop_length = max(1, round(hop_ms * traj.sample_rate_hz / 1000))
-
-    raw_hz, voiced_flag, voiced_prob = librosa.pyin(
-        y,
-        fmin=fmin_hz,
-        fmax=fmax_hz,
-        sr=traj.sample_rate_hz,
-        frame_length=frame_length,
-        hop_length=hop_length,
-        fill_na=0.0,
-        center=True,
+    pitch = pYAAPT.yaapt(
+        signal,
+        frame_length=frame_ms,
+        frame_lengtht=frame_ms,
+        frame_space=hop_ms,
+        f0_min=fmin_hz,
+        f0_max=fmax_hz,
     )
 
-    # Match MVIEW's dataproc logic: pitch-track SR is number of pitch frames / duration.
+    # pYAAPT's pitch.values is the final pitch track in Hz. In YAAPT convention,
+    # unvoiced frames are represented as 0.
+    raw_hz = np.asarray(pitch.values, dtype=np.float64)
+
     duration_s = traj.n_samples / traj.sample_rate_hz
     f0_sample_rate_hz = 0.0 if duration_s == 0 else len(raw_hz) / duration_s
 
     return F0Track(
         sample_rate_hz=f0_sample_rate_hz,
         raw_hz=raw_hz,
-        interp_hz=_fill_and_smooth_f0(raw_hz, smooth_sigma=smooth_sigma),
-        voiced_flag=voiced_flag.astype(bool),
-        voiced_prob=voiced_prob.astype(np.float64),
+        interp_hz=_interp_zeros(raw_hz),
     )
 
 
