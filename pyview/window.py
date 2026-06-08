@@ -45,11 +45,6 @@ class PyViewWindow(QMainWindow):
 
         config = normalize_args(kwargs, data, other_data, dimensions)
 
-        if config.audio_traj is not None:
-            for var in data.values():
-                if config.audio_traj in var.trajectories:
-                    var.audio_traj = analyze_audio(var.trajectories[config.audio_traj])
-
         min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
         max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
         for variable in data.values():
@@ -120,6 +115,12 @@ class PyViewWindow(QMainWindow):
             tail_s=tail_s,
             play_mode=play_modes[0],
         )
+        if self.state_model.config.audio_traj:
+            self.state_model.selected_value.audio_traj = analyze_audio(
+                self.state_model.selected_value.trajectories[
+                    self.state_model.config.audio_traj
+                ]
+            )
 
         self.setWindowTitle(f"PyView - {path.name}")
         self.resize(1440, 1000)
@@ -270,3 +271,35 @@ class PyViewWindow(QMainWindow):
         new_head = self.state_model.head_s + delta_s
         new_tail = self.state_model.tail_s + delta_s
         self.set_selection(new_head, new_tail)
+
+    def update_variable(self, name: str) -> None:
+        self.state_model.selected_variable = name
+        # Lazily analyze audio
+        if (
+            self.state_model.config.audio_traj is not None
+            and self.state_model.selected_value.audio_traj is None
+        ):
+            self.state_model.selected_value.audio_traj = analyze_audio(
+                self.state_model.selected_value.trajectories[
+                    self.state_model.config.audio_traj
+                ]
+            )
+
+        self.info_label.setText(
+            f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
+        )
+        self.set_cursor(0.0)
+        new_tail = min(self.state_model.tail_s, self.state_model.data[name].duration_s)
+        new_head = min(
+            self.state_model.head_s,
+            max(0, new_tail - self.state_model.min_sel_dur_s),
+        )
+        self.set_selection(new_head, new_tail)
+        # TODO: show a confirmation dialog if there are unsaved labels?
+        old_labels = self.state_model.labels
+        self.state_model.labels = []
+
+        self.temporal_view.update_plot(trajectories=True, labels=old_labels)
+        if self.state_model.selected_value.audio_traj is not None:
+            self.freq_domain_view.update_plot()
+        self.spatial_view.update_plot(points=True)

@@ -25,7 +25,7 @@ class DataMenu(QMenu):
         if traj := self.state_model.selected_value.audio_traj:
             idx = round(self.state_model.cursor_s * traj.sample_rate_hz)
             print(
-                f"Window {20:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0_hz[idx]:.2f} Hz, L1 = {traj.l1[idx]:.2f}, skew = {traj.skew[idx]:.2f}, kurt = {traj.kurt[idx]:.2f}"
+                f"Window {20:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {traj.l1[idx]:.2f}, skew = {traj.skew[idx]:.2f}, kurt = {traj.kurt[idx]:.2f}"
             )
             print("Formants (BW):", end="")
             nf = len(traj.formants)
@@ -43,7 +43,7 @@ class DataMenu(QMenu):
             traj = self.state_model.selected_value.trajectories[spec.traj_name]
             idx = round(self.state_model.cursor_s * traj.sample_rate_hz)
             if isinstance(spec, ScalarTrajDisplay):
-                if spec.content in {"SIGNAL", "RMS", "ZC", "VEL", "ABSVEL"}:
+                if spec.content in {"SIGNAL", "RMS", "ZC", "F0", "VEL", "ABSVEL"}:
                     traj_measures.append((str(spec), data[idx]))
                 elif spec.content == "SPECT":
                     continue

@@ -201,7 +201,9 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         content_combo.clear()
 
         if isinstance(spec, ScalarTrajDisplay):
-            content_combo.addItems(["SIGNAL", "SPECT", "RMS", "ZC", "VEL", "ABSVEL"])
+            content_combo.addItems(
+                ["SIGNAL", "SPECT", "RMS", "ZC", "F0", "VEL", "ABSVEL"]
+            )
             content_combo.setCurrentText(spec.content)
             content_combo.setEnabled(True)
             content_combo.blockSignals(False)

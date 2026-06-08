@@ -234,6 +234,7 @@ class TemporalView(QWidget):
             "VEL",
             "ABSVEL",
             "RMS",
+            "F0",
             "ZC",
         ):
             artist = ("scalar", ax.plot(t, data, linewidth=0.8, color=traj.color)[0])

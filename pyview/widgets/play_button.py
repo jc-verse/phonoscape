@@ -1,7 +1,5 @@
 import sounddevice as sd
-from PySide6.QtCore import QPoint, Qt
-from PySide6.QtWidgets import QFrame, QGridLayout, QMenu, QPushButton, QWidget
-from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtWidgets import QFrame, QGridLayout, QPushButton, QWidget
 
 from ..state import PyViewState
 

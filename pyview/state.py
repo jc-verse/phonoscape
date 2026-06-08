@@ -16,9 +16,7 @@ class PyViewConfig:
 @dataclass
 class ScalarTrajDisplay:
     traj_name: str
-    # TODO: should I implement "F0"?
-    # The mview version is buggy
-    content: Literal["SIGNAL", "SPECT", "RMS", "ZC", "VEL", "ABSVEL"]
+    content: Literal["SIGNAL", "SPECT", "RMS", "ZC", "F0", "VEL", "ABSVEL"]
 
     def __str__(self) -> str:
         if self.content == "SIGNAL":
@@ -61,6 +59,15 @@ class Trajectory:
     angles: np.ndarray | None
 
 
+@dataclass(frozen=True)
+class F0Track:
+    sample_rate_hz: float
+    raw_hz: np.ndarray
+    interp_hz: np.ndarray
+    voiced_flag: np.ndarray
+    voiced_prob: np.ndarray
+
+
 @dataclass
 class Audio:
     name: str
@@ -71,7 +78,7 @@ class Audio:
     rms: np.ndarray
     rms_db: np.ndarray
     zc: np.ndarray
-    f0_hz: np.ndarray
+    f0: F0Track
     l1: np.ndarray
     skew: np.ndarray
     kurt: np.ndarray

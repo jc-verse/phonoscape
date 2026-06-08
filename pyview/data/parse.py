@@ -148,7 +148,9 @@ def parse_trajectory_display_spec(
         ):
             return ScalarTrajDisplay(
                 traj_name=base_name,
-                content=cast(Literal["SPECT", "RMS", "ZC", "VEL", "ABSVEL"], content),
+                content=cast(
+                    Literal["SPECT", "RMS", "ZC", "F0", "VEL", "ABSVEL"], content
+                ),
             )
         else:
             raise ValueError(
