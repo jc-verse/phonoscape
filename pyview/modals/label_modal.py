@@ -67,19 +67,6 @@ def open_label_dialog(
 
     outer_layout.addLayout(main_layout)
 
-    buttons_layout = QHBoxLayout()
-    buttons_layout.setContentsMargins(0, 0, 0, 0)
-    buttons_layout.setSpacing(6)
-    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    ok_button = QPushButton("OK", dialog)
-    cancel_button = QPushButton("Cancel", dialog)
-
-    buttons_layout.addWidget(ok_button)
-    buttons_layout.addWidget(cancel_button)
-
-    outer_layout.addLayout(buttons_layout)
-
     def on_ok() -> None:
         try:
             offset_ms = float(offset_ms_entry.text())
@@ -107,13 +94,33 @@ def open_label_dialog(
 
     def on_cancel() -> None:
         dialog.reject()
+    
+    def on_delete() -> None:
+        if action[0] != "edit" or not init_label:
+            return
+        parent.state.delete_labels([action[1]])
+        parent.update_plot(labels=[init_label])
+        dialog.accept()
 
+    buttons_layout = QHBoxLayout()
+    buttons_layout.setContentsMargins(0, 0, 0, 0)
+    buttons_layout.setSpacing(6)
+    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    ok_button = QPushButton("OK", dialog, autoDefault=True, default=True)
     ok_button.clicked.connect(on_ok)
-    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(ok_button)
 
-    ok_button.setDefault(True)
-    ok_button.setAutoDefault(True)
-    cancel_button.setAutoDefault(False)
+    cancel_button = QPushButton("Cancel", dialog, autoDefault=False)
+    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(cancel_button)
+
+    if action[0] == "edit":
+        delete_button = QPushButton("Delete", dialog, autoDefault=False)
+        delete_button.clicked.connect(on_delete)
+        buttons_layout.addWidget(delete_button)
+
+    outer_layout.addLayout(buttons_layout)
 
     dialog.adjustSize()
     dialog.setFixedSize(dialog.sizeHint())

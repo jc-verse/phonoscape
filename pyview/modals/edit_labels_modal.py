@@ -4,15 +4,11 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPushButton,
-    QTextEdit,
     QVBoxLayout,
 )
 
@@ -45,18 +41,18 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
 
     label_header = QLabel("Label", dialog)
     offset_header = QLabel("Offset", dialog)
-    comments_header = QLabel("Comments", dialog)
+    note_header = QLabel("Note", dialog)
 
     label_header.setFixedWidth(120)
     offset_header.setFixedWidth(90)
 
     label_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
     offset_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    comments_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    note_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     header_layout.addWidget(label_header)
     header_layout.addWidget(offset_header)
-    header_layout.addWidget(comments_header, 1)
+    header_layout.addWidget(note_header, 1)
 
     outer_layout.addLayout(header_layout)
 
@@ -80,6 +76,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
     buttons_layout.setSpacing(6)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+    # TODO: reorder labels
     edit_button = QPushButton("Edit", dialog)
     delete_button = QPushButton("Delete", dialog)
     close_button = QPushButton("Close", dialog)
@@ -110,7 +107,6 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
         refresh_labels()
 
     def on_delete() -> None:
-        # UX only: no actual deletion.
         if not label_list.selectedItems():
             return
         selected = [index.row() for index in label_list.selectedIndexes()]
