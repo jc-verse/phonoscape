@@ -12,17 +12,17 @@ modes = (
 )
 
 
-def play(state_model: WindowState) -> None:
-    audio_traj = state_model.app_config.audio_traj
+def play(state: WindowState) -> None:
+    audio_traj = state.app_config.audio_traj
     if audio_traj is None:
         print("No audio trajectory configured.")
         return
-    traj = state_model.selected_value.trajectories[audio_traj]
+    traj = state.selected_value.trajectories[audio_traj]
     play_data = None
-    head_index = round(state_model.head_s * traj.sample_rate_hz)
-    cursor_index = round(state_model.cursor_s * traj.sample_rate_hz)
-    tail_index = round(state_model.tail_s * traj.sample_rate_hz)
-    match state_model.play_mode:
+    head_index = round(state.head_s * traj.sample_rate_hz)
+    cursor_index = round(state.cursor_s * traj.sample_rate_hz)
+    tail_index = round(state.tail_s * traj.sample_rate_hz)
+    match state.play_mode:
         case "Selection":
             play_data = traj.data[head_index:tail_index]
         case "Entire file":
@@ -56,17 +56,17 @@ class PlayButton(QFrame):
     def __init__(
         self,
         parent: QWidget,
-        state_model: WindowState,
+        state: WindowState,
     ):
         super().__init__(parent)
 
-        self.state_model = state_model
+        self.state = state
 
         layout = QGridLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
         self.btn = QPushButton("Play", self)
-        self.btn.clicked.connect(lambda: play(self.state_model))
+        self.btn.clicked.connect(lambda: play(self.state))
 
         layout.addWidget(self.btn, 0, 0)

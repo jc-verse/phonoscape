@@ -19,13 +19,13 @@ class LabelMenu(QMenu):
     def __init__(self, parent: MenuBar):
         super().__init__("Label", parent)
 
-        self.state_model = parent.state_model
+        self.state = parent.state
         self.root = parent.root
 
         self.addAction(
             "Make label...",
             lambda: open_label_dialog(
-                self.root.temporal_view, ("create", self.state_model.cursor_s)
+                self.root.temporal_view, ("create", self.state.cursor_s)
             ),
         )
         self.addAction("Edit labels...", lambda: open_edit_labels_dialog(self))
@@ -45,7 +45,7 @@ class LabelMenu(QMenu):
         self.addMenu(labeling_behavior_menu)
 
     def _clear_all_labels(self) -> None:
-        if not self.state_model.labels:
+        if not self.state.labels:
             return
         box = QMessageBox(self)
         box.setWindowTitle("Clear all labels")
@@ -61,8 +61,8 @@ class LabelMenu(QMenu):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        all_labels = [*self.state_model.labels]
-        self.state_model.labels.clear()
+        all_labels = [*self.state.labels]
+        self.state.labels.clear()
         self.root.temporal_view.update_plot(labels=all_labels)
 
     def _labels_to_mview_lab_text(self, labels: list[Label]) -> str:
@@ -74,14 +74,14 @@ class LabelMenu(QMenu):
         return "".join(lines)
 
     def _export_labels(self) -> None:
-        labels = self.state_model.labels
+        labels = self.state.labels
         if not labels:
             return
 
         file_name, _selected_filter = QFileDialog.getSaveFileName(
             self.root,
             "Save labels as",
-            f"{self.state_model.selected_value.name}.lab",
+            f"{self.state.selected_value.name}.lab",
             "Label files (*.lab);;All files (*)",
         )
         if not file_name:
@@ -132,7 +132,7 @@ class LabelMenu(QMenu):
 
                 # MVIEW import sets HOOK = [], i.e. it does not preserve NOTE.
                 imported_labels.append(
-                    self.state_model.add_label(name=name, offset_s=offset_s, note="")
+                    self.state.add_label(name=name, offset_s=offset_s, note="")
                 )
 
             if imported_labels:
@@ -145,7 +145,7 @@ class LabelMenu(QMenu):
             )
 
     def _save_labels(self) -> None:
-        labels = list(self.root.state_model.labels)
+        labels = list(self.root.state.labels)
 
         if not labels:
             QMessageBox.information(
@@ -159,7 +159,7 @@ class LabelMenu(QMenu):
             self.root,
             "Save labels",
             "Save labels as:",
-            text=f"{self.state_model.selected_value.name}_lbl",
+            text=f"{self.state.selected_value.name}_lbl",
         )
 
         if not accepted:
@@ -172,7 +172,7 @@ class LabelMenu(QMenu):
             )
             return
 
-        if key in self.root.state_model.custom:
+        if key in self.root.state.custom:
             reply = QMessageBox.question(
                 self.root,
                 "Replace labels",
@@ -183,10 +183,10 @@ class LabelMenu(QMenu):
             if reply != QMessageBox.StandardButton.Yes:
                 return
 
-        self.root.state_model.custom[key] = ("LabelList", labels)
+        self.root.state.custom[key] = ("LabelList", labels)
 
     def _load_labels(self) -> None:
-        custom = self.root.state_model.custom
+        custom = self.root.state.custom
 
         label_keys = [key for key, value in custom.items() if value[0] == "LabelList"]
 
@@ -214,10 +214,10 @@ class LabelMenu(QMenu):
             return
 
         # In MVIEW, loading replaces current labels
-        old_labels = list(self.root.state_model.labels)
+        old_labels = list(self.root.state.labels)
         new_labels = list(cast(list[Label], custom[key][1]))
 
-        self.root.state_model.labels = new_labels
+        self.root.state.labels = new_labels
 
         changed_labels = old_labels + [
             label for label in new_labels if label not in old_labels

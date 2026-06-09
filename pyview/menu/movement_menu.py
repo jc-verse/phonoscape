@@ -20,7 +20,7 @@ class MovementMenu(QMenu):
     def __init__(self, parent: MenuBar):
         super().__init__("Movement", parent)
 
-        self.state_model = parent.state_model
+        self.state = parent.state
         self.root = parent.root
 
         self._cycling_mode = CyclingMode.STOPPED
@@ -74,18 +74,18 @@ class MovementMenu(QMenu):
         # TODO: make this configurable
         self.root.set_cursor(
             min(
-                self.state_model.cursor_s + 0.005,
-                self.state_model.selected_value.duration_s,
+                self.state.cursor_s + 0.005,
+                self.state.selected_value.duration_s,
             )
         )
 
     def _step_backward(self):
-        self.root.set_cursor(max(self.state_model.cursor_s - 0.005, 0))
+        self.root.set_cursor(max(self.state.cursor_s - 0.005, 0))
 
     def _shift_selection(self, direction: int) -> None:
-        old_head = self.state_model.head_s
-        old_tail = self.state_model.tail_s
-        old_cursor = self.state_model.cursor_s
+        old_head = self.state.head_s
+        old_tail = self.state.tail_s
+        old_cursor = self.state.cursor_s
 
         width = old_tail - old_head
         if old_head <= old_cursor <= old_tail:
@@ -94,7 +94,7 @@ class MovementMenu(QMenu):
             cursor_rel = 0.0
 
         self.root.move_selection(direction * width)
-        self.root.set_cursor(self.state_model.head_s + cursor_rel)
+        self.root.set_cursor(self.state.head_s + cursor_rel)
 
     def _set_cycling_mode(self, mode: CyclingMode) -> None:
         self._cycling_mode = mode
@@ -123,9 +123,9 @@ class MovementMenu(QMenu):
             self._cycle_timer.stop()
             return
 
-        head = self.state_model.head_s
-        tail = self.state_model.tail_s
-        cursor = self.state_model.cursor_s
+        head = self.state.head_s
+        tail = self.state.tail_s
+        cursor = self.state.cursor_s
 
         step_s = (1000 // self.frame_rate) / 1000 * self.playback_speed
         new_cursor = cursor + step_s * self._cycling_direction

@@ -27,8 +27,8 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     dialog.setModal(True)
     dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
-    loaded_names = list(parent.state_model.selected_value.trajectories.keys())
-    displayed_specs = list(parent.state_model.temporal_disp_specs)
+    loaded_names = list(parent.state.selected_value.trajectories.keys())
+    displayed_specs = list(parent.state.temporal_disp_specs)
 
     outer_layout = QVBoxLayout(dialog)
     outer_layout.setContentsMargins(12, 12, 12, 12)
@@ -117,7 +117,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     comps_layout.addWidget(x_check)
     comps_layout.addWidget(y_check)
 
-    if parent.state_model.dimensions >= 3:
+    if parent.state.dimensions >= 3:
         z_check = QCheckBox("Z", comps)
         comps_layout.addWidget(z_check)
     else:
@@ -301,15 +301,15 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
         for idx in selected_rows:
             traj_name = loaded_list.item(idx).text()
-            traj = parent.state_model.selected_value.trajectories[traj_name]
+            traj = parent.state.selected_value.trajectories[traj_name]
 
             if traj.kind == "spatial":
                 displayed_specs.append(
                     SpatialTrajDisplay(
                         traj_name=traj_name,
-                        traj_dims=parent.state_model.dimensions,
+                        traj_dims=parent.state.dimensions,
                         content="movement",
-                        components=["x", "y", "z"][: parent.state_model.dimensions],
+                        components=["x", "y", "z"][: parent.state.dimensions],
                     )
                 )
             else:
@@ -355,7 +355,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         refresh_button_states()
 
     def on_ok() -> None:
-        parent.state_model.temporal_disp_specs = displayed_specs
+        parent.state.temporal_disp_specs = displayed_specs
         parent.root.temporal_view.reset_plot()
         dialog.accept()
 

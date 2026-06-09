@@ -17,7 +17,7 @@ from ..state import (
 )
 
 
-class PyViewArgs(TypedDict, total=False):
+class CmdArgs(TypedDict, total=False):
     palate: str | None
     spline: list[str] | None
     audio: str | None
@@ -202,7 +202,7 @@ def parse_trajectory_display_spec(
 
 def normalize_args(
     file: Path,
-    args: PyViewArgs,
+    args: CmdArgs,
     data: dict[str, DatasetVariable],
     other_data: dict[str, Any],
     dimensions: Literal[2, 3],

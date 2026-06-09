@@ -34,7 +34,7 @@ def open_label_dialog(
     main_layout.setHorizontalSpacing(6)
     main_layout.setVerticalSpacing(8)
 
-    init_label = parent.state_model.labels[action[1]] if action[0] == "edit" else None
+    init_label = parent.state.labels[action[1]] if action[0] == "edit" else None
     init_name = init_label.name if init_label else ""
     init_offset_s = (
         init_label.offset_s
@@ -95,10 +95,10 @@ def open_label_dialog(
         note = note_entry.text().strip()
 
         if action[0] == "create":
-            new_label = parent.state_model.add_label(name, offset_ms / 1000.0, note)
+            new_label = parent.state.add_label(name, offset_ms / 1000.0, note)
             parent.update_plot(labels=[new_label])
         else:
-            new_label, old_label = parent.state_model.edit_label(
+            new_label, old_label = parent.state.edit_label(
                 action[1], name=name, offset_s=offset_ms / 1000.0, note=note
             )
             parent.update_plot(labels=[new_label, old_label])

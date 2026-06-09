@@ -4,11 +4,11 @@ from typing import Unpack
 from PySide6.QtWidgets import QApplication
 import matplotlib.pyplot as plt
 
-from .data.parse import load_variables, normalize_args, PyViewArgs
-from .window import PyViewWindow, WindowManager
+from .data.parse import load_variables, normalize_args, CmdArgs
+from .window import VarWindow, WindowManager
 
 
-def pyview(file: str, variables: str = "*", **kwargs: Unpack[PyViewArgs]) -> None:
+def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
     plt.style.use("dark_background")
 
     path = Path(file)
@@ -52,7 +52,7 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[PyViewArgs]) -> Non
         app = QApplication(sys.argv)
 
     window_manager = WindowManager()
-    window = PyViewWindow(
+    window = VarWindow(
         window_manager=window_manager,
         selected_variable=selected_variable,
         dimensions=dimensions,

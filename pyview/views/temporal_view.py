@@ -10,7 +10,7 @@ from matplotlib.text import Text
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 if TYPE_CHECKING:
-    from .. import PyViewWindow
+    from .. import VarWindow
 
 from ..state import TrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay, Label
 from ..data.process import get_plotting_data
@@ -27,7 +27,7 @@ class TemporalView(QWidget):
     def __init__(
         self,
         parent: QWidget,
-        root: PyViewWindow,
+        root: VarWindow,
     ):
         super().__init__(parent)
 
@@ -37,7 +37,7 @@ class TemporalView(QWidget):
             | tuple[Literal["frame"], float]
             | tuple[Literal["label"], int]
         ) = None
-        self.state_model = root.state_model
+        self.state = root.state
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -64,10 +64,10 @@ class TemporalView(QWidget):
         self.figure.subplots_adjust(
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
-        n = len(self.state_model.temporal_disp_specs)
+        n = len(self.state.temporal_disp_specs)
         height_ratios = [1.0, 0.08] + [  # Framing trajectory and spacing
             1.0 if spec.content != "SPECT" else 2.0
-            for spec in self.state_model.temporal_disp_specs
+            for spec in self.state.temporal_disp_specs
         ]
         gs = self.figure.add_gridspec(
             nrows=len(height_ratios), ncols=1, height_ratios=height_ratios
@@ -78,7 +78,7 @@ class TemporalView(QWidget):
 
         self._refresh_plotting_data()
 
-        duration_s = self.state_model.selected_value.duration_s
+        duration_s = self.state.selected_value.duration_s
         self.artists: list[ArtistType] = []
         self.zero_artists: list[Line2D | None] = []
         self.cursor_artists: list[Line2D] = []
@@ -106,7 +106,7 @@ class TemporalView(QWidget):
     ) -> None:
         if cursor:
             for line in self.cursor_artists:
-                line.set_xdata([self.state_model.cursor_s, self.state_model.cursor_s])
+                line.set_xdata([self.state.cursor_s, self.state.cursor_s])
         if trajectories:
             self._refresh_plotting_data()
             for i, artist in enumerate(self.artists):
@@ -125,14 +125,14 @@ class TemporalView(QWidget):
                 ax.relim(visible_only=True)
                 ax.autoscale(axis="y")
                 if i == 0:
-                    ax.set_xlim(0, self.state_model.selected_value.duration_s)
+                    ax.set_xlim(0, self.state.selected_value.duration_s)
                 if artist := self.zero_artists[i]:
                     ymin, ymax = ax.get_ylim()
                     zero_visible = ymin < 0 < ymax
                     artist.set_visible(zero_visible)
         if frame:
-            head_s = self.state_model.head_s
-            tail_s = self.state_model.tail_s
+            head_s = self.state.head_s
+            tail_s = self.state.tail_s
             for i, ax in enumerate(self.axes):
                 if i > 0:
                     ax.set_xlim(head_s, tail_s)
@@ -150,7 +150,7 @@ class TemporalView(QWidget):
             )
         if labels:
             for label in labels:
-                if label not in self.state_model.labels:
+                if label not in self.state.labels:
                     # Label deleted
                     for label_artists in self.label_artists:
                         if label in label_artists:
@@ -196,7 +196,7 @@ class TemporalView(QWidget):
     def _plot_one_axis(
         self, ax: plt_axes.Axes, spec: TrajDisplay, i: int, duration_s: float
     ):
-        traj = self.state_model.selected_value.trajectories[spec.traj_name]
+        traj = self.state.selected_value.trajectories[spec.traj_name]
         t, data = self.plotting_data[i]
         artist: ArtistType | None = None
         if isinstance(spec, SpatialTrajDisplay):
@@ -292,7 +292,7 @@ class TemporalView(QWidget):
             zero_artist = None
 
         cursor_artist = ax.axvline(
-            self.state_model.cursor_s,
+            self.state.cursor_s,
             color=plt.rcParams["text.color"],
             linewidth=0.5,
             zorder=1000,
@@ -303,8 +303,8 @@ class TemporalView(QWidget):
             ymin, ymax = ax.get_ylim()
             self.frame_artist = ax.fill_betweenx(
                 [ymin, ymax],
-                self.state_model.head_s,
-                self.state_model.tail_s,
+                self.state.head_s,
+                self.state.tail_s,
                 color=plt.rcParams["text.color"],
                 alpha=0.3,
                 zorder=1000,
@@ -312,7 +312,7 @@ class TemporalView(QWidget):
             )
 
         label_artists: dict[Label, Line2D] = {}
-        for label in self.state_model.labels:
+        for label in self.state.labels:
             label_artists[label] = ax.axvline(
                 label.offset_s, color="red", linewidth=0.8, zorder=999, clip_on=True
             )
@@ -320,7 +320,7 @@ class TemporalView(QWidget):
         if i == 0 or i == 1:
             label_text_artists: dict[Label, Text] | None = {}
             # Only plot label for framing and first real data trajectory
-            for label in self.state_model.labels:
+            for label in self.state.labels:
                 text = ax.text(
                     label.offset_s,
                     0.98,
@@ -338,25 +338,23 @@ class TemporalView(QWidget):
         return artist, zero_artist, cursor_artist, label_artists, label_text_artists
 
     def _get_temp_disp_specs(self):
-        framing_traj_name = self.state_model.app_config.framing_traj
-        framing_traj = self.state_model.selected_value.trajectories[framing_traj_name]
+        framing_traj_name = self.state.app_config.framing_traj
+        framing_traj = self.state.selected_value.trajectories[framing_traj_name]
         framing_traj_spec = (
             ScalarTrajDisplay(content="SIGNAL", traj_name=framing_traj_name)
             if framing_traj.kind == "scalar"
             else SpatialTrajDisplay(
                 content="movement",
                 traj_name=framing_traj_name,
-                traj_dims=self.state_model.dimensions,
-                components=["x", "y", "z"][: self.state_model.dimensions],
+                traj_dims=self.state.dimensions,
+                components=["x", "y", "z"][: self.state.dimensions],
             )
         )
-        return [framing_traj_spec] + self.state_model.temporal_disp_specs
+        return [framing_traj_spec] + self.state.temporal_disp_specs
 
     def _refresh_plotting_data(self) -> None:
         self.plotting_data = [
-            get_plotting_data(
-                self.state_model.selected_value, spec, self.state_model.dimensions
-            )
+            get_plotting_data(self.state.selected_value, spec, self.state.dimensions)
             for spec in self._get_temp_disp_specs()
         ]
 
@@ -374,17 +372,17 @@ class TemporalView(QWidget):
         if self._toolbar_is_active() or event.xdata is None or event.button != 1:
             return
         if self._event_is_in_cursor_axes(event):
-            for i, label in enumerate(self.state_model.labels):
+            for i, label in enumerate(self.state.labels):
                 closest_label = None
                 closest_dist = float("inf")
-                for i, label in enumerate(self.state_model.labels):
+                for i, label in enumerate(self.state.labels):
                     dist = abs(event.xdata - label.offset_s)
                     if dist < closest_dist:
                         closest_dist = dist
                         closest_label = i
                 # Smaller hitbox for labels
                 if closest_label is not None and closest_dist < 0.01 * (
-                    self.state_model.tail_s - self.state_model.head_s
+                    self.state.tail_s - self.state.head_s
                 ):
                     if event.dblclick:
                         open_label_dialog(self, ("edit", closest_label))
@@ -395,20 +393,20 @@ class TemporalView(QWidget):
             self.root.set_cursor(float(event.xdata))
         elif self._event_is_in_frame_axes(event):
             if event.dblclick:
-                self.root.set_selection(0, self.state_model.selected_value.duration_s)
+                self.root.set_selection(0, self.state.selected_value.duration_s)
                 return
             loc = float(event.xdata)
-            dist_to_head = abs(loc - self.state_model.head_s)
-            dist_to_tail = abs(loc - self.state_model.tail_s)
+            dist_to_head = abs(loc - self.state.head_s)
+            dist_to_tail = abs(loc - self.state.tail_s)
             # Allow a 5% hitbox around each edge
-            thres_dist = 0.025 * self.state_model.selected_value.duration_s
+            thres_dist = 0.025 * self.state.selected_value.duration_s
             if dist_to_head < dist_to_tail and dist_to_head < thres_dist:
                 self.dragging = "head"
                 self.root.set_head(loc)
             elif dist_to_tail < dist_to_head and dist_to_tail < thres_dist:
                 self.dragging = "tail"
                 self.root.set_tail(loc)
-            elif self.state_model.head_s < loc < self.state_model.tail_s:
+            elif self.state.head_s < loc < self.state.tail_s:
                 self.dragging = ("frame", loc)
 
     def _on_motion(self, event) -> None:
@@ -441,7 +439,7 @@ class TemporalView(QWidget):
         elif isinstance(self.dragging, tuple) and self.dragging[0] == "label":
             label_idx = self.dragging[1]
             if self._event_is_in_cursor_axes(event):
-                new_label, old_label = self.state_model.edit_label(
+                new_label, old_label = self.state.edit_label(
                     label_idx, offset_s=float(event.xdata)
                 )
                 self.dragging = ("label", label_idx)

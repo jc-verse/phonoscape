@@ -11,16 +11,16 @@ class FileMenu(QMenu):
     def __init__(self, parent: MenuBar):
         super().__init__("File", parent)
 
-        self.state_model = parent.state_model
+        self.state = parent.state
         self.root = parent.root
 
         variables_menu = QMenu("Variables", self)
         self.variable_action_group = QActionGroup(self)
         self.variable_action_group.setExclusive(True)
 
-        current_variable = self.state_model.selected_variable
+        current_variable = self.state.selected_variable
 
-        for name in self.state_model.app_config.data.keys():
+        for name in self.state.app_config.data.keys():
             action = QAction(name, self)
             action.setCheckable(True)
             action.setChecked(name == current_variable)

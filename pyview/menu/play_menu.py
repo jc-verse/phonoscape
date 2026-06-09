@@ -13,7 +13,7 @@ class PlayMenu(QMenu):
     def __init__(self, parent: MenuBar):
         super().__init__("Play", parent)
 
-        self.state_model = parent.state_model
+        self.state = parent.state
         self.root = parent.root
 
         self.addAction("Play", self._play).setShortcut(QKeySequence("Ctrl+P"))
@@ -22,7 +22,7 @@ class PlayMenu(QMenu):
         self.mode_action_group = QActionGroup(self)
         self.mode_action_group.setExclusive(True)
 
-        current_mode = self.state_model.play_mode
+        current_mode = self.state.play_mode
 
         for mode in modes:
             action = QAction(mode, self)
@@ -36,7 +36,7 @@ class PlayMenu(QMenu):
             self.addAction(action)
 
     def _play(self) -> None:
-        play(self.state_model)
+        play(self.state)
 
     def _set_play_mode(self, mode: str) -> None:
-        self.state_model.play_mode = mode
+        self.state.play_mode = mode

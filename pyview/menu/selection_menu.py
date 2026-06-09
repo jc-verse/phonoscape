@@ -11,21 +11,19 @@ class SelectionMenu(QMenu):
     def __init__(self, parent: MenuBar):
         super().__init__("Selection", parent)
 
-        self.state_model = parent.state_model
+        self.state = parent.state
         self.root = parent.root
 
         self.addAction(
-            "Set head to cursor", lambda: self.root.set_head(self.state_model.cursor_s)
+            "Set head to cursor", lambda: self.root.set_head(self.state.cursor_s)
         )
         self.addAction(
-            "Set tail to cursor", lambda: self.root.set_tail(self.state_model.cursor_s)
+            "Set tail to cursor", lambda: self.root.set_tail(self.state.cursor_s)
         )
         self.addAction("Set selection to label pair", self._set_sel_to_lbl_pair)
         self.addAction(
             "Reset selection",
-            lambda: self.root.set_selection(
-                0.0, self.state_model.selected_value.duration_s
-            ),
+            lambda: self.root.set_selection(0.0, self.state.selected_value.duration_s),
         )
 
         self.addSeparator()
@@ -35,34 +33,26 @@ class SelectionMenu(QMenu):
         self.addSeparator()
         self.addAction(
             "Shift selection left",
-            lambda: self.root.move_selection(
-                self.state_model.head_s - self.state_model.tail_s
-            ),
+            lambda: self.root.move_selection(self.state.head_s - self.state.tail_s),
         ).setShortcut(QKeySequence("Ctrl+L"))
         self.addAction(
             "Shift selection right",
-            lambda: self.root.move_selection(
-                self.state_model.tail_s - self.state_model.head_s
-            ),
+            lambda: self.root.move_selection(self.state.tail_s - self.state.head_s),
         ).setShortcut(QKeySequence("Ctrl+R"))
 
     def _shrink_selection(self) -> None:
-        nudge = 0.1 * (self.state_model.tail_s - self.state_model.head_s)
-        self.root.set_selection(
-            self.state_model.head_s + nudge, self.state_model.tail_s - nudge
-        )
+        nudge = 0.1 * (self.state.tail_s - self.state.head_s)
+        self.root.set_selection(self.state.head_s + nudge, self.state.tail_s - nudge)
 
     def _expand_selection(self) -> None:
-        nudge = 0.1 * (self.state_model.tail_s - self.state_model.head_s)
-        self.root.set_selection(
-            self.state_model.head_s - nudge, self.state_model.tail_s + nudge
-        )
+        nudge = 0.1 * (self.state.tail_s - self.state.head_s)
+        self.root.set_selection(self.state.head_s - nudge, self.state.tail_s + nudge)
 
     def _set_sel_to_lbl_pair(self) -> None:
-        labels = sorted(self.state_model.labels, key=lambda lbl: lbl.offset_s)
+        labels = sorted(self.state.labels, key=lambda lbl: lbl.offset_s)
         if len(labels) < 2:
             return
         for left, right in zip(labels, labels[1:]):
-            if left.offset_s <= self.state_model.cursor_s <= right.offset_s:
+            if left.offset_s <= self.state.cursor_s <= right.offset_s:
                 self.root.set_selection(left.offset_s, right.offset_s)
                 return

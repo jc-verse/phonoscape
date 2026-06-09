@@ -11,15 +11,15 @@ from .movement_menu import MovementMenu
 from .label_menu import LabelMenu
 
 if TYPE_CHECKING:
-    from .. import PyViewWindow
+    from .. import VarWindow
 
 
 class MenuBar(QMenuBar):
-    def __init__(self, parent: PyViewWindow) -> None:
+    def __init__(self, parent: VarWindow) -> None:
         super().__init__(parent)
 
         self.root = parent
-        self.state_model = parent.state_model
+        self.state = parent.state
 
         self.addMenu(FileMenu(self))
         self.addMenu(DataMenu(self))

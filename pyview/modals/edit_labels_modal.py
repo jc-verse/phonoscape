@@ -33,7 +33,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
     dialog.setModal(True)
     dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
-    labels = parent.state_model.labels
+    labels = parent.state.labels
 
     outer_layout = QVBoxLayout(dialog)
     outer_layout.setContentsMargins(12, 12, 12, 12)
@@ -97,7 +97,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
 
     def refresh_labels() -> None:
         label_list.clear()
-        for label in parent.state_model.labels:
+        for label in parent.state.labels:
             item = QListWidgetItem(_format_label_row(label))
             item.setData(Qt.ItemDataRole.UserRole, label)
             label_list.addItem(item)
@@ -114,7 +114,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
         if not label_list.selectedItems():
             return
         selected = [index.row() for index in label_list.selectedIndexes()]
-        deleted = parent.state_model.delete_labels(selected)
+        deleted = parent.state.delete_labels(selected)
         parent.root.temporal_view.update_plot(labels=deleted)
         refresh_labels()
 
