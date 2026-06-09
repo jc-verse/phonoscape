@@ -34,6 +34,8 @@ You can run `python -m pyview --help` to see the full list of command-line argum
   - `--head MS` (MVIEW `HEAD`): the position (in milliseconds) of the left edge of the temporal selection. If specified, it must be a non-negative number less than `--tail - 25`. If unspecified, it defaults to the start of the data (0 ms).
   - `--tail MS` (MVIEW `TAIL`): the position (in milliseconds) of the right edge of the temporal selection. If specified, it must be a non-negative number greater than `--head + 25`. If unspecified, it defaults to the end of the first variable's data.
 
+Note that the framing and audio trajectory discovery is slightly different from MVIEW's; for one, we never special-case the very first trajectory.
+
 ## Dataset format
 
 The `.mat` file contains three levels:
@@ -80,8 +82,8 @@ The following optional fields may be provided for each trajectory struct:
 ### File menu
 
 - **Variables**: Only available when viewing >1 variables. Each variable opens in a new window. The first variable is selected by default. We ensure that the same variable can only be opened in one window at a time. Opening a new window inherits most of the current configuration, _except_ the cursor position which is always reset to the beginning.
-  - **Previous (Ctrl+1)**: Opens the previous variable in the order they appear in the dataset. Cycles across the boundary.
-  - **Next (Ctrl+2)**: Opens the next variable in the order they appear in the dataset. Cycles across the boundary.
+  - **Previous (Ctrl+1)**: Opens the previous variable in the order they appear in the dataset. Cycles across the boundary (slightly different from MVIEW).
+  - **Next (Ctrl+2)**: Opens the next variable in the order they appear in the dataset. Cycles across the boundary (slightly different from MVIEW).
   - **Next; close current (Ctrl+3)**: As it says.
   - **Next plus export (Ctrl+4)**: TODO
   - **Next; export, close current (Ctrl+5)**: TODO
@@ -149,11 +151,13 @@ Only available if an audio trajectory exists.
   - **Entire file**: From the start to the end of the data.
   - **To cursor**: Between head and the cursor. If cursor is before head, then play selection.
   - **From cursor**: Between cursor and tail. If cursor is after tail, then play selection.
-  - **150ms @ cursor**: 150ms centered at the cursor, clamped to the selection.
+  - **150ms @ cursor**: 150ms centered at the cursor, clamped to the selection (different from MVIEW; if you want the MVIEW behavior, slightly expand your selection).
 
 Note that the behavior configured here applies to the "Play" button in the navbar as well.
 
 ### Selection menu
+
+Currently a minimum of 25ms is enforced for the selection duration. Customization will be allowed.
 
 - **Set head to cursor**: As it says; clamped to `tail - 25ms`.
 - **Set tail to cursor**: As it says; clamped to `head + 25ms`.
@@ -166,14 +170,16 @@ Note that the behavior configured here applies to the "Play" button in the navba
 
 ### Movement menu
 
-- **Step forward (Ctrl+F)**: Moves the cursor forward by 5ms. The cursor is at most the end of the data.
-- **Step backward (Ctrl+B)**: Moves the cursor backward by 5ms. The cursor is at least the start of the data.
+- **Step forward (Ctrl+F)**: Moves the cursor forward by 5ms, bound by the selection.
+- **Step backward (Ctrl+B)**: Moves the cursor backward by 5ms, bound by the selection.
 - **Shift forward/backward**: Shifts the selection just like "Shift selection right/left", but keeps the cursor at the same relative position inside the selection. If the cursor is not inside the selection, it is set to the start of the selection.
 - **Cycle forward/backward**: Continuously shifts the cursor forward/backward, wrapping around the selection boundary. Currently the playback speed is always 1x (synchronized with actual time) and the frame rate is always 50 FPS.
 - **Reflective cycling**: Continuously shifts the cursor forward; if it hits one boundary, moves in the opposite direction.
 - **Stop cycling (Ctrl+X)**: As it says.
 
 ### Label menu
+
+Unlike MVIEW, labels are ordered by their creation, not by their temporal position. However, sorting and reordering is allowed if you prefer some other ordering.
 
 - **Make label**: Opens a dialog to add a new simple label at the end of the labels list. By default it's at the cursor position. A name is required.
 - **Edit labels**: Opens a dialog to edit the labels list. Each label has a name, a position (in ms), and an optional note. You can delete and reorder labels. You can also edit the name, position, and note of each label. The position must be between the start and the end of the data.

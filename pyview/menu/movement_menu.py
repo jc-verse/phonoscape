@@ -66,11 +66,11 @@ class MovementMenu(QMenu):
         )
 
     def _step_forward(self):
-        # TODO: make this configurable
-        self.root.set_cursor(self.state.cursor_s + 0.005)
+        # TODO: make the nudge configurable
+        self.root.set_cursor(min(self.state.cursor_s + 0.005, self.state.tail_s))
 
     def _step_backward(self):
-        self.root.set_cursor(self.state.cursor_s - 0.005)
+        self.root.set_cursor(max(self.state.cursor_s - 0.005, self.state.head_s))
 
     def _shift_selection(self, direction: int) -> None:
         old_head = self.state.head_s
