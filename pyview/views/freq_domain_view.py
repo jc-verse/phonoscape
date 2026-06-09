@@ -4,11 +4,11 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from ..state import PyViewState
+from ..state import WindowState
 
 
 class FreqDomainView(QWidget):
-    def __init__(self, parent: QWidget, state_model: PyViewState):
+    def __init__(self, parent: QWidget, state_model: WindowState):
         super().__init__(parent)
 
         self.state_model = state_model

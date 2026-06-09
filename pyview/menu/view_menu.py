@@ -32,7 +32,7 @@ class ViewMenu(QMenu):
         self.hide_spline_action.setChecked(False)
         self.hide_spline_action.triggered.connect(self._hide_spline)
         spatial_menu.addAction(self.hide_spline_action)
-        if not self.state_model.config.spline_trajs:
+        if not self.state_model.app_config.spline_trajs:
             self.hide_spline_action.setEnabled(False)
 
         if self.state_model.dimensions == 3:

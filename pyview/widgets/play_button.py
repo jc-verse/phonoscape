@@ -1,7 +1,7 @@
 import sounddevice as sd
 from PySide6.QtWidgets import QFrame, QGridLayout, QPushButton, QWidget
 
-from ..state import PyViewState
+from ..state import WindowState
 
 modes = (
     "Selection",
@@ -12,8 +12,8 @@ modes = (
 )
 
 
-def play(state_model: PyViewState) -> None:
-    audio_traj = state_model.config.audio_traj
+def play(state_model: WindowState) -> None:
+    audio_traj = state_model.app_config.audio_traj
     if audio_traj is None:
         print("No audio trajectory configured.")
         return
@@ -56,7 +56,7 @@ class PlayButton(QFrame):
     def __init__(
         self,
         parent: QWidget,
-        state_model: PyViewState,
+        state_model: WindowState,
     ):
         super().__init__(parent)
 

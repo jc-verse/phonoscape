@@ -6,12 +6,18 @@ from numpy.typing import NDArray
 
 
 @dataclass
-class PyViewConfig:
+class AppConfig:
+    file: Path
+    data: dict[str, DatasetVariable]
+    other_data: dict[str, Any]
     palate_trace: NDArray[np.float64] | None
     spline_trajs: list[str]
     audio_traj: str | None
     framing_traj: str
-    temporal_disp_specs: list[TrajDisplay]
+    spatial_bounds: (
+        tuple[float, float, float, float]
+        | tuple[float, float, float, float, float, float]
+    )
 
 
 @dataclass
@@ -107,19 +113,13 @@ class LabelEdit(TypedDict, total=False):
 
 
 @dataclass
-class PyViewState:
-    file: Path
-    data: dict[str, DatasetVariable]
-    other_data: dict[str, Any]
+class WindowState:
     custom: dict[str, tuple[str, Any]]
     labels: list[Label]
     selected_variable: str
     dimensions: Literal[2, 3]
-    spatial_bounds: (
-        tuple[float, float, float, float, float, float]
-        | tuple[float, float, float, float]
-    )
-    config: PyViewConfig
+    temporal_disp_specs: list[TrajDisplay]
+    app_config: AppConfig
     cursor_s: float
     head_s: float
     tail_s: float
@@ -129,7 +129,7 @@ class PyViewState:
 
     @property
     def selected_value(self) -> DatasetVariable:
-        return self.data[self.selected_variable]
+        return self.app_config.data[self.selected_variable]
 
     def add_label(self, name: str, offset_s: float, note: str):
         new_label = Label(name=name, offset_s=offset_s, note=note)

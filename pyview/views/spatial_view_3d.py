@@ -10,11 +10,11 @@ from mpl_toolkits.mplot3d.axes3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Path3DCollection, Line3D, Text3D
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
-from ..state import PyViewState
+from ..state import WindowState
 
 
 class SpatialView3D(QWidget):
-    def __init__(self, parent: QWidget, state_model: PyViewState):
+    def __init__(self, parent: QWidget, state_model: WindowState):
         super().__init__(parent)
 
         self.state_model = state_model
@@ -38,7 +38,7 @@ class SpatialView3D(QWidget):
 
         xmin, xmax, ymin, ymax, zmin, zmax = cast(
             tuple[float, float, float, float, float, float],
-            self.state_model.spatial_bounds,
+            self.state_model.app_config.spatial_bounds,
         )
         xmin -= (xmax - xmin) * 0.05
         xmax += (xmax - xmin) * 0.05
@@ -65,11 +65,11 @@ class SpatialView3D(QWidget):
         self.text_artists: dict[str, Text3D] = {}
         self.spline_artist: Line3D | None = None
 
-        if self.state_model.config.palate_trace is not None:
+        if self.state_model.app_config.palate_trace is not None:
             self.ax.plot(
-                self.state_model.config.palate_trace[:, 0],
-                self.state_model.config.palate_trace[:, 1],
-                self.state_model.config.palate_trace[:, 2],
+                self.state_model.app_config.palate_trace[:, 0],
+                self.state_model.app_config.palate_trace[:, 1],
+                self.state_model.app_config.palate_trace[:, 2],
                 color=plt.rcParams["text.color"],
                 linewidth=1.0,
             )
@@ -95,7 +95,7 @@ class SpatialView3D(QWidget):
                 Text3D, self.ax.text(x, y, z, f" {traj.name}")
             )
 
-        if self.state_model.config.spline_trajs is not None:
+        if self.state_model.app_config.spline_trajs is not None:
             spline = self._compute_spline(positions_by_name)
             if spline is not None:
                 x_new, y_new, z_new = spline
@@ -142,11 +142,11 @@ class SpatialView3D(QWidget):
     def _compute_spline(
         self, positions_by_name: dict[str, tuple[float, float, float]]
     ) -> tuple[Any, Any, Any] | None:
-        assert self.state_model.config.spline_trajs is not None
+        assert self.state_model.app_config.spline_trajs is not None
 
         spline_points: list[tuple[float, float, float]] = []
 
-        for name in self.state_model.config.spline_trajs:
+        for name in self.state_model.app_config.spline_trajs:
             if name in positions_by_name:
                 spline_points.append(positions_by_name[name])
             else:

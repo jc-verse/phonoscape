@@ -40,7 +40,7 @@ class DataMenu(QMenu):
             self.root.temporal_view._get_temp_disp_specs(),
             self.root.temporal_view.plotting_data,
         ):
-            if spec.traj_name == self.state_model.config.audio_traj:
+            if spec.traj_name == self.state_model.app_config.audio_traj:
                 continue
             traj = self.state_model.selected_value.trajectories[spec.traj_name]
             idx = round(self.state_model.cursor_s * traj.sample_rate_hz)

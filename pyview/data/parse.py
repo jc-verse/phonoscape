@@ -13,7 +13,7 @@ from ..state import (
     TrajDisplay,
     ScalarTrajDisplay,
     SpatialTrajDisplay,
-    PyViewConfig,
+    AppConfig,
 )
 
 
@@ -41,7 +41,7 @@ def normalize_traj_name(name: str) -> str:
 
 def load_variables(
     file: str | Path, variables_pattern: str, comps: int | list[int] | None
-) -> tuple[dict[str, DatasetVariable], dict[str, Any], int]:
+) -> tuple[dict[str, DatasetVariable], dict[str, Any], Literal[2, 3]]:
     raw = loadmat(file, squeeze_me=True)
 
     raw = {k: v for k, v in raw.items() if not k.startswith("__")}
@@ -138,7 +138,7 @@ def load_variables(
 
 
 def parse_trajectory_display_spec(
-    name: str, first_variable: DatasetVariable, dimensions: int
+    name: str, first_variable: DatasetVariable, dimensions: Literal[2, 3]
 ) -> TrajDisplay:
     if match := re.match(r"^(.*)_(SPECT|RMS|ZC|VEL|ABSVEL)$", name):
         base_name, content = match.groups()
@@ -201,11 +201,12 @@ def parse_trajectory_display_spec(
 
 
 def normalize_args(
+    file: Path,
     args: PyViewArgs,
     data: dict[str, DatasetVariable],
     other_data: dict[str, Any],
-    dimensions: int,
-) -> PyViewConfig:
+    dimensions: Literal[2, 3],
+):
     first_variable = next(iter(data.values()))
 
     comps = args.get("comps")
@@ -299,10 +300,46 @@ def normalize_args(
         for name in temporal_disp_trajs
     ]
 
-    return PyViewConfig(
-        palate_trace=palate_trace,
-        spline_trajs=spline_trajs,
-        audio_traj=audio_traj,
-        framing_traj=framing_traj,
-        temporal_disp_specs=temporal_disp_specs,
+    min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
+    max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
+    for variable in data.values():
+        for traj in variable.trajectories.values():
+            if traj.kind != "spatial":
+                continue
+            if dimensions == 3:
+                x, y, z = traj.data.T
+                min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+                min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+                min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
+            else:
+                x, y = traj.data.T
+                min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+                min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+    if palate_trace is not None:
+        if dimensions == 3:
+            x, y, z = palate_trace.T
+            min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+            min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+            min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
+        else:
+            x, y = palate_trace.T
+            min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
+            min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
+
+    return (
+        AppConfig(
+            file=file,
+            data=data,
+            other_data=other_data,
+            palate_trace=palate_trace,
+            spline_trajs=spline_trajs,
+            audio_traj=audio_traj,
+            framing_traj=framing_traj,
+            spatial_bounds=(
+                (min_x, max_x, min_y, max_y, min_z, max_z)
+                if dimensions == 3
+                else (min_x, max_x, min_y, max_y)
+            ),
+        ),
+        temporal_disp_specs,
     )

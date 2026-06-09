@@ -20,12 +20,12 @@ class FileMenu(QMenu):
 
         current_variable = self.state_model.selected_variable
 
-        for name in self.state_model.data.keys():
+        for name in self.state_model.app_config.data.keys():
             action = QAction(name, self)
             action.setCheckable(True)
             action.setChecked(name == current_variable)
             action.triggered.connect(
-                lambda checked=False, name=name: self.root.update_variable(name)
+                lambda checked=False, name=name: self.root.show_variable(name)
             )
 
             self.variable_action_group.addAction(action)
@@ -46,5 +46,5 @@ class FileMenu(QMenu):
 
         self.addMenu(save_menu)
         self.addAction("Export...", parent._todo("Export"))
-        self.addAction("Close window", parent._todo("Close window"))
-        self.addAction("Close all", parent._todo("Close all"))
+        self.addAction("Close window", self.root.close)
+        self.addAction("Close all", self.root.window_manager.close_all)

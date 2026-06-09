@@ -1,7 +1,5 @@
-from pathlib import Path
-from typing import cast, Literal, Unpack
+from typing import Literal
 
-import matplotlib.pyplot as plt
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame,
@@ -14,10 +12,9 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
 )
 
-from .data.parse import load_variables, normalize_args, PyViewArgs
 from .data.process import analyze_audio
 from .menu.menu_bar import MenuBar
-from .state import PyViewState
+from .state import WindowState, AppConfig, TrajDisplay
 from .widgets.play_button import PlayButton, modes as play_modes
 from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
@@ -28,101 +25,37 @@ from .views.freq_domain_view import FreqDomainView
 class PyViewWindow(QMainWindow):
     def __init__(
         self,
-        file: str | Path,
-        variables: str = "*",
-        **kwargs: Unpack[PyViewArgs],
+        window_manager: WindowManager,
+        selected_variable: str,
+        dimensions: Literal[2, 3],
+        temporal_disp_specs: list[TrajDisplay],
+        app_config: AppConfig,
+        head_s: float,
+        tail_s: float,
     ):
         super().__init__()
-        plt.style.use("dark_background")
-
-        path = Path(file)
-        data, other_data, dimensions = load_variables(
-            path, variables, comps=kwargs.get("comps")
-        )
-
-        if not data:
-            raise ValueError(f"No matching variables found for pattern {variables!r}")
-
-        config = normalize_args(kwargs, data, other_data, dimensions)
-
-        min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
-        max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
-        for variable in data.values():
-            for traj in variable.trajectories.values():
-                if traj.kind != "spatial":
-                    continue
-                if dimensions == 3:
-                    x, y, z = traj.data.T
-                    min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
-                    min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
-                    min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
-                else:
-                    x, y = traj.data.T
-                    min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
-                    min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
-        if config.palate_trace is not None:
-            palate_trace = config.palate_trace
-            if dimensions == 3:
-                x, y, z = palate_trace.T
-                min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
-                min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
-                min_z, max_z = min(min_z, z.min()), max(max_z, z.max())
-            else:
-                x, y = palate_trace.T
-                min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
-                min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
-
-        selected_variable = next(iter(data.keys()))
-
-        head_s = (kwargs.get("head") or 0) / 1000
-        tail_s = (
-            kwargs.get("tail") or data[selected_variable].duration_s * 1000
-        ) / 1000
-        tail_s = min(tail_s, data[selected_variable].duration_s)
-        if head_s < 0:
-            raise ValueError(
-                f"--head must be a non-negative number of milliseconds, but got {head_s * 1000}"
-            )
-        if tail_s < 0:
-            raise ValueError(
-                f"--tail must be a non-negative number of milliseconds, but got {tail_s * 1000}"
-            )
-        if head_s >= tail_s:
-            raise ValueError(
-                f"--head must be less than --tail, but got head={head_s * 1000} and tail={tail_s * 1000}"
-            )
-        elif tail_s - head_s < 0.025:
-            raise ValueError(
-                f"The duration of the selection (tail - head) must be at least 25 milliseconds, but got head={head_s * 1000} and tail={tail_s * 1000} ({(tail_s - head_s) * 1000:.1f} ms)"
-            )
-
-        self.state_model = PyViewState(
-            file=path,
-            data=data,
-            other_data=other_data,
+        window_manager.add_window(self)
+        self.window_manager = window_manager
+        self.state_model = WindowState(
             custom={},
             labels=[],
             selected_variable=selected_variable,
-            dimensions=cast(Literal[2, 3], dimensions),
-            spatial_bounds=(
-                (min_x, max_x, min_y, max_y, min_z, max_z)
-                if dimensions == 3
-                else (min_x, max_x, min_y, max_y)
-            ),
-            config=config,
+            dimensions=dimensions,
+            temporal_disp_specs=temporal_disp_specs,
+            app_config=app_config,
             cursor_s=0.0,
             head_s=head_s,
             tail_s=tail_s,
             play_mode=play_modes[0],
         )
-        if self.state_model.config.audio_traj:
+        if self.state_model.app_config.audio_traj:
             self.state_model.selected_value.audio_traj = analyze_audio(
                 self.state_model.selected_value.trajectories[
-                    self.state_model.config.audio_traj
+                    self.state_model.app_config.audio_traj
                 ]
             )
 
-        self.setWindowTitle(f"PyView - {path.name}")
+        self.setWindowTitle(f"PyView - {app_config.file.name}")
         self.resize(1440, 1000)
 
         self._build_ui()
@@ -150,12 +83,12 @@ class PyViewWindow(QMainWindow):
 
         self.info_label = QLabel(
             f"{self.state_model.selected_variable} "
-            f"({self.state_model.data[self.state_model.selected_variable].duration_s:.2f}s)",
+            f"({self.state_model.selected_value.duration_s:.2f}s)",
             navbar,
         )
         navbar_layout.addWidget(self.info_label)
 
-        if self.state_model.config.audio_traj is not None:
+        if self.state_model.app_config.audio_traj is not None:
             play_button = PlayButton(navbar, self.state_model)
             play_button.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             navbar_layout.addWidget(play_button)
@@ -233,7 +166,7 @@ class PyViewWindow(QMainWindow):
         self.cursor_box.setText(f"{cursor_s * 1000:.1f}")
         self.temporal_view.update_plot(cursor=True)
         self.spatial_view.update_plot(points=True)
-        if self.state_model.config.audio_traj is not None:
+        if self.state_model.app_config.audio_traj is not None:
             self.freq_domain_view.update_plot()
 
     def set_head(self, head_s: float) -> None:
@@ -272,34 +205,45 @@ class PyViewWindow(QMainWindow):
         new_tail = self.state_model.tail_s + delta_s
         self.set_selection(new_head, new_tail)
 
-    def update_variable(self, name: str) -> None:
-        self.state_model.selected_variable = name
-        # Lazily analyze audio
-        if (
-            self.state_model.config.audio_traj is not None
-            and self.state_model.selected_value.audio_traj is None
-        ):
-            self.state_model.selected_value.audio_traj = analyze_audio(
-                self.state_model.selected_value.trajectories[
-                    self.state_model.config.audio_traj
-                ]
-            )
+    def show_variable(self, name: str) -> None:
+        selected_value = self.state_model.app_config.data[name]
 
-        self.info_label.setText(
-            f"{name} ({self.state_model.data[name].duration_s:.2f}s)"
-        )
-        self.set_cursor(0.0)
-        new_tail = min(self.state_model.tail_s, self.state_model.data[name].duration_s)
+        new_tail = min(self.state_model.tail_s, selected_value.duration_s)
         new_head = min(
             self.state_model.head_s,
             max(0, new_tail - self.state_model.min_sel_dur_s),
         )
-        self.set_selection(new_head, new_tail)
-        # TODO: show a confirmation dialog if there are unsaved labels?
-        old_labels = self.state_model.labels
-        self.state_model.labels = []
 
-        self.temporal_view.update_plot(trajectories=True, labels=old_labels)
-        if self.state_model.selected_value.audio_traj is not None:
-            self.freq_domain_view.update_plot()
-        self.spatial_view.update_plot(points=True)
+        # Lazily analyze audio
+        if (
+            self.state_model.app_config.audio_traj is not None
+            and selected_value.audio_traj is None
+        ):
+            selected_value.audio_traj = analyze_audio(
+                selected_value.trajectories[self.state_model.app_config.audio_traj]
+            )
+
+        window = PyViewWindow(
+            window_manager=self.window_manager,
+            selected_variable=name,
+            dimensions=self.state_model.dimensions,
+            temporal_disp_specs=self.state_model.temporal_disp_specs,
+            app_config=self.state_model.app_config,
+            head_s=new_head,
+            tail_s=new_tail,
+        )
+
+        window.show()
+
+
+class WindowManager:
+    def __init__(self):
+        self.windows: list[PyViewWindow] = []
+
+    def add_window(self, window: PyViewWindow) -> None:
+        self.windows.append(window)
+
+    def close_all(self) -> None:
+        for window in self.windows:
+            window.close()
+        self.windows.clear()

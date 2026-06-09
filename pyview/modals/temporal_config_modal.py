@@ -28,7 +28,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     dialog.setWindowFlag(Qt.WindowType.WindowContextHelpButtonHint, False)
 
     loaded_names = list(parent.state_model.selected_value.trajectories.keys())
-    displayed_specs = list(parent.state_model.config.temporal_disp_specs)
+    displayed_specs = list(parent.state_model.temporal_disp_specs)
 
     outer_layout = QVBoxLayout(dialog)
     outer_layout.setContentsMargins(12, 12, 12, 12)
@@ -355,7 +355,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         refresh_button_states()
 
     def on_ok() -> None:
-        parent.state_model.config.temporal_disp_specs = displayed_specs
+        parent.state_model.temporal_disp_specs = displayed_specs
         parent.root.temporal_view.reset_plot()
         dialog.accept()
 

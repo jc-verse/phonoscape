@@ -64,10 +64,10 @@ class TemporalView(QWidget):
         self.figure.subplots_adjust(
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
-        n = len(self.state_model.config.temporal_disp_specs)
+        n = len(self.state_model.temporal_disp_specs)
         height_ratios = [1.0, 0.08] + [  # Framing trajectory and spacing
             1.0 if spec.content != "SPECT" else 2.0
-            for spec in self.state_model.config.temporal_disp_specs
+            for spec in self.state_model.temporal_disp_specs
         ]
         gs = self.figure.add_gridspec(
             nrows=len(height_ratios), ncols=1, height_ratios=height_ratios
@@ -338,7 +338,7 @@ class TemporalView(QWidget):
         return artist, zero_artist, cursor_artist, label_artists, label_text_artists
 
     def _get_temp_disp_specs(self):
-        framing_traj_name = self.state_model.config.framing_traj
+        framing_traj_name = self.state_model.app_config.framing_traj
         framing_traj = self.state_model.selected_value.trajectories[framing_traj_name]
         framing_traj_spec = (
             ScalarTrajDisplay(content="SIGNAL", traj_name=framing_traj_name)
@@ -350,7 +350,7 @@ class TemporalView(QWidget):
                 components=["x", "y", "z"][: self.state_model.dimensions],
             )
         )
-        return [framing_traj_spec] + self.state_model.config.temporal_disp_specs
+        return [framing_traj_spec] + self.state_model.temporal_disp_specs
 
     def _refresh_plotting_data(self) -> None:
         self.plotting_data = [
