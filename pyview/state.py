@@ -18,6 +18,7 @@ class AppConfig:
         tuple[float, float, float, float]
         | tuple[float, float, float, float, float, float]
     )
+    dimensions: Literal[2, 3]
 
 
 @dataclass
@@ -117,7 +118,6 @@ class WindowState:
     custom: dict[str, tuple[str, Any]]
     labels: list[Label]
     selected_variable: str
-    dimensions: Literal[2, 3]
     temporal_disp_specs: list[TrajDisplay]
     app_config: AppConfig
     cursor_s: float

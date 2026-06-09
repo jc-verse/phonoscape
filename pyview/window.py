@@ -27,7 +27,6 @@ class VarWindow(QMainWindow):
         self,
         window_manager: WindowManager,
         selected_variable: str,
-        dimensions: Literal[2, 3],
         temporal_disp_specs: list[TrajDisplay],
         app_config: AppConfig,
         head_s: float,
@@ -40,7 +39,6 @@ class VarWindow(QMainWindow):
             custom={},
             labels=[],
             selected_variable=selected_variable,
-            dimensions=dimensions,
             temporal_disp_specs=temporal_disp_specs,
             app_config=app_config,
             cursor_s=0.0,
@@ -133,7 +131,7 @@ class VarWindow(QMainWindow):
 
         root_layout.addWidget(left, 1, 0)
 
-        if self.state.dimensions == 3:
+        if self.state.app_config.dimensions == 3:
             self.spatial_view = SpatialView3D(left, state=self.state)
         else:
             self.spatial_view = SpatialView2D(left, state=self.state)
@@ -237,7 +235,6 @@ class WindowManager:
         window = VarWindow(
             window_manager=self,
             selected_variable=name,
-            dimensions=parent_window.state.dimensions,
             temporal_disp_specs=parent_window.state.temporal_disp_specs,
             app_config=parent_window.state.app_config,
             head_s=new_head,

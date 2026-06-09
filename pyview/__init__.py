@@ -55,7 +55,6 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
     window = VarWindow(
         window_manager=window_manager,
         selected_variable=selected_variable,
-        dimensions=dimensions,
         temporal_disp_specs=temporal_disp_specs,
         app_config=app_config,
         head_s=head_s,

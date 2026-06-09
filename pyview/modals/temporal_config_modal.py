@@ -117,7 +117,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     comps_layout.addWidget(x_check)
     comps_layout.addWidget(y_check)
 
-    if parent.state.dimensions >= 3:
+    if parent.state.app_config.dimensions >= 3:
         z_check = QCheckBox("Z", comps)
         comps_layout.addWidget(z_check)
     else:
@@ -307,9 +307,9 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                 displayed_specs.append(
                     SpatialTrajDisplay(
                         traj_name=traj_name,
-                        traj_dims=parent.state.dimensions,
+                        traj_dims=parent.state.app_config.dimensions,
                         content="movement",
-                        components=["x", "y", "z"][: parent.state.dimensions],
+                        components=["x", "y", "z"][: parent.state.app_config.dimensions],
                     )
                 )
             else:

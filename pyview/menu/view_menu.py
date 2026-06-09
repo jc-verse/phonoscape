@@ -35,7 +35,7 @@ class ViewMenu(QMenu):
         if not self.state.app_config.spline_trajs:
             self.hide_spline_action.setEnabled(False)
 
-        if self.state.dimensions == 3:
+        if self.state.app_config.dimensions == 3:
             spatial_menu.addSeparator()
 
             self.free_rotate_action = QAction("Free rotate", self)

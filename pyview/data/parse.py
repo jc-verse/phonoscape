@@ -340,6 +340,7 @@ def normalize_args(
                 if dimensions == 3
                 else (min_x, max_x, min_y, max_y)
             ),
+            dimensions=dimensions,
         ),
         temporal_disp_specs,
     )

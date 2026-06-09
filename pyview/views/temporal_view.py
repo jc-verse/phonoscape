@@ -346,15 +346,15 @@ class TemporalView(QWidget):
             else SpatialTrajDisplay(
                 content="movement",
                 traj_name=framing_traj_name,
-                traj_dims=self.state.dimensions,
-                components=["x", "y", "z"][: self.state.dimensions],
+                traj_dims=self.state.app_config.dimensions,
+                components=["x", "y", "z"][: self.state.app_config.dimensions],
             )
         )
         return [framing_traj_spec] + self.state.temporal_disp_specs
 
     def _refresh_plotting_data(self) -> None:
         self.plotting_data = [
-            get_plotting_data(self.state.selected_value, spec, self.state.dimensions)
+            get_plotting_data(self.state.selected_value, spec, self.state.app_config.dimensions)
             for spec in self._get_temp_disp_specs()
         ]
 
