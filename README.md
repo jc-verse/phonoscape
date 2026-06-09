@@ -152,6 +152,8 @@ Only available if an audio trajectory exists.
   - **To cursor**: Between head and the cursor. If cursor is before head, then play selection.
   - **From cursor**: Between cursor and tail. If cursor is after tail, then play selection.
   - **150ms @ cursor**: 150ms centered at the cursor, clamped to the selection (different from MVIEW; if you want the MVIEW behavior, slightly expand your selection).
+  - **Between labels**: Only has an effect if the cursor is between two labels. Plays the audio between the previous and next labels.
+- **Select playback track**: TODO
 
 Note that the behavior configured here applies to the "Play" button in the navbar as well.
 

@@ -9,6 +9,7 @@ modes = (
     "To cursor",
     "From cursor",
     "150ms @ cursor",
+    "Between labels",
 )
 
 
@@ -44,6 +45,16 @@ def play(state: WindowState) -> None:
             start = max(head_index, cursor_index - half_window)
             end = min(tail_index, cursor_index + half_window)
             play_data = traj.data[start:end]
+        case "Between labels":
+            labels = sorted(state.labels, key=lambda lbl: lbl.offset_s)
+            if len(labels) < 2:
+                return
+            for left, right in zip(labels, labels[1:]):
+                if left.offset_s <= state.cursor_s <= right.offset_s:
+                    left_index = round(left.offset_s * traj.sample_rate_hz)
+                    right_index = round(right.offset_s * traj.sample_rate_hz)
+                    play_data = traj.data[left_index:right_index]
+                    break
         case mode:
             print(f"Unknown play mode: {mode}")
             return

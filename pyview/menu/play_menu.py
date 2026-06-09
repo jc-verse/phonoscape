@@ -33,5 +33,8 @@ class PlayMenu(QMenu):
             self.mode_action_group.addAction(action)
             self.addAction(action)
 
+        self.addSeparator()
+        self.addAction("Select playback track...", parent._todo("Select playback track"))
+
     def _set_play_mode(self, mode: str) -> None:
         self.state.play_mode = mode
