@@ -31,27 +31,28 @@ class FreqDomainView(QWidget):
 
         if self.state_model.selected_value.audio_traj is None:
             return
-        f, spect = self._get_current_spect()
+        f, spect_slice = self._get_current_spect()
 
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
         self.curve_artist = self.ax.plot(
-            f, spect, color=plt.rcParams["text.color"], linewidth=0.8
+            f, spect_slice, color=plt.rcParams["text.color"], linewidth=0.8
         )[0]
         self.ax.set_xlabel("Hz")
         self.ax.set_ylabel("dB")
         self.ax.set_ylim(
-            self.state_model.selected_value.audio_traj.spect[1].min() - 5,
-            self.state_model.selected_value.audio_traj.spect[1].max() + 5,
+            self.state_model.selected_value.audio_traj.spect.min() - 5,
+            self.state_model.selected_value.audio_traj.spect.max() + 5,
         )
+        # TODO: double clicking gesture (open new window)
 
         self.canvas.draw_idle()
 
     def update_plot(self) -> None:
         assert self.state_model.selected_value.audio_traj is not None
-        f, spect_db = self._get_current_spect()
+        f, spect_slice = self._get_current_spect()
 
-        self.curve_artist.set_data(f, spect_db)
+        self.curve_artist.set_data(f, spect_slice)
         self.ax.relim()
         self.ax.autoscale_view()
 
@@ -59,15 +60,9 @@ class FreqDomainView(QWidget):
 
     def _get_current_spect(self):
         assert self.state_model.selected_value.audio_traj is not None
-        # This must be in sync with data.process.get_plotting_data for SPECT.
-        # TODO: refactor to avoid this duplication.
-        traj = self.state_model.selected_value.audio_traj
-        window_ms = 25
-        overlap = 0.75
-        nperseg = round(traj.sample_rate_hz * window_ms / 1000)
-        hop = max(1, round(nperseg * (1.0 - overlap)))
-        delta_t = hop / traj.sample_rate_hz
-        extent, spect_db = traj.spect
+        delta_t = self.state_model.selected_value.audio_traj.spect_delta_t_s
+        spect_db = self.state_model.selected_value.audio_traj.spect
+        extent = self.state_model.selected_value.audio_traj.spect_extent
         frame_idx = round(self.state_model.cursor_s / delta_t)
         frame_idx = max(0, min(frame_idx, spect_db.shape[1] - 1))
         f = np.linspace(extent[2], extent[3], spect_db.shape[0])

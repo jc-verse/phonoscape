@@ -375,15 +375,28 @@ class TemporalView(QWidget):
             return
         if self._event_is_in_cursor_axes(event):
             for i, label in enumerate(self.state_model.labels):
+                closest_label = None
+                closest_dist = float("inf")
+                for i, label in enumerate(self.state_model.labels):
+                    dist = abs(event.xdata - label.offset_s)
+                    if dist < closest_dist:
+                        closest_dist = dist
+                        closest_label = i
                 # Smaller hitbox for labels
-                if abs(event.xdata - label.offset_s) < 0.01 * (
+                if closest_label is not None and closest_dist < 0.01 * (
                     self.state_model.tail_s - self.state_model.head_s
                 ):
-                    self.dragging = ("label", i)
+                    if event.dblclick:
+                        open_label_dialog(self, ("edit", closest_label))
+                    else:
+                        self.dragging = ("label", closest_label)
                     return
             self.dragging = "cursor"
             self.root.set_cursor(float(event.xdata))
         elif self._event_is_in_frame_axes(event):
+            if event.dblclick:
+                self.root.set_selection(0, self.state_model.selected_value.duration_s)
+                return
             loc = float(event.xdata)
             dist_to_head = abs(loc - self.state_model.head_s)
             dist_to_tail = abs(loc - self.state_model.tail_s)

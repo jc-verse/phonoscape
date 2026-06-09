@@ -22,13 +22,13 @@ def get_spect(traj: Trajectory):
     )
     S = stft.spectrogram(traj.data)
     S_db = 20 * np.log10(S + np.finfo(float).eps)
-    extent: list[float] = [
-        0,
+    extent = (
+        0.0,
         traj.n_samples / traj.sample_rate_hz,
-        0,
+        0.0,
         traj.sample_rate_hz / 2,
-    ]
-    return extent, S_db
+    )
+    return extent, S_db, hop / traj.sample_rate_hz
 
 
 def get_rms(traj: Trajectory):
@@ -221,7 +221,11 @@ def get_cog(
     p_norm = p_cut / total
     p_norm = p_norm[1:]
 
-    freqs = np.linspace(1, upb, upb - 1, dtype=np.float64) * traj.sample_rate_hz / (frame * 2.0)
+    freqs = (
+        np.linspace(1, upb, upb - 1, dtype=np.float64)
+        * traj.sample_rate_hz
+        / (frame * 2.0)
+    )
 
     l1 = np.sum(freqs * p_norm)
 
@@ -233,14 +237,14 @@ def get_cog(
     if l2 <= 0 or not np.isfinite(l2):
         return CogMeasure(l1=l1, skew=np.nan, kurt=np.nan)
 
-    skew = l3 / (l2 ** 1.5)
+    skew = l3 / (l2**1.5)
     kurt = l4 / (l2**2) - 3.0
 
     return CogMeasure(l1=l1, skew=skew, kurt=kurt)
 
 
 def analyze_audio(traj: Trajectory):
-    extent, S_db = get_spect(traj)
+    extent, S_db, delta_t = get_spect(traj)
     rms = get_rms(traj)
     zc = get_zc(traj)
     f0 = get_f0(traj)
@@ -249,7 +253,9 @@ def analyze_audio(traj: Trajectory):
         sample_rate_hz=traj.sample_rate_hz,
         n_samples=traj.n_samples,
         signal=np.ravel(traj.data),
-        spect=(extent, S_db),
+        spect=S_db,
+        spect_extent=extent,
+        spect_delta_t_s=delta_t,
         rms=rms,
         rms_db=20 * np.log10(rms + np.finfo(float).eps),
         zc=zc,
@@ -267,7 +273,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
             case "SIGNAL":
                 return t, traj.signal
             case "SPECT":
-                return traj.spect
+                return traj.spect_extent, traj.spect
             case "RMS":
                 return t, traj.rms
             case "ZC":
@@ -282,7 +288,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
     t = np.arange(traj.n_samples) / traj.sample_rate_hz
     match spec.content:
         case "SPECT":
-            return get_spect(traj)
+            return get_spect(traj)[0:2]
         case "SIGNAL":
             return t, traj.data
         case "VEL":

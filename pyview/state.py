@@ -73,7 +73,9 @@ class Audio:
     sample_rate_hz: float
     n_samples: int
     signal: NDArray[np.float64]
-    spect: tuple[list[float], NDArray[np.float64]]
+    spect: NDArray[np.float64]
+    spect_extent: tuple[float, float, float, float]
+    spect_delta_t_s: float
     # TODO: lazily compute only if requested (by temporal view or "report")
     rms: NDArray[np.float64]
     rms_db: NDArray[np.float64]
