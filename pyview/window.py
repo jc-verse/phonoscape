@@ -34,7 +34,7 @@ class VarWindow(QMainWindow):
         tail_s: float,
     ):
         super().__init__()
-        window_manager.add_window(self)
+        window_manager.add_window(selected_variable, self)
         self.window_manager = window_manager
         self.state = WindowState(
             custom={},
@@ -158,6 +158,10 @@ class VarWindow(QMainWindow):
 
         self.setFocus()
 
+    def closeEvent(self, event) -> None:
+        self.window_manager.remove_window(self.state.selected_variable)
+        super().closeEvent(event)
+
     def set_cursor(self, cursor_s: float) -> None:
         cursor_s = min(max(0, cursor_s), self.state.selected_value.duration_s)
         self.state.cursor_s = cursor_s
@@ -203,45 +207,57 @@ class VarWindow(QMainWindow):
         new_tail = self.state.tail_s + delta_s
         self.set_selection(new_head, new_tail)
 
-    def show_variable(self, name: str) -> None:
-        selected_value = self.state.app_config.data[name]
 
-        new_tail = min(self.state.tail_s, selected_value.duration_s)
+class WindowManager:
+    def __init__(self):
+        self.windows: dict[str, VarWindow] = {}
+
+    def open_window(self, name: str, parent_window: VarWindow) -> None:
+        if name in self.windows:
+            self.windows[name].raise_()
+            self.windows[name].activateWindow()
+            return
+        selected_value = parent_window.state.app_config.data[name]
+
+        new_tail = min(parent_window.state.tail_s, selected_value.duration_s)
         new_head = min(
-            self.state.head_s,
-            max(0, new_tail - self.state.min_sel_dur_s),
+            parent_window.state.head_s,
+            max(0, new_tail - parent_window.state.min_sel_dur_s),
         )
 
         # Lazily analyze audio
         if (
-            self.state.app_config.audio_traj is not None
+            parent_window.state.app_config.audio_traj is not None
             and selected_value.audio_traj is None
         ):
             selected_value.audio_traj = analyze_audio(
-                selected_value.trajectories[self.state.app_config.audio_traj]
+                selected_value.trajectories[parent_window.state.app_config.audio_traj]
             )
 
         window = VarWindow(
-            window_manager=self.window_manager,
+            window_manager=self,
             selected_variable=name,
-            dimensions=self.state.dimensions,
-            temporal_disp_specs=self.state.temporal_disp_specs,
-            app_config=self.state.app_config,
+            dimensions=parent_window.state.dimensions,
+            temporal_disp_specs=parent_window.state.temporal_disp_specs,
+            app_config=parent_window.state.app_config,
             head_s=new_head,
             tail_s=new_tail,
         )
 
         window.show()
 
+    def add_window(self, name: str, window: VarWindow) -> None:
+        self.windows[name] = window
 
-class WindowManager:
-    def __init__(self):
-        self.windows: list[VarWindow] = []
+    def remove_window(self, name: str) -> None:
+        if name in self.windows:
+            del self.windows[name]
 
-    def add_window(self, window: VarWindow) -> None:
-        self.windows.append(window)
+    def close_window(self, name: str) -> None:
+        if name in self.windows:
+            # Automatically unregisters itself
+            self.windows[name].close()
 
     def close_all(self) -> None:
-        for window in self.windows:
+        for window in self.windows.values():
             window.close()
-        self.windows.clear()
