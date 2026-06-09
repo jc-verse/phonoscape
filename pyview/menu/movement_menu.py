@@ -67,15 +67,10 @@ class MovementMenu(QMenu):
 
     def _step_forward(self):
         # TODO: make this configurable
-        self.root.set_cursor(
-            min(
-                self.state.cursor_s + 0.005,
-                self.state.selected_value.duration_s,
-            )
-        )
+        self.root.set_cursor(self.state.cursor_s + 0.005)
 
     def _step_backward(self):
-        self.root.set_cursor(max(self.state.cursor_s - 0.005, 0))
+        self.root.set_cursor(self.state.cursor_s - 0.005)
 
     def _shift_selection(self, direction: int) -> None:
         old_head = self.state.head_s

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -31,12 +31,13 @@ class VarWindow(QMainWindow):
         app_config: AppConfig,
         head_s: float,
         tail_s: float,
+        custom: dict[str, Any],
     ):
         super().__init__()
         window_manager.add_window(selected_variable, self)
         self.window_manager = window_manager
         self.state = WindowState(
-            custom={},
+            custom=custom,
             labels=[],
             selected_variable=selected_variable,
             temporal_disp_specs=temporal_disp_specs,
@@ -242,6 +243,7 @@ class WindowManager:
             app_config=parent_window.state.app_config,
             head_s=new_head,
             tail_s=new_tail,
+            custom=parent_window.state.custom,
         )
 
         window.show()

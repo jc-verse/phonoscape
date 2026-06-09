@@ -59,6 +59,7 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
         app_config=app_config,
         head_s=head_s,
         tail_s=tail_s,
+        custom={},
     )
     window.show()
 
