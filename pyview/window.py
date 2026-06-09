@@ -51,7 +51,7 @@ class VarWindow(QMainWindow):
                 self.state.selected_value.trajectories[self.state.app_config.audio_traj]
             )
 
-        self.setWindowTitle(f"PyView - {app_config.file.name}")
+        self.setWindowTitle(f"PyView - {app_config.file.name} - {selected_variable}")
         self.resize(1440, 1000)
 
         self._build_ui()

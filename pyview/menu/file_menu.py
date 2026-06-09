@@ -14,61 +14,62 @@ class FileMenu(QMenu):
         self.state = parent.state
         self.root = parent.root
 
-        variables_menu = QMenu("Variables", self)
-        variables_menu.addAction("Previous", self._open_previous, shortcut="Ctrl+1")
-        variables_menu.addAction("Next", self._open_next, shortcut="Ctrl+2")
-        variables_menu.addAction(
-            "Next; close current",
-            lambda: self._open_next(after=self._close_current),
-            shortcut="Ctrl+3",
-        )
-        variables_menu.addAction(
-            "Next plus export",
-            lambda: self._open_next(after=parent._todo("export")),
-            shortcut="Ctrl+4",
-        )
-        variables_menu.addAction(
-            "Next; export, close current",
-            lambda: self._open_next(
-                after=[parent._todo("export"), self._close_current]
-            ),
-            shortcut="Ctrl+5",
-        )
-        variables_menu.addAction(
-            "Next; save labels, close current",
-            lambda: self._open_next(
-                after=[parent._todo("save labels"), self._close_current]
-            ),
-            shortcut="Ctrl+6",
-        )
-        variables_menu.addAction(
-            "Next; export/save labels, close current",
-            lambda: self._open_next(
-                after=[parent._todo("export/save labels"), self._close_current]
-            ),
-            shortcut="Ctrl+7",
-        )
-        variables_menu.addSeparator()
-        self.variable_action_group = QActionGroup(self)
-        self.variable_action_group.setExclusive(True)
-
-        current_variable = self.state.selected_variable
-
-        for name in self.state.app_config.data.keys():
-            action = QAction(name, self)
-            action.setCheckable(True)
-            action.setChecked(name == current_variable)
-            action.triggered.connect(
-                lambda checked=False, name=name: self.root.window_manager.open_window(
-                    name, self.root
-                )
+        if len(self.state.app_config.data) > 1:
+            variables_menu = QMenu("Variables", self)
+            variables_menu.addAction("Previous", self._open_previous, shortcut="Ctrl+1")
+            variables_menu.addAction("Next", self._open_next, shortcut="Ctrl+2")
+            variables_menu.addAction(
+                "Next; close current",
+                lambda: self._open_next(after=self._close_current),
+                shortcut="Ctrl+3",
             )
+            variables_menu.addAction(
+                "Next plus export",
+                lambda: self._open_next(after=parent._todo("export")),
+                shortcut="Ctrl+4",
+            )
+            variables_menu.addAction(
+                "Next; export, close current",
+                lambda: self._open_next(
+                    after=[parent._todo("export"), self._close_current]
+                ),
+                shortcut="Ctrl+5",
+            )
+            variables_menu.addAction(
+                "Next; save labels, close current",
+                lambda: self._open_next(
+                    after=[parent._todo("save labels"), self._close_current]
+                ),
+                shortcut="Ctrl+6",
+            )
+            variables_menu.addAction(
+                "Next; export/save labels, close current",
+                lambda: self._open_next(
+                    after=[parent._todo("export/save labels"), self._close_current]
+                ),
+                shortcut="Ctrl+7",
+            )
+            variables_menu.addSeparator()
+            self.variable_action_group = QActionGroup(self)
+            self.variable_action_group.setExclusive(True)
 
-            self.variable_action_group.addAction(action)
-            variables_menu.addAction(action)
+            current_variable = self.state.selected_variable
 
-        self.addMenu(variables_menu)
-        self.addSeparator()
+            for name in self.state.app_config.data.keys():
+                action = QAction(name, self)
+                action.setCheckable(True)
+                action.setChecked(name == current_variable)
+                action.triggered.connect(
+                    lambda checked=False, name=name: self.root.window_manager.open_window(
+                        name, self.root
+                    )
+                )
+
+                self.variable_action_group.addAction(action)
+                variables_menu.addAction(action)
+
+            self.addMenu(variables_menu)
+            self.addSeparator()
 
         save_menu = QMenu("Save", self)
         save_menu.addAction(
