@@ -187,6 +187,9 @@ class VarWindow(QMainWindow):
             mid = (head_s + tail_s) / 2
             head_s = mid - self.state.min_sel_dur_s / 2
             tail_s = mid + self.state.min_sel_dur_s / 2
+        if width > self.state.selected_value.duration_s:
+            head_s = 0
+            tail_s = self.state.selected_value.duration_s
         if head_s < 0:
             head_s = 0
             tail_s = head_s + width
