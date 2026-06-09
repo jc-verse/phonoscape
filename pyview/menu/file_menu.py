@@ -1,10 +1,55 @@
 from typing import TYPE_CHECKING, Callable
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.backends.backend_qt import NavigationToolbar2QT
+from matplotlib.figure import Figure
+import pickle
+from PySide6.QtCore import QSize
 from PySide6.QtGui import QAction, QActionGroup
-from PySide6.QtWidgets import QMenu
+from PySide6.QtWidgets import QMenu, QMainWindow, QSizePolicy
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
+
+
+class FigureCanvasWithInitialSize(FigureCanvasQTAgg):
+    def __init__(self, figure, initial_size: QSize):
+        super().__init__(figure)
+        self._initial_size = initial_size
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+    def sizeHint(self) -> QSize:
+        return self._initial_size
+
+
+class MatplotlibCloneWindow(QMainWindow):
+    def __init__(
+        self,
+        source_figure: Figure,
+        source_canvas: FigureCanvasQTAgg,
+        title: str,
+        parent: QMainWindow,
+    ):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+
+        # TODO: not getting the right dimensions
+        self.figure = pickle.loads(pickle.dumps(source_figure))
+        dpi = self.figure.dpi
+        width_px, height_px = source_canvas.get_width_height(physical=False)
+        self.figure.set_size_inches(width_px / dpi, height_px / dpi, forward=False)
+
+        self.canvas = FigureCanvasWithInitialSize(
+            self.figure, QSize(width_px, height_px)
+        )
+        self.setCentralWidget(self.canvas)
+
+        self.toolbar = NavigationToolbar2QT(self.canvas, self)
+        self.addToolBar(self.toolbar)
+
+        self.adjustSize()
+        self.canvas.draw_idle()
 
 
 class FileMenu(QMenu):
@@ -83,6 +128,13 @@ class FileMenu(QMenu):
 
         self.addMenu(save_menu)
         self.addAction("Export...", parent._todo("Export"))
+        open_figure_menu = QMenu("Open figure", self)
+        open_figure_menu.addAction("Temporal view", self._open_temporal_view)
+        open_figure_menu.addAction("Spatial view", self._open_spatial_view)
+        open_figure_menu.addSeparator()
+        open_figure_menu.addAction("Entire window", parent._todo("Open entire window"))
+        self.addMenu(open_figure_menu)
+        self.addSeparator()
         self.addAction("Close window", self.root.close)
         self.addAction("Close all", self.root.window_manager.close_all)
 
@@ -110,3 +162,21 @@ class FileMenu(QMenu):
 
     def _close_current(self):
         self.root.window_manager.close_window(self.state.selected_variable)
+
+    def _open_temporal_view(self):
+        self._temporal_clone_window = MatplotlibCloneWindow(
+            self.root.temporal_view.figure,
+            self.root.temporal_view.canvas,
+            title="Temporal Display",
+            parent=self.root,
+        )
+        self._temporal_clone_window.show()
+
+    def _open_spatial_view(self):
+        self._spatial_clone_window = MatplotlibCloneWindow(
+            self.root.spatial_view.figure,
+            self.root.spatial_view.canvas,
+            title="Spatial Display",
+            parent=self.root,
+        )
+        self._spatial_clone_window.show()
