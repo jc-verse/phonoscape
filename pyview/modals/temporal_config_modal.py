@@ -309,7 +309,9 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                         traj_name=traj_name,
                         traj_dims=parent.state.app_config.dimensions,
                         content="movement",
-                        components=["x", "y", "z"][: parent.state.app_config.dimensions],
+                        components=["x", "y", "z"][
+                            : parent.state.app_config.dimensions
+                        ],
                     )
                 )
             else:

@@ -24,7 +24,8 @@ class MenuBar(QMenuBar):
         self.addMenu(FileMenu(self))
         self.addMenu(DataMenu(self))
         self.addMenu(ViewMenu(self))
-        self.addMenu(PlayMenu(self))
+        if self.state.app_config.audio_traj is not None:
+            self.addMenu(PlayMenu(self))
         self.addMenu(SelectionMenu(self))
         self.addMenu(MovementMenu(self))
         self.addMenu(LabelMenu(self))

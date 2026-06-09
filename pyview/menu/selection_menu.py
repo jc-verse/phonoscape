@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 
-from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
@@ -34,11 +33,13 @@ class SelectionMenu(QMenu):
         self.addAction(
             "Shift selection left",
             lambda: self.root.move_selection(self.state.head_s - self.state.tail_s),
-        ).setShortcut(QKeySequence("Ctrl+L"))
+            shortcut="Ctrl+L",
+        )
         self.addAction(
             "Shift selection right",
             lambda: self.root.move_selection(self.state.tail_s - self.state.head_s),
-        ).setShortcut(QKeySequence("Ctrl+R"))
+            shortcut="Ctrl+R",
+        )
 
     def _shrink_selection(self) -> None:
         nudge = 0.1 * (self.state.tail_s - self.state.head_s)

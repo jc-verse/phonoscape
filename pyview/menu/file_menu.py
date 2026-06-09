@@ -101,9 +101,9 @@ class FileMenu(QMenu):
             current_variable = self.state.selected_variable
 
             for name in self.state.app_config.data.keys():
-                action = QAction(name, self)
-                action.setCheckable(True)
-                action.setChecked(name == current_variable)
+                action = QAction(
+                    name, self, checkable=True, checked=name == current_variable
+                )
                 action.triggered.connect(
                     lambda checked=False, name=name: self.root.window_manager.open_window(
                         name, self.root

@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from enum import Enum, auto
 
 from PySide6.QtCore import QTimer
-from PySide6.QtGui import QKeySequence, QAction, QActionGroup
+from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
@@ -33,33 +33,26 @@ class MovementMenu(QMenu):
         self._cycle_timer.setInterval(1000 // self.frame_rate)
         self._cycle_timer.timeout.connect(self._cycle_once)
 
-        self.addAction("Step forward", self._step_forward).setShortcut(
-            QKeySequence("Ctrl+F")
-        )
-        self.addAction("Step backward", self._step_backward).setShortcut(
-            QKeySequence("Ctrl+B")
-        )
+        self.addAction("Step forward", self._step_forward, shortcut="Ctrl+F")
+        self.addAction("Step backward", self._step_backward, shortcut="Ctrl+B")
         self.addAction("Shift forward", lambda: self._shift_selection(1))
         self.addAction("Shift backward", lambda: self._shift_selection(-1))
         self.addSeparator()
         cycling_group = QActionGroup(self)
         cycling_group.setExclusive(True)
-        forward_action = QAction("Cycle forward", self)
-        forward_action.setCheckable(True)
+        forward_action = QAction("Cycle forward", self, checkable=True)
         forward_action.triggered.connect(
             lambda: self._set_cycling_mode(CyclingMode.FORWARD)
         )
         self.forward_action = forward_action
         cycling_group.addAction(forward_action)
-        backward_action = QAction("Cycle backward", self)
-        backward_action.setCheckable(True)
+        backward_action = QAction("Cycle backward", self, checkable=True)
         backward_action.triggered.connect(
             lambda: self._set_cycling_mode(CyclingMode.BACKWARD)
         )
         self.backward_action = backward_action
         cycling_group.addAction(backward_action)
-        reflective_action = QAction("Reflective cycling", self)
-        reflective_action.setCheckable(True)
+        reflective_action = QAction("Reflective cycling", self, checkable=True)
         reflective_action.triggered.connect(
             lambda: self._set_cycling_mode(CyclingMode.REFLECTIVE)
         )
@@ -67,8 +60,10 @@ class MovementMenu(QMenu):
         cycling_group.addAction(reflective_action)
         self.addActions(cycling_group.actions())
         self.addAction(
-            "Stop cycling", lambda: self._set_cycling_mode(CyclingMode.STOPPED)
-        ).setShortcut(QKeySequence("Ctrl+X"))
+            "Stop cycling",
+            lambda: self._set_cycling_mode(CyclingMode.STOPPED),
+            shortcut="Ctrl+X",
+        )
 
     def _step_forward(self):
         # TODO: make this configurable

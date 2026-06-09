@@ -27,20 +27,22 @@ class ViewMenu(QMenu):
 
         spatial_menu = QMenu("Spatial options", self)
 
-        self.hide_spline_action = QAction("Hide spline", self)
-        self.hide_spline_action.setCheckable(True)
-        self.hide_spline_action.setChecked(False)
+        self.hide_spline_action = QAction(
+            "Hide spline",
+            self,
+            checkable=True,
+            checked=False,
+            enabled=bool(self.state.app_config.spline_trajs),
+        )
         self.hide_spline_action.triggered.connect(self._hide_spline)
         spatial_menu.addAction(self.hide_spline_action)
-        if not self.state.app_config.spline_trajs:
-            self.hide_spline_action.setEnabled(False)
 
         if self.state.app_config.dimensions == 3:
             spatial_menu.addSeparator()
 
-            self.free_rotate_action = QAction("Free rotate", self)
-            self.free_rotate_action.setCheckable(True)
-            self.free_rotate_action.setChecked(False)
+            self.free_rotate_action = QAction(
+                "Free rotate", self, checkable=True, checked=False
+            )
             self.free_rotate_action.triggered.connect(self._free_rotate)
             spatial_menu.addAction(self.free_rotate_action)
 
@@ -59,9 +61,9 @@ class ViewMenu(QMenu):
             self.view_option = "2D view (2)"
 
             for label in views.keys():
-                action = QAction(label, self)
-                action.setCheckable(True)
-                action.setChecked(label == self.view_option)
+                action = QAction(
+                    label, self, checkable=True, checked=label == self.view_option
+                )
                 action.triggered.connect(
                     lambda checked=False, label=label: self._set_view_option(label)
                 )

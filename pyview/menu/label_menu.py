@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, cast
 from pathlib import Path
 import re
 
-from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QMenu, QMessageBox, QFileDialog, QInputDialog
 
 if TYPE_CHECKING:
@@ -29,9 +28,7 @@ class LabelMenu(QMenu):
             ),
         )
         self.addAction("Edit labels...", lambda: open_edit_labels_dialog(self))
-        self.addAction("Clear all labels", self._clear_all_labels).setShortcut(
-            QKeySequence("Ctrl+Y")
-        )
+        self.addAction("Clear all labels", self._clear_all_labels, shortcut="Ctrl+Y")
         self.addSeparator()
         self.addAction("Export labels...", self._export_labels)
         self.addAction("Import labels...", self._import_labels)
