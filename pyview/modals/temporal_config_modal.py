@@ -126,20 +126,6 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     comps_layout.addStretch(1)
     main_layout.addWidget(comps, 6, 0, 1, 3)
 
-    buttons = QFrame(main)
-    buttons_layout = QHBoxLayout(buttons)
-    buttons_layout.setContentsMargins(0, 16, 0, 0)
-    buttons_layout.setSpacing(12)
-    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    ok_button = QPushButton("OK", buttons)
-    cancel_button = QPushButton("Cancel", buttons)
-
-    buttons_layout.addWidget(ok_button)
-    buttons_layout.addWidget(cancel_button)
-
-    main_layout.addWidget(buttons, 7, 0, 1, 3)
-
     def selected_displayed_index() -> int | None:
         selected_items = displayed_list.selectedItems()
         if len(selected_items) != 1:
@@ -356,14 +342,6 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         refresh_detail_controls()
         refresh_button_states()
 
-    def on_ok() -> None:
-        parent.state.temporal_disp_specs = displayed_specs
-        parent.root.temporal_view.reset_plot()
-        dialog.accept()
-
-    def on_cancel() -> None:
-        dialog.reject()
-
     loaded_list.itemSelectionChanged.connect(on_loaded_select)
     displayed_list.itemSelectionChanged.connect(on_displayed_select)
 
@@ -378,12 +356,27 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     if z_check is not None:
         z_check.toggled.connect(lambda _checked: rewrite_selected_spec())
 
-    ok_button.clicked.connect(on_ok)
-    cancel_button.clicked.connect(on_cancel)
+    buttons = QFrame(main)
+    buttons_layout = QHBoxLayout(buttons)
+    buttons_layout.setContentsMargins(0, 16, 0, 0)
+    buttons_layout.setSpacing(12)
+    buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    main_layout.addWidget(buttons, 7, 0, 1, 3)
 
-    ok_button.setDefault(True)
-    ok_button.setAutoDefault(True)
-    cancel_button.setAutoDefault(False)
+    def on_ok() -> None:
+        parent.state.temporal_disp_specs = displayed_specs
+        parent.root.temporal_view.reset_plot()
+        dialog.accept()
+
+    def on_cancel() -> None:
+        dialog.reject()
+
+    ok_button = QPushButton("OK", buttons, autoDefault=True, default=True)
+    ok_button.clicked.connect(on_ok)
+    buttons_layout.addWidget(ok_button)
+    cancel_button = QPushButton("Cancel", buttons, autoDefault=False)
+    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(cancel_button)
 
     refresh_detail_controls()
     refresh_button_states()

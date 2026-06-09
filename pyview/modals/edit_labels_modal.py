@@ -75,22 +75,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
     buttons_layout.setContentsMargins(0, 0, 0, 0)
     buttons_layout.setSpacing(6)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    # TODO: reorder labels
-    edit_button = QPushButton("Edit", dialog)
-    delete_button = QPushButton("Delete", dialog)
-    close_button = QPushButton("Close", dialog)
-
-    buttons_layout.addWidget(edit_button)
-    buttons_layout.addWidget(delete_button)
-    buttons_layout.addWidget(close_button)
-
     outer_layout.addLayout(buttons_layout)
-
-    def update_buttons() -> None:
-        n_selected = len(label_list.selectedItems())
-        edit_button.setEnabled(n_selected == 1)
-        delete_button.setEnabled(n_selected > 0)
 
     def refresh_labels() -> None:
         label_list.clear()
@@ -117,16 +102,26 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
     def on_close() -> None:
         dialog.accept()
 
+    # TODO: reorder labels
+    edit_button = QPushButton("Edit", dialog, autoDefault=False)
+    edit_button.clicked.connect(on_edit)
+    buttons_layout.addWidget(edit_button)
+
+    delete_button = QPushButton("Delete", dialog, autoDefault=False)
+    delete_button.clicked.connect(on_delete)
+    buttons_layout.addWidget(delete_button)
+
+    close_button = QPushButton("Close", dialog, autoDefault=True, default=True)
+    close_button.clicked.connect(on_close)
+    buttons_layout.addWidget(close_button)
+
+    def update_buttons() -> None:
+        n_selected = len(label_list.selectedItems())
+        edit_button.setEnabled(n_selected == 1)
+        delete_button.setEnabled(n_selected > 0)
+
     label_list.itemSelectionChanged.connect(update_buttons)
     label_list.itemDoubleClicked.connect(lambda _item: on_edit())
-    edit_button.clicked.connect(on_edit)
-    delete_button.clicked.connect(on_delete)
-    close_button.clicked.connect(on_close)
-
-    close_button.setDefault(True)
-    close_button.setAutoDefault(True)
-    edit_button.setAutoDefault(False)
-    delete_button.setAutoDefault(False)
 
     update_buttons()
 

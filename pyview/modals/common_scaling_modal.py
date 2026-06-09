@@ -64,13 +64,6 @@ def open_common_scaling_dialog(parent: ViewMenu) -> None:
     buttons_layout.setContentsMargins(0, 0, 0, 0)
     buttons_layout.setSpacing(6)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-    ok_button = QPushButton("OK", buttons)
-    cancel_button = QPushButton("Cancel", buttons)
-
-    buttons_layout.addWidget(ok_button)
-    buttons_layout.addWidget(cancel_button)
-
     outer_layout.addWidget(buttons)
 
     def on_ok() -> None:
@@ -80,12 +73,13 @@ def open_common_scaling_dialog(parent: ViewMenu) -> None:
     def on_cancel() -> None:
         dialog.reject()
 
+    ok_button = QPushButton("OK", buttons, autoDefault=True, default=True)
     ok_button.clicked.connect(on_ok)
-    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(ok_button)
 
-    ok_button.setDefault(True)
-    ok_button.setAutoDefault(True)
-    cancel_button.setAutoDefault(False)
+    cancel_button = QPushButton("Cancel", buttons, autoDefault=False)
+    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(cancel_button)
 
     dialog.adjustSize()
     dialog.setFixedSize(dialog.sizeHint())

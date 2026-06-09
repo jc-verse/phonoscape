@@ -74,14 +74,6 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     buttons_layout.setSpacing(6)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
 
-    ok_button = QPushButton("OK", dialog)
-    cancel_button = QPushButton("Cancel", dialog)
-
-    buttons_layout.addWidget(ok_button)
-    buttons_layout.addWidget(cancel_button)
-
-    outer_layout.addLayout(buttons_layout)
-
     def on_ok() -> None:
         try:
             azim = float(azim_entry.text())
@@ -111,12 +103,15 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     def on_cancel() -> None:
         dialog.reject()
 
+    ok_button = QPushButton("OK", dialog, autoDefault=True, default=True)
     ok_button.clicked.connect(on_ok)
-    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(ok_button)
 
-    ok_button.setDefault(True)
-    ok_button.setAutoDefault(True)
-    cancel_button.setAutoDefault(False)
+    cancel_button = QPushButton("Cancel", dialog, autoDefault=False)
+    cancel_button.clicked.connect(on_cancel)
+    buttons_layout.addWidget(cancel_button)
+
+    outer_layout.addLayout(buttons_layout)
 
     dialog.adjustSize()
     dialog.setFixedSize(dialog.sizeHint())
