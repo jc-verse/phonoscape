@@ -5,6 +5,8 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMenu
 
+from ..modals.movement_config_modal import open_movement_config_dialog
+
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 
@@ -27,10 +29,7 @@ class MovementMenu(QMenu):
         self._cycling_direction = 0
 
         self._cycle_timer = QTimer(self)
-        # TODO: make this configurable
-        self.frame_rate = 50
-        self.playback_speed = 1.0
-        self._cycle_timer.setInterval(1000 // self.frame_rate)
+        self._cycle_timer.setInterval(int(1000 / self.state.app_config.frame_rate_fps))
         self._cycle_timer.timeout.connect(self._cycle_once)
 
         self.addAction("Step forward", self._step_forward, shortcut="Ctrl+F")
@@ -65,12 +64,29 @@ class MovementMenu(QMenu):
             shortcut="Ctrl+X",
         )
 
+        self.addSeparator()
+        configure_action = QAction("Configure movement...", self)
+        # Without this, the action gets the "Preferences" role and shows up in
+        # the "Preferences" menu on MacOS.
+        configure_action.setMenuRole(QAction.MenuRole.NoRole)
+        configure_action.triggered.connect(lambda: open_movement_config_dialog(self))
+        self.addAction(configure_action)
+
     def _step_forward(self):
-        # TODO: make the nudge configurable
-        self.root.set_cursor(min(self.state.cursor_s + 0.005, self.state.tail_s))
+        self.root.set_cursor(
+            min(
+                self.state.cursor_s + self.state.app_config.nudge_step_ms / 1000,
+                self.state.tail_s,
+            )
+        )
 
     def _step_backward(self):
-        self.root.set_cursor(max(self.state.cursor_s - 0.005, self.state.head_s))
+        self.root.set_cursor(
+            max(
+                self.state.cursor_s - self.state.app_config.nudge_step_ms / 1000,
+                self.state.head_s,
+            )
+        )
 
     def _shift_selection(self, direction: int) -> None:
         old_head = self.state.head_s
@@ -117,7 +133,11 @@ class MovementMenu(QMenu):
         tail = self.state.tail_s
         cursor = self.state.cursor_s
 
-        step_s = (1000 // self.frame_rate) / 1000 * self.playback_speed
+        step_s = (
+            int(1000 / self.state.app_config.frame_rate_fps)
+            / 1000
+            * self.state.app_config.playback_rate
+        )
         new_cursor = cursor + step_s * self._cycling_direction
 
         if new_cursor < head:

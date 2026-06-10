@@ -20,6 +20,11 @@ class AppConfig:
     )
     dimensions: Literal[2, 3]
 
+    # Movement
+    nudge_step_ms: float = 5.0
+    playback_rate: float = 1.0
+    frame_rate_fps: float = 50.0
+
 
 @dataclass
 class ScalarTrajDisplay:
