@@ -31,7 +31,7 @@ class SpatialView2D(QWidget):
         dpi = self.screen().logicalDotsPerInch()
 
         self.figure = Figure(figsize=(width / dpi, height / dpi), dpi=dpi, frameon=True)
-        self.figure.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        self.figure.tight_layout()
 
         self.canvas = FigureCanvasQTAgg(self.figure)
         layout.addWidget(self.canvas)

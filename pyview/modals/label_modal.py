@@ -94,7 +94,7 @@ def open_label_dialog(
 
     def on_cancel() -> None:
         dialog.reject()
-    
+
     def on_delete() -> None:
         if action[0] != "edit" or not init_label:
             return
