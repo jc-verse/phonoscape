@@ -24,9 +24,9 @@ You can run `python -m pyview --help` to see the full list of command-line argum
   - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default.
   - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first scalar trajectory with a sampling rate `> 1000` is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
   - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
-  - `--temporal-disp-trajs SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot.
+  - `--temporal-disp-trajs SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot. See [temporal view](#temporal-view) for more details regarding their presentation.
     - If designating a scalar trajectory: `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: `SPECT` (spectrogram), `RMS` (root mean square), `ZC` (zero-crossing rate), `F0` (fundamental frequency), `VEL` (velocity), `ABSVEL` (absolute velocity).
-    - If designating a spatial trajectory: `TRAJ`, optionally prefixed by `v` or `a`, and optionally suffixed by a subset of `xyz`, indicating if the trajectory should be movement, velocity, or acceleration, and which dimensions to plot. Specifying `xyz` is equivalent to no specification. Note that following MVIEW behavior, the velocity/acceleration of the whole vector (e.g., `vTD`) only displays the magnitude (and is therefore unsigned), while the velocity/acceleration of specific dimensions (e.g., `vTDx`, `vTDxy`) displays each separate dimension (and is signed).
+    - If designating a spatial trajectory: `TRAJ`, optionally prefixed by `v` or `a`, and optionally suffixed by a subset of `xyz`, indicating if the trajectory should be movement, velocity, or acceleration, and which dimensions to plot. Specifying `xyz` is equivalent to no specification.
 
     These specification names can also be obtained from the "Temporal layout" dialog.
 
@@ -94,7 +94,7 @@ The following optional fields may be provided for each trajectory struct:
 - **Open figure**: Opens one of the figures in a new window with matplotlib tools (configuring dimensions, save as file, etc.), like what you get with `plt.show()`; usually for the purpose of exporting the figure, but also useful for detailed inspection. This is equivalent to MVIEW's "Duplicate window".
   - **Temporal view**: Open the right panel only.
   - **Spatial view**: Open the top-left panel only.
-  - **Entire window**: TODO
+  - **Entire window**: Clone all plots in the current window as a single matplotlib figure. Currently the layout is broken.
 - **Close window**: Closes the current window only.
 - **Close all**: Closes all variable windows, which should quit the application.
 
@@ -113,7 +113,18 @@ The following optional fields may be provided for each trajectory struct:
   Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except spectrograms), depending on which dimensions are being viewed.
 
 - **Track formants**: TODO
-- **Spectral analysis**: TODO
+- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal spectrogram (`AUDIO_SPECT`) in the temporal view, and the external spectrum window (TODO). Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
+  - **Analysis window (ms)**: TODO
+  - **Number of LPC coeffs**: TODO
+  - **# FFT eval points**: Configures the frequency resolution of the `AUDIO_SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
+  - **Averaging window (ms)**: Configures the analysis window for the `AUDIO_SPECT` (I don't think this is right but this is how it is in MVIEW).
+  - **Overlap (ms)**: Configures the window shift for the `AUDIO_SPECT`.
+  - **SPL reference (dB)**: TODO
+  - **Spectral display cutoff (Hz)**: Affects visualization only. Configures the ymax of `AUDIO_SPECT` and the xmax of the time-slice spectrograms.
+  - **Adaptive pre-emphasis**: TODO
+  - **Active analyses**: TODO
+  - **Subject gender**: TODO
+  - **Spectrogram**: Acts as a multiplier for **Averaging window** (and affects `AUDIO_SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
 
 ### View menu
 
@@ -172,12 +183,16 @@ Currently a minimum of 25ms is enforced for the selection duration. Customizatio
 
 ### Movement menu
 
-- **Step forward (Ctrl+F)**: Moves the cursor forward by 5ms, bound by the selection.
-- **Step backward (Ctrl+B)**: Moves the cursor backward by 5ms, bound by the selection.
+- **Step forward (Ctrl+F)**: Moves the cursor forward by the nudge step size, bound by the selection.
+- **Step backward (Ctrl+B)**: Moves the cursor backward by the nudge step size, bound by the selection.
 - **Shift forward/backward**: Shifts the selection just like "Shift selection right/left", but keeps the cursor at the same relative position inside the selection. If the cursor is not inside the selection, it is set to the start of the selection.
-- **Cycle forward/backward**: Continuously shifts the cursor forward/backward, wrapping around the selection boundary. Currently the playback speed is always 1x (synchronized with actual time) and the frame rate is always 50 FPS.
+- **Cycle forward/backward**: Continuously shifts the cursor forward/backward, wrapping around the selection boundary.
 - **Reflective cycling**: Continuously shifts the cursor forward; if it hits one boundary, moves in the opposite direction.
 - **Stop cycling (Ctrl+X)**: As it says.
+- **Configure movement**: Opens a dialog to configure the movement behavior.
+  - **Nudge step size**: The amount of time to move when stepping forward/backward, in milliseconds. Default is 5 ms. (In MVIEW this also controls the cycling; in PyView you use playback rate and FPS instead.)
+  - **Playback rate**: How fast the simulated motion is relative to real time when cycling. Default is 1 (i.e., synchronized with real time). For example, if the playback rate is 2, then the cursor moves twice as fast as real time, so a 10-second selection would take 5 seconds to cycle through.
+  - **Frame rate (FPS)**: The frame rate of the simulated motion when cycling, in frames per second. Default is 20 FPS. You can get the "nudge step size" for cycling by `1000 / frame_rate_fps * playback_rate` ms. So by default it is 50 ms. You don't want the frame rate too large (especially if it exceeds your screen's refresh rate!), because it can cause performance issues, and practically the signal probably have a sampling rate of ~100 Hz anyway. The animation tends to go out of sync at 30 FPS (sorry Python isn't really efficient for real-time stuff).
 
 ### Label menu
 
@@ -216,7 +231,15 @@ Currently, the trajectories' colors are determined by the `COLOR` field in the d
 
 Currently, each axis' y-range is adaptive to the range of the trajectory data. [Common scaling](#view-menu) will be supported.
 
-For the spectrogram's parameters, see [spectrogram](#spectrogram).
+Unlike MVIEW, all scalar trajectories—not just audio—support spectrogram display (this was nominally supported in MVIEW but in reality it seems to be sketchy). Short Time Fourier Transform (STFT) is used. You can customize its data using the following [spectral analysis](#data-menu) options:
+
+- **# FFT eval points**
+- **Averaging window**
+- **Overlap**
+- **Spectral display cutoff**
+- **Spectrogram**
+
+Following MVIEW behavior, the velocity/acceleration of the whole vector (e.g., `vTD`) only displays the magnitude (and is therefore unsigned), while the velocity/acceleration of specific dimensions (e.g., `vTDx`, `vTDxy`) displays each separate dimension (and is signed).
 
 You can drag the selection in the framing trajectory to shift it, or drag its boundaries to resize. Double-clicking resets it to the entire data.
 

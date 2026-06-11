@@ -40,7 +40,7 @@ def open_movement_config_dialog(parent: MovementMenu) -> None:
     frame_rate_fps_field = QLineEdit(f"{config.frame_rate_fps:g}", main)
 
     fields = [
-        ("Nudge stepsize (msecs)", nudge_step_ms_field),
+        ("Nudge step size (ms)", nudge_step_ms_field),
         ("Playback rate", playback_rate_field),
         ("Frame rate (FPS)", frame_rate_fps_field),
     ]

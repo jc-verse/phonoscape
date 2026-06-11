@@ -29,7 +29,6 @@ class MovementMenu(QMenu):
         self._cycling_direction = 0
 
         self._cycle_timer = QTimer(self)
-        self._cycle_timer.setInterval(int(1000 / self.state.app_config.frame_rate_fps))
         self._cycle_timer.timeout.connect(self._cycle_once)
 
         self.addAction("Step forward", self._step_forward, shortcut="Ctrl+F")
@@ -122,6 +121,9 @@ class MovementMenu(QMenu):
         if mode is CyclingMode.STOPPED:
             self._cycle_timer.stop()
         elif not self._cycle_timer.isActive():
+            self._cycle_timer.setInterval(
+                int(1000 / self.state.app_config.frame_rate_fps)
+            )
             self._cycle_timer.start()
 
     def _cycle_once(self) -> None:

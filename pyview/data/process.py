@@ -8,32 +8,54 @@ from numpy.typing import NDArray
 from scipy.signal import ShortTimeFFT, windows, filtfilt, lfilter
 
 
-from ..state import TrajDisplay, DatasetVariable, Trajectory, Audio, F0Track
+from ..state import TrajDisplay, DatasetVariable, Trajectory, Audio, F0Track, AppConfig
 
 
-def get_spect(traj: Trajectory):
-    window_ms = 25
-    overlap = 0.75
-    nperseg = round(traj.sample_rate_hz * window_ms / 1000)
-    hop = max(1, round(nperseg * (1.0 - overlap)))
-    win = windows.hann(nperseg, sym=False)
+def get_spect(traj: Trajectory, frame: int, win_ms: float, hop_ms: float, mult: int):
+    # MVIEW temporal spectrogram uses first-difference pre-emphasis,
+    # not the configurable PREEMP value.
+    signal = np.diff(traj.data, prepend=traj.data[0])
+
+    nperseg = round(traj.sample_rate_hz * win_ms / 1000)
+    nperseg = max(1, nperseg * mult)
+    # MVIEW makes the resulting window length even.
+    nperseg += nperseg % 2
+
+    # In MVIEW, OLAP is effectively the frame shift in milliseconds.
+    # MVIEW applies MULT to the spectrogram window size, not to hop/OLAP.
+    hop_samples = round(traj.sample_rate_hz * hop_ms / 1000)
+    hop_samples = max(1, hop_samples)
+
+    # SciPy requires the FFT size to be at least the window length.
+    # MVIEW/MATLAB allows fft(x, n) where n < len(x), which effectively
+    # truncates; this implementation intentionally does not reproduce that.
+    fft_samples = max(frame * 2, nperseg)
+
+    # Idiomatic STFT windowing uses the periodic window form.
+    # MVIEW uses MATLAB hamming(n), which is closer to sym=True.
+    win = windows.hamming(nperseg, sym=True)
     stft = ShortTimeFFT(
-        win=win, hop=hop, fs=traj.sample_rate_hz, mfft=1024, scale_to="magnitude"
+        win=win,
+        hop=hop_samples,
+        fs=traj.sample_rate_hz,
+        mfft=fft_samples,
+        scale_to="magnitude",
     )
-    S = stft.spectrogram(traj.data)
+
+    S = stft.spectrogram(signal)
     S_db = 20 * np.log10(S + np.finfo(float).eps)
-    return S_db, hop / traj.sample_rate_hz
+    return S_db
 
 
 def get_rms(traj: Trajectory):
-    window = round(20 * traj.sample_rate_hz / 1000)  # 20 msec filter window
+    window = round(20 * traj.sample_rate_hz / 1000)  # 20 ms filter window
     b = np.ones(window) / window  # rectwin(window) ./ window
     rms: NDArray[np.float64] = np.sqrt(np.abs(filtfilt(b, [1], traj.data**2)))
     return rms
 
 
 def get_zc(traj: Trajectory):
-    wl = round(20 * traj.sample_rate_hz / 1000)  # 20 msec filter window
+    wl = round(20 * traj.sample_rate_hz / 1000)  # 20 ms filter window
     wl2 = int(np.ceil(wl / 2))
     s = np.concatenate([np.zeros(wl2), traj.data, np.zeros(wl2)])
     zc = cast(
@@ -237,8 +259,15 @@ def get_cog(
     return CogMeasure(l1=l1, skew=skew, kurt=kurt)
 
 
-def analyze_audio(traj: Trajectory):
-    S_db, delta_t = get_spect(traj)
+def analyze_audio(traj: Trajectory, config: AppConfig):
+    S_db = get_spect(
+        traj,
+        frame=config.fft_eval_points,
+        # TODO: is this right? This is what MVIEW does but I think it should be analysis_window_ms
+        win_ms=config.averaging_window_ms,
+        hop_ms=config.overlap_ms,
+        mult=config.spectrogram_bandwidth_mode.value,
+    )
     rms = get_rms(traj)
     zc = get_zc(traj)
     f0 = get_f0(traj)
@@ -248,7 +277,6 @@ def analyze_audio(traj: Trajectory):
         n_samples=traj.n_samples,
         signal=np.ravel(traj.data),
         spect=S_db,
-        spect_delta_t_s=delta_t,
         rms=rms,
         rms_db=20 * np.log10(rms + np.finfo(float).eps),
         zc=zc,
@@ -281,7 +309,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
     t = np.arange(traj.n_samples) / traj.sample_rate_hz
     match spec.content:
         case "SPECT":
-            return get_spect(traj)[0:2]
+            return (t[0], t[-1], 0, traj.sample_rate_hz / 2), get_spect(traj)
         case "SIGNAL":
             return t, traj.data
         case "VEL":

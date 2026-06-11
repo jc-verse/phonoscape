@@ -49,9 +49,17 @@ class FreqDomainView(QWidget):
 
         self.canvas.draw_idle()
 
-    def update_plot(self, cursor: bool = False, xlim: bool = False) -> None:
+    def update_plot(
+        self, data: bool = False, cursor: bool = False, xlim: bool = False
+    ) -> None:
         assert self.state.selected_value.audio_traj is not None
-        if cursor:
+        if data:
+            self.ax.set_ylim(
+                self.state.selected_value.audio_traj.spect.min() - 5,
+                self.state.selected_value.audio_traj.spect.max() + 5,
+            )
+
+        if cursor or data:
             f, spect_slice = self._get_current_spect()
 
             self.curve_artist.set_data(f, spect_slice)
@@ -61,18 +69,24 @@ class FreqDomainView(QWidget):
         if xlim:
             self.ax.set_xlim(0, self.state.app_config.spectral_display_cutoff_hz)
 
-        if cursor or xlim:
+        if data or cursor or xlim:
             self.canvas.draw_idle()
 
     def _get_current_spect(self):
         assert self.state.selected_value.audio_traj is not None
-        delta_t = self.state.selected_value.audio_traj.spect_delta_t_s
-        spect_db = self.state.selected_value.audio_traj.spect
-        frame_idx = round(self.state.cursor_s / delta_t)
+
+        config = self.state.app_config
+        audio_traj = self.state.selected_value.audio_traj
+        spect_db = audio_traj.spect
+
+        hop_s = config.overlap_ms * config.spectrogram_bandwidth_mode.value / 1000.0
+        frame_idx = int(np.floor(self.state.cursor_s / hop_s + 0.5))
         frame_idx = max(0, min(frame_idx, spect_db.shape[1] - 1))
-        f = np.linspace(
-            0,
-            self.state.selected_value.audio_traj.sample_rate_hz / 2,
-            spect_db.shape[0],
+
+        f = (
+            np.arange(spect_db.shape[0])
+            * audio_traj.sample_rate_hz
+            / (2 * config.fft_eval_points)
         )
+
         return f, spect_db[:, frame_idx]

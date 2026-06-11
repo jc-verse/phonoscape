@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import IntFlag, auto
+from enum import IntFlag, Enum, auto
 from pathlib import Path
 from typing import Any, Literal, Unpack, TypedDict
 import numpy as np
@@ -12,6 +12,13 @@ class ActiveAnalysis(IntFlag):
     DFT = auto()
     AVG = auto()
     CEPS = auto()
+
+
+class SpectrogramBandwidth(Enum):
+    WIDE = 1
+    MID_1 = 2
+    MID_2 = 3
+    NARROW = 4
 
 
 @dataclass
@@ -32,7 +39,7 @@ class AppConfig:
     # Movement
     nudge_step_ms: float = 5.0
     playback_rate: float = 1.0
-    frame_rate_fps: float = 50.0
+    frame_rate_fps: float = 20.0
 
     # Spectral analysis
     analysis_window_ms: float = 30.0
@@ -45,7 +52,7 @@ class AppConfig:
     pre_emphasis: float = 0.98
     active_analyses: ActiveAnalysis = ActiveAnalysis.LPC
     is_female: bool = False
-    spectrogram_bandwidth_mode: int = 1
+    spectrogram_bandwidth_mode: SpectrogramBandwidth = SpectrogramBandwidth.WIDE
 
 
 @dataclass
@@ -108,7 +115,6 @@ class Audio:
     n_samples: int
     signal: NDArray[np.float64]
     spect: NDArray[np.float64]
-    spect_delta_t_s: float
     # TODO: lazily compute only if requested (by temporal view or "report")
     rms: NDArray[np.float64]
     rms_db: NDArray[np.float64]

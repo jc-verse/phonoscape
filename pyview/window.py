@@ -49,7 +49,10 @@ class VarWindow(QMainWindow):
         )
         if self.state.app_config.audio_traj:
             self.state.selected_value.audio_traj = analyze_audio(
-                self.state.selected_value.trajectories[self.state.app_config.audio_traj]
+                self.state.selected_value.trajectories[
+                    self.state.app_config.audio_traj
+                ],
+                self.state.app_config,
             )
 
         self.setWindowTitle(f"PyView - {app_config.file.name} - {selected_variable}")
@@ -233,7 +236,8 @@ class WindowManager:
             and selected_value.audio_traj is None
         ):
             selected_value.audio_traj = analyze_audio(
-                selected_value.trajectories[parent_window.state.app_config.audio_traj]
+                selected_value.trajectories[parent_window.state.app_config.audio_traj],
+                parent_window.state.app_config,
             )
 
         window = VarWindow(

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (
 
 if TYPE_CHECKING:
     from ..menu.data_menu import DataMenu
-from ..state import ActiveAnalysis
+from ..data.process import analyze_audio
+from ..state import ActiveAnalysis, SpectrogramBandwidth
 
 
 def open_spectral_analysis_dialog(parent: DataMenu) -> None:
@@ -60,13 +61,13 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     spectral_cutoff_entry = make_entry(f"{config.spectral_display_cutoff_hz:.1f}")
     pre_emphasis_entry = make_entry(f"{abs(config.pre_emphasis):.2f}")
 
-    add_row(0, "Analysis window (msecs):", analysis_window_entry)
+    add_row(0, "Analysis window (ms):", analysis_window_entry)
     add_row(1, "Number of LPC coeffs:", lpc_order_entry)
     add_row(2, "# FFT eval points:", fft_eval_points_entry)
-    add_row(3, "Averaging window (msecs):", averaging_window_entry)
-    add_row(4, "Overlap (msecs):", overlap_entry)
+    add_row(3, "Averaging window (ms):", averaging_window_entry)
+    add_row(4, "Overlap (ms):", overlap_entry)
     add_row(5, "SPL reference (dB):", spl_reference_entry)
-    add_row(6, "Spectral Display Cutoff (Hz):", spectral_cutoff_entry)
+    add_row(6, "Spectral display cutoff (Hz):", spectral_cutoff_entry)
 
     pre_emphasis_frame = QFrame(main)
     pre_emphasis_layout = QHBoxLayout(pre_emphasis_frame)
@@ -84,7 +85,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     main_layout.addWidget(pre_emphasis_frame, 8, 0, 1, 2)
 
     main_layout.addWidget(
-        QLabel("Active Analyses:", main),
+        QLabel("Active analyses:", main),
         9,
         0,
         alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop,
@@ -121,7 +122,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     subject_gender_combo.setFixedWidth(120)
 
     main_layout.addWidget(
-        QLabel("Subject Gender:", main),
+        QLabel("Subject gender:", main),
         10,
         0,
         alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
@@ -132,9 +133,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
 
     spectrogram_combo = QComboBox(main)
     spectrogram_combo.addItems(["wideband", "mid 1", "mid 2", "narrow"])
-    spectrogram_combo.setCurrentIndex(
-        max(0, min(3, config.spectrogram_bandwidth_mode - 1))
-    )
+    spectrogram_combo.setCurrentIndex(config.spectrogram_bandwidth_mode.value - 1)
     spectrogram_combo.setFixedWidth(120)
 
     main_layout.addWidget(
@@ -155,18 +154,73 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     buttons_layout.setSpacing(6)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-    def on_ok() -> None:
-        old_spectral_display_cutoff_hz = config.spectral_display_cutoff_hz
+    @overload
+    def parse_positive_num(
+        field: QLineEdit, name: str, type: type[int]
+    ) -> int | None: ...
+    @overload
+    def parse_positive_num(
+        field: QLineEdit, name: str, type: type[float]
+    ) -> float | None: ...
+    def parse_positive_num(field: QLineEdit, name: str, type) -> int | float | None:
         try:
-            config.spectral_display_cutoff_hz = float(spectral_cutoff_entry.text())
-            if config.spectral_display_cutoff_hz <= 0:
-                config.spectral_display_cutoff_hz = old_spectral_display_cutoff_hz
-        except:
-            pass
+            value = type(field.text())
+        except ValueError:
+            return None
+        if value <= 0 or value == getattr(config, name):
+            return None
+        return value
 
-        if config.spectral_display_cutoff_hz != old_spectral_display_cutoff_hz:
+    def on_ok() -> None:
+        update_temporal_view = False
+        if analysis_window_ms := parse_positive_num(
+            analysis_window_entry, "analysis_window_ms", float
+        ):
+            config.analysis_window_ms = analysis_window_ms
+        if lpc_order := parse_positive_num(lpc_order_entry, "lpc_order", int):
+            config.lpc_order = lpc_order
+        if fft_eval_points := parse_positive_num(
+            fft_eval_points_entry, "fft_eval_points", int
+        ):
+            config.fft_eval_points = fft_eval_points
+            update_temporal_view = True
+        if averaging_window_ms := parse_positive_num(
+            averaging_window_entry, "averaging_window_ms", float
+        ):
+            config.averaging_window_ms = averaging_window_ms
+            update_temporal_view = True
+        if overlap_ms := parse_positive_num(overlap_entry, "overlap_ms", float):
+            config.overlap_ms = overlap_ms
+            update_temporal_view = True
+        if spl_reference_db := parse_positive_num(
+            spl_reference_entry, "spl_reference_db", float
+        ):
+            config.spl_reference_db = spl_reference_db
+        if spectral_display_cutoff_hz := parse_positive_num(
+            spectral_cutoff_entry, "spectral_display_cutoff_hz", float
+        ):
+            config.spectral_display_cutoff_hz = spectral_display_cutoff_hz
             parent.root.freq_domain_view.update_plot(xlim=True)
             parent.root.temporal_view.update_plot(spect_ylim=True)
+        spectrogram_bandwidth_mode = spectrogram_combo.currentIndex() + 1
+        if spectrogram_bandwidth_mode != config.spectrogram_bandwidth_mode.value:
+            config.spectrogram_bandwidth_mode = SpectrogramBandwidth(
+                spectrogram_bandwidth_mode
+            )
+            update_temporal_view = True
+        if update_temporal_view and parent.state.app_config.audio_traj:
+            # Invalidate all previous computations
+            for v in parent.state.app_config.data.values():
+                v.audio_traj = None
+            parent.state.selected_value.audio_traj = analyze_audio(
+                parent.state.selected_value.trajectories[
+                    parent.state.app_config.audio_traj
+                ],
+                parent.state.app_config,
+            )
+            # TODO: perhaps restrict to only spectrogram?
+            parent.root.temporal_view.update_plot(trajectories=True)
+            parent.root.freq_domain_view.update_plot(data=True)
         dialog.accept()
 
     def on_cancel() -> None:

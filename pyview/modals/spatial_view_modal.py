@@ -50,10 +50,7 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     roll_entry.setFixedWidth(100)
 
     main_layout.addWidget(
-        QLabel("azim", dialog),
-        0,
-        0,
-        alignment=Qt.AlignmentFlag.AlignRight,
+        QLabel("azim", dialog), 0, 0, alignment=Qt.AlignmentFlag.AlignRight
     )
     main_layout.addWidget(azim_entry, 0, 1)
 
