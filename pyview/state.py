@@ -164,6 +164,7 @@ class WindowState:
     selected_variable: str
     temporal_disp_specs: list[TrajDisplay]
     app_config: AppConfig
+    view: tuple[float, float, float]
     cursor_s: float
     head_s: float
     tail_s: float

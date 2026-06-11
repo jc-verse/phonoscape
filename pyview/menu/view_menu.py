@@ -58,12 +58,8 @@ class ViewMenu(QMenu):
             self.view_action_group.setExclusive(True)
             self.view_actions: dict[str, QAction] = {}
 
-            self.view_option = "2D view (2)"
-
             for label in views.keys():
-                action = QAction(
-                    label, self, checkable=True, checked=label == self.view_option
-                )
+                action = QAction(label, self, checkable=True, checked=False)
                 action.triggered.connect(
                     lambda checked=False, label=label: self._set_view_option(label)
                 )
@@ -71,7 +67,7 @@ class ViewMenu(QMenu):
                 spatial_menu.addAction(action)
                 self.view_actions[label] = action
 
-            self._view_init()
+            self._set_view(self.state.view)
 
             spatial_menu.addAction(
                 "Specify view...",
@@ -95,11 +91,24 @@ class ViewMenu(QMenu):
             self.root.spatial_view.ax.disable_mouse_rotation()
 
     def _set_view_option(self, label: str) -> None:
-        self.view_option = label
-        self._view_init()
+        elev, azim, roll = views[label]
+        self.root.state.view = (elev, azim, roll)
+        self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
+        self.root.spatial_view.canvas.draw_idle()
 
-    def _view_init(self) -> None:
-        elev, azim, roll = views[self.view_option]
+    def _set_view(self, view: tuple[float, float, float]) -> None:
+        matching_view = None
+        for label, (velev, vazim, vroll) in views.items():
+            if view[0] == velev and view[1] == vazim and view[2] == vroll:
+                matching_view = label
+                break
+        if matching_view is not None:
+            action = self.view_actions[matching_view]
+            action.blockSignals(True)
+            action.setChecked(True)
+            action.blockSignals(False)
+        elev, azim, roll = view
+        self.root.state.view = view
         self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
         self.root.spatial_view.canvas.draw_idle()
 
@@ -108,7 +117,6 @@ class ViewMenu(QMenu):
         for action in self.view_actions.values():
             action.setChecked(False)
         self.view_action_group.setExclusive(True)
-        self.view_option = ""
 
     def _on_spatial_axis_rotate(self, event) -> None:
         if not self.free_rotate_action.isChecked():
@@ -121,6 +129,7 @@ class ViewMenu(QMenu):
             self.root.spatial_view.ax.azim,
             self.root.spatial_view.ax.roll,
         )
+        self.root.state.view = view
 
         matching_view = None
         for label, (velev, vazim, vroll) in views.items():
@@ -132,11 +141,6 @@ class ViewMenu(QMenu):
                 matching_view = label
                 break
         if matching_view is not None:
-            self.view_option = matching_view
-            action = self.view_actions[matching_view]
-            action.blockSignals(True)
-            action.setChecked(True)
-            action.blockSignals(False)
-            self._view_init()
+            self._set_view_option(matching_view)
         else:
             self._clear_view_selection()

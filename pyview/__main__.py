@@ -1,3 +1,4 @@
+from typing import cast
 from . import pyview
 
 if __name__ == "__main__":
@@ -19,10 +20,10 @@ if __name__ == "__main__":
     # [ ] SPREAD
     # [x] TAIL
     # [ ] SPATEX
-    # [ ] VIEW
-    # [ ] NAME
-    # [ ] VLIST
-    # [ ] VLSEL
+    # [x] VIEW
+    # [x] NAME
+    # [x] VLIST
+    # [x] VLSEL
     # [x] SPECLIM
 
     parser = argparse.ArgumentParser(
@@ -74,6 +75,13 @@ if __name__ == "__main__":
         help="Number of dimensions for spatial trajectories, or list of column indices to use for each dimension (default: all dimensions, up to 3, are used for spatial view in x,y,z order).",
     )
     parser.add_argument(
+        "--view",
+        type=float,
+        nargs=3,
+        metavar=("ELEV", "AZIM", "ROLL"),
+        help="Initial view angles (degrees) for the 3D spatial display: azimuth, elevation and roll. Only has an effect when the data is 3D. Only has an effect on the first opened window; subsequent windows inherit the opening window's view (default: 0, -90, 0).",
+    )
+    parser.add_argument(
         "--head",
         type=float,
         metavar="MS",
@@ -111,6 +119,7 @@ if __name__ == "__main__":
             if not args.comps
             else args.comps[0] if len(args.comps) == 1 else args.comps
         ),
+        view=cast(tuple[float, float, float], tuple(args.view)) if args.view else None,
         head=args.head,
         tail=args.tail,
         sex=args.sex,

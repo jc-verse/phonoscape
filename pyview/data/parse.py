@@ -25,6 +25,7 @@ class CmdArgs(TypedDict, total=False):
     framing: str | None
     temporal_disp_trajs: list[str] | None
     comps: int | list[int] | None
+    view: tuple[float, float, float] | None
     head: float | None
     tail: float | None
     sex: Literal["M", "F"] | None
@@ -42,14 +43,23 @@ def normalize_traj_name(name: str) -> str:
     return str(name).strip().upper().replace("_", "")
 
 
+def is_data(arr: np.ndarray) -> bool:
+    return (
+        arr.dtype.names is not None
+        and "NAME" in arr.dtype.names
+        and "SRATE" in arr.dtype.names
+        and "SIGNAL" in arr.dtype.names
+    )
+
+
 def load_variables(
     file: str | Path, variables_pattern: str, comps: int | list[int] | None
 ) -> tuple[dict[str, DatasetVariable], dict[str, Any], Literal[2, 3]]:
     raw = loadmat(file, squeeze_me=True)
 
     raw = {k: v for k, v in raw.items() if not k.startswith("__")}
-    data = {k: v for k, v in raw.items() if v.dtype.names is not None}
-    other = {k: v for k, v in raw.items() if v.dtype.names is None}
+    data = {k: v for k, v in raw.items() if is_data(v)}
+    other = {k: v for k, v in raw.items() if not is_data(v)}
 
     if variables_pattern != "*":
         data = {k: v for k, v in data.items() if fnmatch(k, variables_pattern)}

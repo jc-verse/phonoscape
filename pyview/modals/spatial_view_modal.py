@@ -41,23 +41,23 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
     main_layout.setHorizontalSpacing(8)
     main_layout.setVerticalSpacing(8)
 
-    azim_entry = QLineEdit(str(parent.root.spatial_view.ax.azim), dialog)
-    elev_entry = QLineEdit(str(parent.root.spatial_view.ax.elev), dialog)
-    roll_entry = QLineEdit(str(parent.root.spatial_view.ax.roll), dialog)
+    elev_entry = QLineEdit(str(parent.state.view[0]), dialog)
+    azim_entry = QLineEdit(str(parent.state.view[1]), dialog)
+    roll_entry = QLineEdit(str(parent.state.view[2]), dialog)
 
-    azim_entry.setFixedWidth(100)
     elev_entry.setFixedWidth(100)
+    azim_entry.setFixedWidth(100)
     roll_entry.setFixedWidth(100)
 
     main_layout.addWidget(
-        QLabel("azim", dialog), 0, 0, alignment=Qt.AlignmentFlag.AlignRight
+        QLabel("elev", dialog), 0, 0, alignment=Qt.AlignmentFlag.AlignRight
     )
-    main_layout.addWidget(azim_entry, 0, 1)
+    main_layout.addWidget(elev_entry, 0, 1)
 
     main_layout.addWidget(
-        QLabel("elev", dialog), 1, 0, alignment=Qt.AlignmentFlag.AlignRight
+        QLabel("azim", dialog), 1, 0, alignment=Qt.AlignmentFlag.AlignRight
     )
-    main_layout.addWidget(elev_entry, 1, 1)
+    main_layout.addWidget(azim_entry, 1, 1)
 
     main_layout.addWidget(
         QLabel("roll", dialog), 2, 0, alignment=Qt.AlignmentFlag.AlignRight
@@ -73,29 +73,17 @@ def open_spatial_view_dialog(parent: ViewMenu) -> None:
 
     def on_ok() -> None:
         try:
-            azim = float(azim_entry.text())
             elev = float(elev_entry.text())
+            azim = float(azim_entry.text())
             roll = float(roll_entry.text())
         except ValueError:
             QMessageBox.critical(
-                dialog, "Invalid view", "azim, elev, and roll must be numbers."
+                dialog, "Invalid view", "elev, azim, and roll must be numbers."
             )
             return
 
+        parent._set_view((elev, azim, roll))
         dialog.accept()
-
-        matching_view = None
-        for label, (velev, vazim, vroll) in views.items():
-            if azim == vazim and elev == velev and roll == vroll:
-                matching_view = label
-                break
-
-        if matching_view is not None:
-            parent._set_view_option(matching_view)
-        else:
-            parent._clear_view_selection()
-            parent.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
-            parent.root.spatial_view.canvas.draw_idle()
 
     def on_cancel() -> None:
         dialog.reject()

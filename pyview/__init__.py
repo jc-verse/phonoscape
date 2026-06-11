@@ -57,6 +57,7 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
         selected_variable=selected_variable,
         temporal_disp_specs=temporal_disp_specs,
         app_config=app_config,
+        view=kwargs.get("view") or (0, -90, 0),
         head_s=head_s,
         tail_s=tail_s,
         custom={},
