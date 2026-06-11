@@ -156,7 +156,17 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def on_ok() -> None:
-        # TODO: Parse widgets into SpectConfig and update state.
+        old_spectral_display_cutoff_hz = config.spectral_display_cutoff_hz
+        try:
+            config.spectral_display_cutoff_hz = float(spectral_cutoff_entry.text())
+            if config.spectral_display_cutoff_hz <= 0:
+                config.spectral_display_cutoff_hz = old_spectral_display_cutoff_hz
+        except:
+            pass
+
+        if config.spectral_display_cutoff_hz != old_spectral_display_cutoff_hz:
+            parent.root.freq_domain_view.update_plot(xlim=True)
+            parent.root.temporal_view.update_plot(spect_ylim=True)
         dialog.accept()
 
     def on_cancel() -> None:

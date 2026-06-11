@@ -36,14 +36,14 @@ class AppConfig:
 
     # Spectral analysis
     analysis_window_ms: float = 30.0
-    lpc_order: int = 0
+    lpc_order: int = 26  # Need overriding based on sample rate
     fft_eval_points: int = 256
     averaging_window_ms: float = 6.0
     overlap_ms: float = 1.0
     spl_reference_db: float = 20.0
-    spectral_display_cutoff_hz: float = 0.0
+    spectral_display_cutoff_hz: float = 11025.0  # Need overriding based on sample rate
     pre_emphasis: float = 0.98
-    active_analyses: int = 1
+    active_analyses: ActiveAnalysis = ActiveAnalysis.LPC
     is_female: bool = False
     spectrogram_bandwidth_mode: int = 1
 
@@ -108,7 +108,6 @@ class Audio:
     n_samples: int
     signal: NDArray[np.float64]
     spect: NDArray[np.float64]
-    spect_extent: tuple[float, float, float, float]
     spect_delta_t_s: float
     # TODO: lazily compute only if requested (by temporal view or "report")
     rms: NDArray[np.float64]

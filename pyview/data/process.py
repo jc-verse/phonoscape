@@ -22,8 +22,7 @@ def get_spect(traj: Trajectory):
     )
     S = stft.spectrogram(traj.data)
     S_db = 20 * np.log10(S + np.finfo(float).eps)
-    extent = (0.0, traj.n_samples / traj.sample_rate_hz, 0.0, traj.sample_rate_hz / 2)
-    return extent, S_db, hop / traj.sample_rate_hz
+    return S_db, hop / traj.sample_rate_hz
 
 
 def get_rms(traj: Trajectory):
@@ -239,7 +238,7 @@ def get_cog(
 
 
 def analyze_audio(traj: Trajectory):
-    extent, S_db, delta_t = get_spect(traj)
+    S_db, delta_t = get_spect(traj)
     rms = get_rms(traj)
     zc = get_zc(traj)
     f0 = get_f0(traj)
@@ -249,7 +248,6 @@ def analyze_audio(traj: Trajectory):
         n_samples=traj.n_samples,
         signal=np.ravel(traj.data),
         spect=S_db,
-        spect_extent=extent,
         spect_delta_t_s=delta_t,
         rms=rms,
         rms_db=20 * np.log10(rms + np.finfo(float).eps),
@@ -268,7 +266,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
             case "SIGNAL":
                 return t, traj.signal
             case "SPECT":
-                return traj.spect_extent, traj.spect
+                return (t[0], t[-1], 0, traj.sample_rate_hz / 2), traj.spect
             case "RMS":
                 return t, traj.rms
             case "ZC":

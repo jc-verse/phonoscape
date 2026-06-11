@@ -19,12 +19,14 @@ class DataMenu(QMenu):
 
         self.addAction("Report", self._report)
         self.addAction("Track formants", parent._todo("Track formants"))
-        
+
         spect_config_action = QAction("Configure spectral analysis...", self)
         # Without this, the action gets the "Preferences" role and shows up in
         # the "Preferences" menu on MacOS.
         spect_config_action.setMenuRole(QAction.MenuRole.NoRole)
-        spect_config_action.triggered.connect(lambda: open_spectral_analysis_dialog(self))
+        spect_config_action.triggered.connect(
+            lambda: open_spectral_analysis_dialog(self)
+        )
         self.addAction(spect_config_action)
 
     def _report(self):

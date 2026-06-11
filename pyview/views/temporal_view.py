@@ -102,6 +102,7 @@ class TemporalView(QWidget):
         cursor: bool = False,
         trajectories: bool = False,
         frame: bool = False,
+        spect_ylim: bool = False,
         labels: list[Label] | None = None,
     ) -> None:
         if cursor:
@@ -148,6 +149,14 @@ class TemporalView(QWidget):
                     ]
                 ]
             )
+        if spect_ylim:
+            for i, spec in enumerate(self._get_temp_disp_specs()):
+                if (
+                    spec.content == "SPECT"
+                    and spec.traj_name == self.state.app_config.audio_traj
+                ):
+                    ax = self.axes[i]
+                    ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
         if labels:
             for label in labels:
                 if label not in self.state.labels:
@@ -190,7 +199,7 @@ class TemporalView(QWidget):
                                 clip_on=True,
                             )
                             label_text_artists[label] = text
-        if cursor or trajectories or frame or labels:
+        if cursor or trajectories or frame or spect_ylim or labels:
             self.canvas.draw_idle()
 
     def _plot_one_axis(
@@ -231,14 +240,8 @@ class TemporalView(QWidget):
                     cmap="gray_r",
                 ),
             )
-        elif spec.content in (
-            "SIGNAL",
-            "VEL",
-            "ABSVEL",
-            "RMS",
-            "F0",
-            "ZC",
-        ):
+            ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
+        elif spec.content in ("SIGNAL", "VEL", "ABSVEL", "RMS", "F0", "ZC"):
             artist = ("scalar", ax.plot(t, data, linewidth=0.8, color=traj.color)[0])
         else:
             raise ValueError(

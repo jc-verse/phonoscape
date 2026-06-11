@@ -44,26 +44,35 @@ class FreqDomainView(QWidget):
             self.state.selected_value.audio_traj.spect.min() - 5,
             self.state.selected_value.audio_traj.spect.max() + 5,
         )
+        self.ax.set_xlim(0, self.state.app_config.spectral_display_cutoff_hz)
         # TODO: double clicking gesture (open new window)
 
         self.canvas.draw_idle()
 
-    def update_plot(self) -> None:
+    def update_plot(self, cursor: bool = False, xlim: bool = False) -> None:
         assert self.state.selected_value.audio_traj is not None
-        f, spect_slice = self._get_current_spect()
+        if cursor:
+            f, spect_slice = self._get_current_spect()
 
-        self.curve_artist.set_data(f, spect_slice)
-        self.ax.relim()
-        self.ax.autoscale_view()
+            self.curve_artist.set_data(f, spect_slice)
+            self.ax.relim()
+            self.ax.autoscale_view()
 
-        self.canvas.draw_idle()
+        if xlim:
+            self.ax.set_xlim(0, self.state.app_config.spectral_display_cutoff_hz)
+
+        if cursor or xlim:
+            self.canvas.draw_idle()
 
     def _get_current_spect(self):
         assert self.state.selected_value.audio_traj is not None
         delta_t = self.state.selected_value.audio_traj.spect_delta_t_s
         spect_db = self.state.selected_value.audio_traj.spect
-        extent = self.state.selected_value.audio_traj.spect_extent
         frame_idx = round(self.state.cursor_s / delta_t)
         frame_idx = max(0, min(frame_idx, spect_db.shape[1] - 1))
-        f = np.linspace(extent[2], extent[3], spect_db.shape[0])
+        f = np.linspace(
+            0,
+            self.state.selected_value.audio_traj.sample_rate_hz / 2,
+            spect_db.shape[0],
+        )
         return f, spect_db[:, frame_idx]

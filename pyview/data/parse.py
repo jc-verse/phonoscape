@@ -326,21 +326,29 @@ def normalize_args(
             min_x, max_x = min(min_x, x.min()), max(max_x, x.max())
             min_y, max_y = min(min_y, y.min()), max(max_y, y.max())
 
-    return (
-        AppConfig(
-            file=file,
-            data=data,
-            other_data=other_data,
-            palate_trace=palate_trace,
-            spline_trajs=spline_trajs,
-            audio_traj=audio_traj,
-            framing_traj=framing_traj,
-            spatial_bounds=(
-                (min_x, max_x, min_y, max_y, min_z, max_z)
-                if dimensions == 3
-                else (min_x, max_x, min_y, max_y)
-            ),
-            dimensions=dimensions,
+    config = AppConfig(
+        file=file,
+        data=data,
+        other_data=other_data,
+        palate_trace=palate_trace,
+        spline_trajs=spline_trajs,
+        audio_traj=audio_traj,
+        framing_traj=framing_traj,
+        spatial_bounds=(
+            (min_x, max_x, min_y, max_y, min_z, max_z)
+            if dimensions == 3
+            else (min_x, max_x, min_y, max_y)
         ),
+        dimensions=dimensions,
+    )
+
+    if audio_traj is not None:
+        audio_sr = first_variable.trajectories[audio_traj].sample_rate_hz
+        # Consistent with MVIEW
+        config.lpc_order = round(audio_sr / 1000) + (8 if config.is_female else 4)
+        config.spectral_display_cutoff_hz = audio_sr / 2
+
+    return (
+        config,
         temporal_disp_specs,
     )

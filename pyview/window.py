@@ -168,7 +168,7 @@ class VarWindow(QMainWindow):
         self.temporal_view.update_plot(cursor=True)
         self.spatial_view.update_plot(points=True)
         if self.state.app_config.audio_traj is not None:
-            self.freq_domain_view.update_plot()
+            self.freq_domain_view.update_plot(cursor=True)
 
     def set_head(self, head_s: float) -> None:
         head_s = min(self.state.tail_s - self.state.min_sel_dur_s, head_s)
