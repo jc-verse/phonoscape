@@ -27,6 +27,8 @@ class CmdArgs(TypedDict, total=False):
     comps: int | list[int] | None
     head: float | None
     tail: float | None
+    sex: Literal["M", "F"] | None
+    spect_lim: float | None
 
 
 def get_optional(arr: np.ndarray, name: str) -> np.ndarray | list[None]:
@@ -358,15 +360,14 @@ def normalize_args(
             else (min_x, max_x, min_y, max_y)
         ),
         dimensions=dimensions,
+        is_female=(args.get("sex") == "F"),
+        spectral_display_cutoff_hz=args.get("spect_lim") or 11025.0,
     )
 
     if audio_traj is not None:
         audio_sr = first_variable.trajectories[audio_traj].sample_rate_hz
         # Consistent with MVIEW
         config.lpc_order = round(audio_sr / 1000) + (8 if config.is_female else 4)
-        config.spectral_display_cutoff_hz = audio_sr / 2
+        config.spectral_display_cutoff_hz = args.get("spect_lim") or (audio_sr / 2)
 
-    return (
-        config,
-        temporal_disp_specs,
-    )
+    return config, temporal_disp_specs

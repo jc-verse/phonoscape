@@ -31,9 +31,11 @@ You can run `python -m pyview --help` to see the full list of command-line argum
 
     These specification names can also be obtained from the "Temporal layout" dialog.
 
-  - `--comps COMP1 COMP2 ...` (MVIEW `IS3D`): equivalent to the dataset `NCOMPS` [field](#dataset-format), but used as a global fallback when the `NCOMPS` field is absent. This global configuration is also used for non-trajectory data, such as palate trace. A single number `N` is equivalent to `0 .. N-1`.
-  - `--head MS` (MVIEW `HEAD`): the position (in milliseconds) of the left edge of the temporal selection. If specified, it must be a non-negative number less than `--tail - 25`. If unspecified, it defaults to the start of the data (0 ms).
-  - `--tail MS` (MVIEW `TAIL`): the position (in milliseconds) of the right edge of the temporal selection. If specified, it must be a non-negative number greater than `--head + 25`. If unspecified, it defaults to the end of the first variable's data.
+  - `--comps COL1 COL2 ...` (MVIEW `IS3D`): equivalent to the dataset `NCOMPS` [field](#dataset-format), but used as a global fallback when the `NCOMPS` field is absent. This global configuration is also used for non-trajectory data, such as palate trace. A single number `N` is equivalent to `0 .. N-1`.
+  - `--head MS` (MVIEW `HEAD`): the position (in milliseconds) of the left edge of the temporal selection. If specified, it must be a non-negative number less than `--tail - 25`. If unspecified, it defaults to the start of the data (0 ms). It only has an effect on the first opened window; subsequent windows inherit the opening window's selection.
+  - `--tail MS` (MVIEW `TAIL`): the position (in milliseconds) of the right edge of the temporal selection. If specified, it must be a non-negative number greater than `--head + 25`. If unspecified, it defaults to the end of the first variable's data. It only has an effect on the first opened window; subsequent windows inherit the opening window's selection.
+  - `--sex SEX` (MVIEW `SEX`): the subject's sex. `M` for male; `F` for female. This can be later customized in the 'Configure spectral analysis' dialog, but it affects the default LPC degree. Default is `M`.
+  - `--spect-lim HZ` (MVIEW `SPECLIM`): frequency upper limit (Hz) for spectrogram display. This affects the visualization of the spectrograms but does not affect the underlying spectral analysis. Default is the Nyquist frequency.
 
 Note that the framing and audio trajectory discovery is slightly different from MVIEW's; for one, we never special-case the very first trajectory.
 
