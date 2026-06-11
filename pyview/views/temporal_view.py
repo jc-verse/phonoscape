@@ -357,9 +357,7 @@ class TemporalView(QWidget):
 
     def _refresh_plotting_data(self) -> None:
         self.plotting_data = [
-            get_plotting_data(
-                self.state.selected_value, spec, self.state.app_config.dimensions
-            )
+            get_plotting_data(self.state.selected_value, spec, self.state.app_config)
             for spec in self._get_temp_disp_specs()
         ]
 

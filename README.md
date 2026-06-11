@@ -113,8 +113,8 @@ The following optional fields may be provided for each trajectory struct:
   Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except spectrograms), depending on which dimensions are being viewed.
 
 - **Track formants**: TODO
-- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal spectrogram (`AUDIO_SPECT`) in the temporal view, and the external spectrum window (TODO). Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
-  - **Analysis window (ms)**: TODO
+- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`_SPECT`, `_RMS`, `_ZC`, `_F0`), and the external spectrum window (TODO). Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
+  - **Analysis window (ms)**: Configures the window size for the `RMS` and `ZC` temporal analyses.
   - **Number of LPC coeffs**: TODO
   - **# FFT eval points**: Configures the frequency resolution of the `AUDIO_SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
   - **Averaging window (ms)**: Configures the analysis window for the `AUDIO_SPECT` (I don't think this is right but this is how it is in MVIEW).

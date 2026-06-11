@@ -37,7 +37,7 @@ class DataMenu(QMenu):
             idx = round(self.state.cursor_s * traj.sample_rate_hz)
             cog = get_cog(traj, self.state.cursor_s)
             print(
-                f"Window {20:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {cog.l1:.2f}, skew = {cog.skew:.2f}, kurt = {cog.kurt:.2f}"
+                f"Window {self.state.app_config.analysis_window_ms:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {cog.l1:.2f}, skew = {cog.skew:.2f}, kurt = {cog.kurt:.2f}"
             )
             print("Formants (BW):", end="")
             nf = len(traj.formants)

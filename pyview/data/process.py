@@ -47,15 +47,15 @@ def get_spect(traj: Trajectory, frame: int, win_ms: float, hop_ms: float, mult: 
     return S_db
 
 
-def get_rms(traj: Trajectory):
-    window = round(20 * traj.sample_rate_hz / 1000)  # 20 ms filter window
+def get_rms(traj: Trajectory, win_ms: float):
+    window = round(traj.sample_rate_hz * win_ms / 1000)
     b = np.ones(window) / window  # rectwin(window) ./ window
     rms: NDArray[np.float64] = np.sqrt(np.abs(filtfilt(b, [1], traj.data**2)))
     return rms
 
 
-def get_zc(traj: Trajectory):
-    wl = round(20 * traj.sample_rate_hz / 1000)  # 20 ms filter window
+def get_zc(traj: Trajectory, win_ms: float):
+    wl = round(traj.sample_rate_hz * win_ms / 1000)
     wl2 = int(np.ceil(wl / 2))
     s = np.concatenate([np.zeros(wl2), traj.data, np.zeros(wl2)])
     zc = cast(
@@ -268,8 +268,8 @@ def analyze_audio(traj: Trajectory, config: AppConfig):
         hop_ms=config.overlap_ms,
         mult=config.spectrogram_bandwidth_mode.value,
     )
-    rms = get_rms(traj)
-    zc = get_zc(traj)
+    rms = get_rms(traj, win_ms=config.analysis_window_ms)
+    zc = get_zc(traj, win_ms=config.analysis_window_ms)
     f0 = get_f0(traj)
     return Audio(
         name=traj.name,
@@ -285,7 +285,7 @@ def analyze_audio(traj: Trajectory, config: AppConfig):
     )
 
 
-def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
+def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, config: AppConfig):
     # Fast path: reuse precomputed audio data
     if var.audio_traj and spec.traj_name == var.audio_traj.name:
         traj = var.audio_traj
@@ -309,7 +309,13 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
     t = np.arange(traj.n_samples) / traj.sample_rate_hz
     match spec.content:
         case "SPECT":
-            return (t[0], t[-1], 0, traj.sample_rate_hz / 2), get_spect(traj)
+            return (t[0], t[-1], 0, traj.sample_rate_hz / 2), get_spect(
+                traj,
+                frame=config.fft_eval_points,
+                win_ms=config.averaging_window_ms,
+                hop_ms=config.overlap_ms,
+                mult=config.spectrogram_bandwidth_mode.value,
+            )
         case "SIGNAL":
             return t, traj.data
         case "VEL":
@@ -321,9 +327,9 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
             )
             return t, vs
         case "RMS":
-            return t, get_rms(traj)
+            return t, get_rms(traj, win_ms=config.analysis_window_ms)
         case "ZC":
-            return t, get_zc(traj)
+            return t, get_zc(traj, win_ms=config.analysis_window_ms)
         case "movement" | "velocity" | "acceleration":
             cols = [{"x": 0, "y": 1, "z": 2}[comp] for comp in spec.components]
             ps = traj.data[:, cols]
@@ -331,7 +337,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
                 return t, ps
             vs = np.gradient(ps, axis=0) * traj.sample_rate_hz
             if spec.content == "velocity":
-                if vs.shape[1] == dimensions:
+                if vs.shape[1] == config.dimensions:
                     # Collapse if viewing all components
                     # TODO: currently this way for mview compatibility, but I think
                     # "velocity" and "speed" should be separate content types
@@ -339,7 +345,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, dimensions: int):
                     return t, np.array([np.linalg.norm(vs, axis=1)]).T
                 return t, vs
             accs = np.gradient(vs, axis=0) * traj.sample_rate_hz
-            if accs.shape[1] == dimensions:
+            if accs.shape[1] == config.dimensions:
                 return t, np.array([np.linalg.norm(accs, axis=1)]).T
             return t, accs
         case x:

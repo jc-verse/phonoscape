@@ -177,6 +177,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
             analysis_window_entry, "analysis_window_ms", float
         ):
             config.analysis_window_ms = analysis_window_ms
+            update_temporal_view = True
         if lpc_order := parse_positive_num(lpc_order_entry, "lpc_order", int):
             config.lpc_order = lpc_order
         if fft_eval_points := parse_positive_num(
