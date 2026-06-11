@@ -115,18 +115,18 @@ The following optional fields may be provided for each trajectory struct:
   Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except spectrograms), depending on which dimensions are being viewed.
 
 - **Track formants**: TODO
-- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), and the external spectrum window (TODO). Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
-  - **Analysis window (ms)**: Configures the window size for the `RMS` and `ZC` temporal analyses.
-  - **Number of LPC coeffs**: TODO
-  - **# FFT eval points**: Configures the frequency resolution of the `SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
-  - **Averaging window (ms)**: Configures the analysis window for the `SPECT` (I don't think this is right but this is how it is in MVIEW).
-  - **Overlap (ms)**: Configures the window shift for the `SPECT`.
-  - **SPL reference (dB)**: TODO
-  - **Spectral display cutoff (Hz)**: Affects visualization only. Configures the ymax of `SPECT` and the xmax of the time-slice spectrograms.
-  - **Adaptive pre-emphasis**: TODO
-  - **Active analyses**: TODO
-  - **Subject gender**: TODO
-  - **Spectrogram**: Acts as a multiplier for **Averaging window** (and affects `SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
+- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), the external spectrum window (TODO), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
+  - **Analysis window (ms)** (default: 30ms): Configures the window size for the `RMS` and `ZC` temporal analyses, and the window size for the **Report** output.
+  - **Number of LPC coeffs** (default: `audio_sampling_rate / 1000 + 8` if female, otherwise `audio_sampling_rate / 1000 + 4`): TODO
+  - **# FFT eval points** (default: 256): Configures the frequency resolution of the `SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
+  - **Averaging window (ms)** (default: 6ms): Configures the analysis window for the `SPECT` (I don't think this is right but this is how it is in MVIEW).
+  - **Overlap (ms)** (default: 1ms): Configures the window shift for the `SPECT`.
+  - **SPL reference (dB)** (default: 20dB): TODO
+  - **Spectral display cutoff (Hz)** (default: `audio_sampling_rate / 2`): Affects visualization only. Configures the ymax of `SPECT` and the xmax of the time-slice spectrograms.
+  - **Adaptive pre-emphasis** (default: 0.98): TODO
+  - **Active analyses** (default: LPC): TODO
+  - **Subject gender** (default: Male): TODO
+  - **Spectrogram** (default: wide): Acts as a multiplier for **Averaging window** (and affects `SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
 
 ### View menu
 
@@ -192,9 +192,9 @@ Currently a minimum of 25ms is enforced for the selection duration. Customizatio
 - **Reflective cycling**: Continuously shifts the cursor forward; if it hits one boundary, moves in the opposite direction.
 - **Stop cycling (Ctrl+X)**: As it says.
 - **Configure movement**: Opens a dialog to configure the movement behavior.
-  - **Nudge step size**: The amount of time to move when stepping forward/backward, in milliseconds. Default is 5 ms. (In MVIEW this also controls the cycling; in PyView you use playback rate and FPS instead.)
-  - **Playback rate**: How fast the simulated motion is relative to real time when cycling. Default is 1 (i.e., synchronized with real time). For example, if the playback rate is 2, then the cursor moves twice as fast as real time, so a 10-second selection would take 5 seconds to cycle through.
-  - **Frame rate (FPS)**: The frame rate of the simulated motion when cycling, in frames per second. Default is 20 FPS. You can get the "nudge step size" for cycling by `1000 / frame_rate_fps * playback_rate` ms. So by default it is 50 ms. You don't want the frame rate too large (especially if it exceeds your screen's refresh rate!), because it can cause performance issues, and practically the signal probably have a sampling rate of ~100 Hz anyway. The animation tends to go out of sync at 30 FPS (sorry Python isn't really efficient for real-time stuff).
+  - **Nudge step size (ms)** (default: 5ms): The amount of time to move when stepping forward/backward, in milliseconds. (In MVIEW this also controls the cycling; in PyView you use playback rate and FPS instead.)
+  - **Playback rate** (default: 1; i.e., synchronized with real time): How fast the simulated motion is relative to real time when cycling. For example, if the playback rate is 2, then the cursor moves twice as fast as real time, so a 10-second selection would take 5 seconds to cycle through.
+  - **Frame rate (FPS)** (default: 20): The frame rate of the simulated motion when cycling, in frames per second. You can get the "nudge step size" for cycling by `1000 / frame_rate_fps * playback_rate` ms. So by default it is 50ms. You don't want the frame rate too large (especially if it exceeds your screen's refresh rate!), because it can cause performance issues, and practically the signal probably have a sampling rate of ~100 Hz anyway. The animation tends to go out of sync at 30 FPS (sorry Python isn't really efficient for real-time stuff).
 
 ### Label menu
 
