@@ -20,10 +20,12 @@ from ..state import (
 
 class CmdArgs(TypedDict, total=False):
     palate: str | None
+    pharynx: str | None
     spline: list[str] | None
     audio: str | None
     framing: str | None
-    temporal_disp_trajs: list[str] | None
+    temporal_display: list[str] | None
+    spatial_exclude: list[str] | None
     comps: int | list[int] | None
     view: tuple[float, float, float] | None
     head: float | None
@@ -267,6 +269,42 @@ def normalize_args(
             palate_trace = palate_trace[:, :dimensions]
         del other_data[palate_variable]
 
+    pharynx_variable = args.get("pharynx")
+    pharynx_trace = None
+    if pharynx_variable is not None:
+        pharynx_trace = other_data[pharynx_variable]
+        if not isinstance(pharynx_trace, np.ndarray):
+            raise ValueError(
+                f"Pharynx trace variable '{pharynx_variable}' found but is not a numpy array"
+            )
+        if pharynx_trace.ndim != 2 or pharynx_trace.shape[1] < 2:
+            raise ValueError(
+                f"Pharynx trace variable '{pharynx_variable}' must be a 2D array with at least 2 columns for spatial data, but has shape {pharynx_trace.shape}"
+            )
+        if pharynx_trace.shape[1] == 2 and dimensions == 3:
+            # If only 2 columns, assume it's x/z and add a dummy y column of zeros for easier handling downstream
+            # This is consistent with MVIEW, which requires pharynx traces to be 2D
+            # TODO: should the extra column be y or z or customizable?
+            pharynx_trace = np.hstack(
+                [
+                    pharynx_trace[:, 0:1],
+                    np.zeros((pharynx_trace.shape[0], 1)),
+                    pharynx_trace[:, 1:2],
+                ]
+            )
+            print(
+                "Your pharynx trace is 2D but your spatial data is 3D. This is allowed by MVIEW and an extra y column of zeros has been added, but editing your data to be 3D is recommended."
+            )
+        if comps is not None:
+            if max(comps) >= pharynx_trace.shape[1]:
+                raise ValueError(
+                    f"--comps {comps} is invalid for pharynx trace with shape {pharynx_trace.shape}"
+                )
+            pharynx_trace = pharynx_trace[:, comps]
+        elif pharynx_trace.shape[1] > dimensions:
+            pharynx_trace = pharynx_trace[:, :dimensions]
+        del other_data[pharynx_variable]
+
     spline_trajs = args.get("spline")
     if spline_trajs is None:
         spline_trajs = [
@@ -316,25 +354,44 @@ def normalize_args(
                 f"Framing trajectory '{framing_traj}' not found among trajectories of variable '{first_variable.name}'"
             )
 
-    temporal_disp_trajs = args.get("temporal_disp_trajs")
-    if temporal_disp_trajs is None:
-        temporal_disp_trajs = list(first_variable.trajectories.keys())
+    temporal_display = args.get("temporal_display")
+    if temporal_display is None:
+        temporal_display = list(first_variable.trajectories.keys())
         if audio_traj:
-            temporal_disp_trajs.remove(audio_traj)
-            temporal_disp_trajs = [
+            temporal_display.remove(audio_traj)
+            temporal_display = [
                 audio_traj,
                 f"{audio_traj}_SPECT",
-            ] + temporal_disp_trajs
+            ] + temporal_display
     temporal_disp_specs = [
         parse_trajectory_display_spec(name, first_variable, dimensions)
-        for name in temporal_disp_trajs
+        for name in temporal_display
     ]
+
+    spatial_exclude = args.get("spatial_exclude") or []
+    spatial_exclude = [normalize_traj_name(name) for name in spatial_exclude]
+    for name in spatial_exclude:
+        found = False
+        for variable in data.values():
+            if name in variable.trajectories:
+                traj = variable.trajectories[name]
+                if traj.kind == "spatial":
+                    found = True
+                    break
+                else:
+                    raise ValueError(
+                        f"Trajectory '{name}' specified for exclusion from spatial view, but it is not a spatial trajectory (found as {traj.kind} trajectory in variable '{variable.name}')"
+                    )
+        if not found:
+            raise ValueError(
+                f"Trajectory '{name}' specified for exclusion from spatial view was not found in any variable"
+            )
 
     min_x, min_y, min_z = float("inf"), float("inf"), float("inf")
     max_x, max_y, max_z = float("-inf"), float("-inf"), float("-inf")
     for variable in data.values():
         for traj in variable.trajectories.values():
-            if traj.kind != "spatial":
+            if traj.kind != "spatial" or traj.name in spatial_exclude:
                 continue
             if dimensions == 3:
                 x, y, z = traj.data.T
@@ -361,6 +418,7 @@ def normalize_args(
         data=data,
         other_data=other_data,
         palate_trace=palate_trace,
+        pharynx_trace=pharynx_trace,
         spline_trajs=spline_trajs,
         audio_traj=audio_traj,
         framing_traj=framing_traj,
@@ -369,6 +427,7 @@ def normalize_args(
             if dimensions == 3
             else (min_x, max_x, min_y, max_y)
         ),
+        spatial_exclude=spatial_exclude,
         dimensions=dimensions,
         is_female=(args.get("sex") == "F"),
         spectral_display_cutoff_hz=args.get("spect_lim") or 11025.0,

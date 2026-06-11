@@ -13,13 +13,13 @@ if __name__ == "__main__":
     # [x] IS3D
     # [x] MAP / TEMPMAP
     # [x] PALATE
-    # [ ] PHARYNX
+    # [x] PHARYNX
     # [ ] PPROC
     # [x] SEX
     # [x] SPLINE
     # [ ] SPREAD
     # [x] TAIL
-    # [ ] SPATEX
+    # [x] SPATEX
     # [x] VIEW
     # [x] NAME
     # [x] VLIST
@@ -42,6 +42,10 @@ if __name__ == "__main__":
         metavar="VAR", help="Variable name for palate trace (optional)."
     )
     parser.add_argument(
+        "--pharynx", type=str, 
+        metavar="VAR", help="Variable name for pharynx trace (optional)."
+    )
+    parser.add_argument(
         "--spline",
         type=str,
         nargs="+",
@@ -61,11 +65,18 @@ if __name__ == "__main__":
         help="Variable name for framing trajectory (default: --audio, or first trajectory if no audio found).",
     )
     parser.add_argument(
-        "--temporal-disp-trajs",
+        "--temporal-display",
         type=str,
         metavar="SPEC",
         nargs="+",
         help="List of variable names to include in temporal display (default: all plus {--audio}_SPECT).",
+    )
+    parser.add_argument(
+        "--spatial-exclude",
+        type=str,
+        nargs="+",
+        metavar="TRAJ",
+        help="List of trajectory names to exclude from the spatial view (default: none).",
     )
     parser.add_argument(
         "--comps",
@@ -110,10 +121,12 @@ if __name__ == "__main__":
         args.file,
         args.variables,
         palate=args.palate,
+        pharynx=args.pharynx,
         spline=args.spline,
         audio=args.audio,
         framing=args.framing,
-        temporal_disp_trajs=args.temporal_disp_trajs,
+        temporal_display=args.temporal_display,
+        spatial_exclude=args.spatial_exclude,
         comps=(
             None
             if not args.comps

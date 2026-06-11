@@ -27,6 +27,7 @@ class AppConfig:
     data: dict[str, DatasetVariable]
     other_data: dict[str, Any]
     palate_trace: NDArray[np.float64] | None
+    pharynx_trace: NDArray[np.float64] | None
     spline_trajs: list[str]
     audio_traj: str | None
     framing_traj: str
@@ -34,6 +35,7 @@ class AppConfig:
         tuple[float, float, float, float]
         | tuple[float, float, float, float, float, float]
     )
+    spatial_exclude: list[str]
     dimensions: Literal[2, 3]
 
     # Movement

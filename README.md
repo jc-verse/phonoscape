@@ -8,7 +8,7 @@ source .venv/bin/activate
 ```
 
 ```bash
-python -m pyview ./test_data/S02_data.mat --palate S02_pal --temporal-disp-trajs AUDIO_SPECT TDx vTDx TDz vTDz
+python -m pyview ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
 ## Central concepts
@@ -21,16 +21,18 @@ You can run `python -m pyview --help` to see the full list of command-line argum
 - Then, you can optionally provide a `variables` pattern. It uses [`fnmatch`](https://docs.python.org/3/library/fnmatch.html), so you can use `*` to match a sequence of characters and `?` to match a single character. If no variable pattern is provided, then all variables in the dataset file are used.
 - Finally, you can provide any number of options:
   - `--palate VAR` (MVIEW `PALATE`): use the variable `VAR` (in the `file`) to plot a palate curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of palate points. If unspecified, no palate is plotted.
+  - `--pharynx VAR` (MVIEW `PHARYNX`): use the variable `VAR` (in the `file`) to plot a pharynx curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of pharynx points. However, per MVIEW compatibility, if the pharynx trace is 2D and the spatial data is 3D, an extra column of zeros will be added as the y-axis. If unspecified, no pharynx is plotted.
   - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default.
   - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first audio trajectory is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
   - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
-  - `--temporal-disp-trajs SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot. See [temporal view](#temporal-view) for more details regarding their presentation.
+  - `--temporal-display SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot. See [temporal view](#temporal-view) for more details regarding their presentation.
     - If designating an audio trajectory (sampling rate ≥ 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: `SPECT` (spectrogram), `RMS` (root mean square), `ZC` (zero-crossing rate), `F0` (fundamental frequency). **Note**: unlike MVIEW, we have a strict separation of audio and physiological scalar trajectories.
     - If designating a scalar trajectory (sampling rate < 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: ``VEL` (velocity), `ABSVEL` (absolute velocity).
     - If designating a spatial trajectory: `TRAJ`, optionally prefixed by `v` or `a`, and optionally suffixed by a subset of `xyz`, indicating if the trajectory should be movement, velocity, or acceleration, and which dimensions to plot. Specifying `xyz` is equivalent to no specification.
 
     These specification names can also be obtained from the "Temporal layout" dialog.
 
+  - `--spatial-exclude TRAJ1 TRAJ2 ...` (MVIEW `SPATEX`): a list of trajectory names to exclude from the spatial view (they are still included in every other analysis, including the temporal view). If unspecified, then no trajectory is excluded.
   - `--comps COL1 COL2 ...` (MVIEW `IS3D`): equivalent to the dataset `NCOMPS` [field](#dataset-format), but used as a global fallback when the `NCOMPS` field is absent. This global configuration is also used for non-trajectory data, such as palate trace. A single number `N` is equivalent to `0 .. N-1`.
   - `--view ELEV AZIM ROLL` (MVIEW `VIEW`): the initial view of the spatial display, in terms of elevation, azimuth, and roll (in degrees). This is only used if the data is 3D. If unspecified, it defaults to `(0, -90, 0)` (i.e., sagittal section, right view).
   - `--head MS` (MVIEW `HEAD`): the position (in milliseconds) of the left edge of the temporal selection. If specified, it must be a non-negative number less than `--tail - 25`. If unspecified, it defaults to the start of the data (0 ms). It only has an effect on the first opened window; subsequent windows inherit the opening window's selection.
@@ -141,7 +143,7 @@ The following optional fields may be provided for each trajectory struct:
   - Select one displayed trajectory from the right-hand side to reorder (`^` and `v`).
   - Select one displayed trajectory from the right-hand side to customize its content. For spatial trajectories, you can choose to display position, velocity, or acceleration, and which dimensions to display. For scalar trajectories, you can choose to apply a temporal analysis (spectrogram, RMS, zero-crossing rate, fundamental frequency, etc.).
 
-  The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-disp-trajs` [argument](#command-line-arguments) and the "Report" output.
+  The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
 
 - **Set common scaling**: Opens a dialog. TODO
 - **Spatial options**: Configure the spatial display.
@@ -232,7 +234,7 @@ You can read off and edit the cursor, head, and tail positions, all in milliseco
 
 The temporal view is the right panel. It displays the trajectories as time series, with time on the x-axis and the trajectory value(s) on the y-axis. The first plot is the _framing trajectory_ specified with the `--framing` [argument](#command-line-arguments). It always displays the full data. The current selection is highlighted. The cursor and labels are also visible.
 
-All remaining plots are the _temporal display trajectories_ specified with the `--temporal-disp-trajs` [argument](#command-line-arguments) and customizable via the ["Temporal layout" dialog](#view-menu). They only display the data within the current selection. The cursor and labels are also visible.
+All remaining plots are the _temporal display trajectories_ specified with the `--temporal-display` [argument](#command-line-arguments) and customizable via the ["Temporal layout" dialog](#view-menu). They only display the data within the current selection. The cursor and labels are also visible.
 
 Currently, the trajectories' colors are determined by the `COLOR` field in the dataset or otherwise arbitrarily. Color selection will be supported. If the data is multidimensional, each dimension is plotted separately, with x being the most opaque and z being the most transparent (with a legend). The zero line is shown as a dashed line if in the visible y-range.
 

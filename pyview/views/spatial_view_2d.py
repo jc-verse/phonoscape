@@ -66,11 +66,18 @@ class SpatialView2D(QWidget):
                 color=plt.rcParams["text.color"],
                 linewidth=1.0,
             )
+        if self.state.app_config.pharynx_trace is not None:
+            self.ax.plot(
+                self.state.app_config.pharynx_trace[:, 0],
+                self.state.app_config.pharynx_trace[:, 1],
+                color=plt.rcParams["text.color"],
+                linewidth=1.0,
+            )
 
         positions_by_name: dict[str, tuple[float, float]] = {}
 
         for traj in self.state.selected_value.trajectories.values():
-            if traj.kind != "spatial":
+            if traj.kind != "spatial" or traj.name in self.state.app_config.spatial_exclude:
                 continue
 
             pos = round(self.state.cursor_s * traj.sample_rate_hz)
@@ -98,7 +105,7 @@ class SpatialView2D(QWidget):
             positions_by_name: dict[str, tuple[float, float]] = {}
 
             for traj in self.state.selected_value.trajectories.values():
-                if traj.kind != "spatial":
+                if traj.kind != "spatial" or traj.name in self.state.app_config.spatial_exclude:
                     continue
 
                 pos = round(self.state.cursor_s * traj.sample_rate_hz)
