@@ -12,7 +12,13 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout
 if TYPE_CHECKING:
     from .. import VarWindow
 
-from ..state import TrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay, Label
+from ..state import (
+    TrajDisplay,
+    AudioTrajDisplay,
+    ScalarTrajDisplay,
+    SpatialTrajDisplay,
+    Label,
+)
 from ..data.process import get_plotting_data
 from ..modals.label_modal import open_label_dialog
 
@@ -151,10 +157,7 @@ class TemporalView(QWidget):
             )
         if spect_ylim:
             for i, spec in enumerate(self._get_temp_disp_specs()):
-                if (
-                    spec.content == "SPECT"
-                    and spec.traj_name == self.state.app_config.audio_traj
-                ):
+                if spec.content == "SPECT":
                     ax = self.axes[i]
                     ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
         if labels:
@@ -241,7 +244,7 @@ class TemporalView(QWidget):
                 ),
             )
             ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
-        elif spec.content in ("SIGNAL", "VEL", "ABSVEL", "RMS", "F0", "ZC"):
+        elif spec.content in ("SIGNAL", "RMS", "F0", "ZC", "MOVEMENT", "VEL", "ABSVEL"):
             artist = ("scalar", ax.plot(t, data, linewidth=0.8, color=traj.color)[0])
         else:
             raise ValueError(
@@ -344,13 +347,17 @@ class TemporalView(QWidget):
         framing_traj_name = self.state.app_config.framing_traj
         framing_traj = self.state.selected_value.trajectories[framing_traj_name]
         framing_traj_spec = (
-            ScalarTrajDisplay(content="SIGNAL", traj_name=framing_traj_name)
+            ScalarTrajDisplay(content="MOVEMENT", traj_name=framing_traj_name)
             if framing_traj.kind == "scalar"
-            else SpatialTrajDisplay(
-                content="movement",
-                traj_name=framing_traj_name,
-                traj_dims=self.state.app_config.dimensions,
-                components=["x", "y", "z"][: self.state.app_config.dimensions],
+            else (
+                AudioTrajDisplay(content="SIGNAL", traj_name=framing_traj_name)
+                if framing_traj.kind == "audio"
+                else SpatialTrajDisplay(
+                    content="movement",
+                    traj_name=framing_traj_name,
+                    traj_dims=self.state.app_config.dimensions,
+                    components=["x", "y", "z"][: self.state.app_config.dimensions],
+                )
             )
         )
         return [framing_traj_spec] + self.state.temporal_disp_specs

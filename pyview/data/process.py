@@ -316,7 +316,7 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, config: AppConfig
                 hop_ms=config.overlap_ms,
                 mult=config.spectrogram_bandwidth_mode.value,
             )
-        case "SIGNAL":
+        case "SIGNAL" | "MOVEMENT":
             return t, traj.data
         case "VEL":
             vs: NDArray[np.float64] = np.gradient(traj.data) * traj.sample_rate_hz

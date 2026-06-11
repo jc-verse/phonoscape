@@ -209,17 +209,17 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
                 spectrogram_bandwidth_mode
             )
             update_temporal_view = True
-        if update_temporal_view and parent.state.app_config.audio_traj:
-            # Invalidate all previous computations
-            for v in parent.state.app_config.data.values():
-                v.audio_traj = None
-            parent.state.selected_value.audio_traj = analyze_audio(
-                parent.state.selected_value.trajectories[
-                    parent.state.app_config.audio_traj
-                ],
-                parent.state.app_config,
-            )
-            # TODO: perhaps restrict to only spectrogram?
+        if update_temporal_view:
+            if parent.state.app_config.audio_traj:
+                # Invalidate all previous computations
+                for v in parent.state.app_config.data.values():
+                    v.audio_traj = None
+                parent.state.selected_value.audio_traj = analyze_audio(
+                    parent.state.selected_value.trajectories[
+                        parent.state.app_config.audio_traj
+                    ],
+                    parent.state.app_config,
+                )
             parent.root.temporal_view.update_plot(trajectories=True)
             parent.root.freq_domain_view.update_plot(data=True)
         dialog.accept()

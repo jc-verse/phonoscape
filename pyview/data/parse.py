@@ -11,6 +11,7 @@ from ..state import (
     DatasetVariable,
     Trajectory,
     TrajDisplay,
+    AudioTrajDisplay,
     ScalarTrajDisplay,
     SpatialTrajDisplay,
     AppConfig,
@@ -72,7 +73,9 @@ def load_variables(
                 raise ValueError(
                     f"Don't know how to process trajectory not in the shape of [n_samples × n_dims]: {k}/{name}"
                 )
-            kind = "spatial" if signal.ndim == 2 else "scalar"
+            kind = (
+                "spatial" if signal.ndim == 2 else "scalar" if srate < 5000 else "audio"
+            )
             if nComps is None:
                 nComps = comps or (
                     list(range(max(3, signal.shape[1]))) if signal.ndim == 2 else [0]
@@ -106,7 +109,7 @@ def load_variables(
                     if color is not None
                     else (
                         plt.rcParams["text.color"]
-                        if kind == "scalar"
+                        if kind == "scalar" or kind == "audio"
                         else next(colors_iter)
                     )
                 ),
@@ -140,21 +143,32 @@ def load_variables(
 def parse_trajectory_display_spec(
     name: str, first_variable: DatasetVariable, dimensions: Literal[2, 3]
 ) -> TrajDisplay:
-    if match := re.match(r"^(.*)_(SPECT|RMS|ZC|VEL|ABSVEL)$", name):
+    if match := re.match(r"^(.*)_(SPECT|RMS|ZC|F0)$", name):
+        base_name, content = match.groups()
+        if (
+            base_name in first_variable.trajectories
+            and first_variable.trajectories[base_name].kind == "audio"
+        ):
+            return AudioTrajDisplay(
+                traj_name=base_name,
+                content=cast(Literal["SPECT", "RMS", "ZC", "F0"], content),
+            )
+        else:
+            raise ValueError(
+                f"Trajectory '{name}' does not match any known audio trajectory for variable '{first_variable.name}'{f" (but this trajectory exists as {first_variable.trajectories[base_name].kind} trajectory)" if base_name in first_variable.trajectories else ''}"
+            )
+    if match := re.match(r"^(.*)_(VEL|ABSVEL)$", name):
         base_name, content = match.groups()
         if (
             base_name in first_variable.trajectories
             and first_variable.trajectories[base_name].kind == "scalar"
         ):
             return ScalarTrajDisplay(
-                traj_name=base_name,
-                content=cast(
-                    Literal["SPECT", "RMS", "ZC", "F0", "VEL", "ABSVEL"], content
-                ),
+                traj_name=base_name, content=cast(Literal["VEL", "ABSVEL"], content)
             )
         else:
             raise ValueError(
-                f"Trajectory '{name}' does not match any known scalar trajectory for variable '{first_variable.name}'"
+                f"Trajectory '{name}' does not match any known scalar trajectory for variable '{first_variable.name}'{f" (but this trajectory exists as {first_variable.trajectories[base_name].kind} trajectory)" if base_name in first_variable.trajectories else ''}"
             )
     match = re.match(r"^([va])?(.*?)(x)?(y)?(z)?$", name)
     if not match:
@@ -187,16 +201,20 @@ def parse_trajectory_display_spec(
             ),
             components=components,
         )
-    elif (
-        base_name in first_variable.trajectories
-        and first_variable.trajectories[base_name].kind == "scalar"
-    ):
+    elif base_name in first_variable.trajectories and first_variable.trajectories[
+        base_name
+    ].kind in ("scalar", "audio"):
         if content or x or y or z:
-            raise ValueError(f"Trajectory '{base_name}' is scalar")
-        return ScalarTrajDisplay(traj_name=base_name, content="SIGNAL")
+            raise ValueError(
+                f"Trajectory '{base_name}' is {first_variable.trajectories[base_name].kind}"
+            )
+        if first_variable.trajectories[base_name].kind == "audio":
+            return AudioTrajDisplay(traj_name=base_name, content="SIGNAL")
+        else:
+            return ScalarTrajDisplay(traj_name=base_name, content="MOVEMENT")
     else:
         raise ValueError(
-            f"Trajectory '{name}' does not match any known trajectory for variable '{first_variable.name}'"
+            f"Trajectory '{name}' does not match any known trajectory for variable '{first_variable.name}'{f" (but this trajectory exists as {first_variable.trajectories[base_name].kind} trajectory)" if base_name in first_variable.trajectories else ''}"
         )
 
 
@@ -263,7 +281,7 @@ def normalize_args(
             (
                 name
                 for name, traj in first_variable.trajectories.items()
-                if traj.sample_rate_hz > 1000 and traj.kind == "scalar"
+                if traj.kind == "audio"
             ),
             None,
         )
@@ -273,8 +291,8 @@ def normalize_args(
             raise ValueError(
                 f"Audio trajectory '{audio_traj}' not found among trajectories of variable '{first_variable.name}'"
             )
-        if first_variable.trajectories[audio_traj].kind != "scalar":
-            raise ValueError(f"Audio trajectory '{audio_traj}' found but is not scalar")
+        if first_variable.trajectories[audio_traj].kind != "audio":
+            raise ValueError(f"Audio trajectory '{audio_traj}' found but is not audio")
 
     framing_traj = args.get("framing", audio_traj)
     if framing_traj is None:

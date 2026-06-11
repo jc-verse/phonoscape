@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
-from ..state import ScalarTrajDisplay
+from ..state import AudioTrajDisplay, ScalarTrajDisplay
 from ..data.process import get_cog
 from ..modals.spectral_analysis_modal import open_spectral_analysis_dialog
 
@@ -35,6 +35,8 @@ class DataMenu(QMenu):
         )
         if traj := self.state.selected_value.audio_traj:
             idx = round(self.state.cursor_s * traj.sample_rate_hz)
+            # MVIEW does not pass any of the config into cog().
+            # TODO: perhaps we should
             cog = get_cog(traj, self.state.cursor_s)
             print(
                 f"Window {self.state.app_config.analysis_window_ms:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {cog.l1:.2f}, skew = {cog.skew:.2f}, kurt = {cog.kurt:.2f}"
@@ -54,11 +56,12 @@ class DataMenu(QMenu):
                 continue
             traj = self.state.selected_value.trajectories[spec.traj_name]
             idx = round(self.state.cursor_s * traj.sample_rate_hz)
-            if isinstance(spec, ScalarTrajDisplay):
-                if spec.content in {"SIGNAL", "RMS", "ZC", "F0", "VEL", "ABSVEL"}:
+            if isinstance(spec, AudioTrajDisplay):
+                traj_measures.append((str(spec), data[idx]))
+            elif isinstance(spec, ScalarTrajDisplay):
+                if spec.content in {"SIGNAL", "RMS", "ZC", "F0"}:
                     traj_measures.append((str(spec), data[idx]))
-                elif spec.content == "SPECT":
-                    continue
+                # Ignore SPECT
             else:
                 if (
                     spec.content in {"velocity", "acceleration"}

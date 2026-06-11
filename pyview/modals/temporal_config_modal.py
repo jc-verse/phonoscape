@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 if TYPE_CHECKING:
     from ..menu.view_menu import ViewMenu
 
-from ..state import ScalarTrajDisplay, SpatialTrajDisplay
+from ..state import AudioTrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay
 
 
 def open_tempcfg_dialog(parent: ViewMenu) -> None:
@@ -186,10 +186,11 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         content_combo.blockSignals(True)
         content_combo.clear()
 
-        if isinstance(spec, ScalarTrajDisplay):
-            content_combo.addItems(
-                ["SIGNAL", "SPECT", "RMS", "ZC", "F0", "VEL", "ABSVEL"]
-            )
+        if isinstance(spec, AudioTrajDisplay) or isinstance(spec, ScalarTrajDisplay):
+            if isinstance(spec, AudioTrajDisplay):
+                content_combo.addItems(["SIGNAL", "SPECT", "RMS", "ZC", "F0"])
+            else:
+                content_combo.addItems(["MOVEMENT", "VEL", "ABSVEL"])
             content_combo.setCurrentText(spec.content)
             content_combo.setEnabled(True)
             content_combo.blockSignals(False)
@@ -239,7 +240,13 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
         old = displayed_specs[idx]
 
-        if isinstance(old, ScalarTrajDisplay):
+        if isinstance(old, AudioTrajDisplay):
+            displayed_specs[idx] = AudioTrajDisplay(
+                traj_name=old.traj_name,
+                content=content_combo.currentText(),
+            )
+
+        elif isinstance(old, ScalarTrajDisplay):
             displayed_specs[idx] = ScalarTrajDisplay(
                 traj_name=old.traj_name,
                 content=content_combo.currentText(),
@@ -289,21 +296,26 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             traj_name = loaded_list.item(idx).text()
             traj = parent.state.selected_value.trajectories[traj_name]
 
-            if traj.kind == "spatial":
-                displayed_specs.append(
-                    SpatialTrajDisplay(
-                        traj_name=traj_name,
-                        traj_dims=parent.state.app_config.dimensions,
-                        content="movement",
-                        components=["x", "y", "z"][
-                            : parent.state.app_config.dimensions
-                        ],
+            match traj.kind:
+                case "audio":
+                    displayed_specs.append(
+                        AudioTrajDisplay(traj_name=traj_name, content="SIGNAL")
                     )
-                )
-            else:
-                displayed_specs.append(
-                    ScalarTrajDisplay(traj_name=traj_name, content="SIGNAL")
-                )
+                case "scalar":
+                    displayed_specs.append(
+                        ScalarTrajDisplay(traj_name=traj_name, content="MOVEMENT")
+                    )
+                case "spatial":
+                    displayed_specs.append(
+                        SpatialTrajDisplay(
+                            traj_name=traj_name,
+                            traj_dims=parent.state.app_config.dimensions,
+                            content="movement",
+                            components=["x", "y", "z"][
+                                : parent.state.app_config.dimensions
+                            ],
+                        )
+                    )
 
         refresh_displayed_listbox()
         refresh_button_states()

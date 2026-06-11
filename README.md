@@ -22,10 +22,11 @@ You can run `python -m pyview --help` to see the full list of command-line argum
 - Finally, you can provide any number of options:
   - `--palate VAR` (MVIEW `PALATE`): use the variable `VAR` (in the `file`) to plot a palate curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of palate points. If unspecified, no palate is plotted.
   - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default.
-  - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first scalar trajectory with a sampling rate `> 1000` is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
+  - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first audio trajectory is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
   - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
   - `--temporal-disp-trajs SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot. See [temporal view](#temporal-view) for more details regarding their presentation.
-    - If designating a scalar trajectory: `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: `SPECT` (spectrogram), `RMS` (root mean square), `ZC` (zero-crossing rate), `F0` (fundamental frequency), `VEL` (velocity), `ABSVEL` (absolute velocity).
+    - If designating an audio trajectory (sampling rate ≥ 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: `SPECT` (spectrogram), `RMS` (root mean square), `ZC` (zero-crossing rate), `F0` (fundamental frequency). **Note**: unlike MVIEW, we have a strict separation of audio and physiological scalar trajectories.
+    - If designating a scalar trajectory (sampling rate < 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: ``VEL` (velocity), `ABSVEL` (absolute velocity).
     - If designating a spatial trajectory: `TRAJ`, optionally prefixed by `v` or `a`, and optionally suffixed by a subset of `xyz`, indicating if the trajectory should be movement, velocity, or acceleration, and which dimensions to plot. Specifying `xyz` is equivalent to no specification.
 
     These specification names can also be obtained from the "Temporal layout" dialog.
@@ -51,7 +52,7 @@ Only variables that contain structs are considered valid variables. Other variab
 The following fields are required for each trajectory struct:
 
 - `NAME` (string): trajectory name. Will be uppercased and stripped of underscores. The actual names absolutely do not matter with one quirk: if the `--spline` [argument](#command-line-arguments) is not provided, all spatial trajectories with name starting with `T` will be used as default.
-- `SRATE` (float): sampling rate in Hz. The actual sampling rate value only matters in one place: if the `--audio` [argument](#command-line-arguments) is not provided, then the first scalar trajectory with a sampling rate `> 1000` is used as the default audio trajectory.
+- `SRATE` (float): sampling rate in Hz. The actual sampling rate value only matters in one place: trajectories with `SRATE` ≥ 5000 Hz are considered audio trajectories, and those with `SRATE` < 5000 Hz are considered physiological trajectories.
 - `SIGNAL` (array `[n_samples × n_dims]`): 1D is scalar, 2D or 3D is spatial. Higher dimensions are truncated off and moved into `ANGLES`; if `ANGLES` is also provided, then the extra dimensions are ignored and `ANGLES` is used instead. Currently only 3D is well-supported for spatial trajectories.
 
 All trajectories in a variable are expected to have roughly the same `n_samples * SRATE`. When displaying, the minimum duration is used (i.e., where all trajectories have data).
@@ -76,6 +77,7 @@ The following optional fields may be provided for each trajectory struct:
   - If an array, specifies the column indices of the trajectory data for each dimension. For example, if the trajectory has 3 dimensions but `NCOMPS` is `[0, 2]`, then the 1st and 3rd dimensions (which are normally `x` and `z`) are used for the spatial view, and the 2nd dimension is treated as `ANGLES`. You may also use it to reorder dimensions, e.g., `[0, 2, 1]` uses the data's `z`-axis as the spatial `y`-axis and the data's `y`-axis as the spatial `z`-axis. It must contain no duplicates and all indices must be valid for the trajectory data dimensions.
   - If not provided, then it's inferred from `SIGNAL.shape[1]`, with the first 3 dimensions used for the spatial view (in `x`, `y`, `z` order) and any extra dimensions treated as `ANGLES`.
 - `ANGLES` (array `[n_samples × n_extra]`): Only used by external data procedures.
+- TODO: `AUDIO` (boolean)?
 
 ## Menu bar
 
@@ -113,18 +115,18 @@ The following optional fields may be provided for each trajectory struct:
   Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except spectrograms), depending on which dimensions are being viewed.
 
 - **Track formants**: TODO
-- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`_SPECT`, `_RMS`, `_ZC`, `_F0`), and the external spectrum window (TODO). Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
+- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), and the external spectrum window (TODO). Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
   - **Analysis window (ms)**: Configures the window size for the `RMS` and `ZC` temporal analyses.
   - **Number of LPC coeffs**: TODO
-  - **# FFT eval points**: Configures the frequency resolution of the `AUDIO_SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
-  - **Averaging window (ms)**: Configures the analysis window for the `AUDIO_SPECT` (I don't think this is right but this is how it is in MVIEW).
-  - **Overlap (ms)**: Configures the window shift for the `AUDIO_SPECT`.
+  - **# FFT eval points**: Configures the frequency resolution of the `SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
+  - **Averaging window (ms)**: Configures the analysis window for the `SPECT` (I don't think this is right but this is how it is in MVIEW).
+  - **Overlap (ms)**: Configures the window shift for the `SPECT`.
   - **SPL reference (dB)**: TODO
-  - **Spectral display cutoff (Hz)**: Affects visualization only. Configures the ymax of `AUDIO_SPECT` and the xmax of the time-slice spectrograms.
+  - **Spectral display cutoff (Hz)**: Affects visualization only. Configures the ymax of `SPECT` and the xmax of the time-slice spectrograms.
   - **Adaptive pre-emphasis**: TODO
   - **Active analyses**: TODO
   - **Subject gender**: TODO
-  - **Spectrogram**: Acts as a multiplier for **Averaging window** (and affects `AUDIO_SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
+  - **Spectrogram**: Acts as a multiplier for **Averaging window** (and affects `SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
 
 ### View menu
 

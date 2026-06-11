@@ -56,12 +56,24 @@ class AppConfig:
 
 
 @dataclass
-class ScalarTrajDisplay:
+class AudioTrajDisplay:
     traj_name: str
-    content: Literal["SIGNAL", "SPECT", "RMS", "ZC", "F0", "VEL", "ABSVEL"]
+    content: Literal["SIGNAL", "SPECT", "RMS", "ZC", "F0"]
 
     def __str__(self) -> str:
         if self.content == "SIGNAL":
+            return self.traj_name
+        else:
+            return f"{self.traj_name}_{self.content}"
+
+
+@dataclass
+class ScalarTrajDisplay:
+    traj_name: str
+    content: Literal["MOVEMENT", "VEL", "ABSVEL"]
+
+    def __str__(self) -> str:
+        if self.content == "MOVEMENT":
             return self.traj_name
         else:
             return f"{self.traj_name}_{self.content}"
@@ -87,13 +99,13 @@ class SpatialTrajDisplay:
         return f"{prefix}{self.traj_name}{comp_str}"
 
 
-TrajDisplay = ScalarTrajDisplay | SpatialTrajDisplay
+TrajDisplay = AudioTrajDisplay | ScalarTrajDisplay | SpatialTrajDisplay
 
 
 @dataclass
 class Trajectory:
     name: str
-    kind: Literal["scalar", "spatial"]
+    kind: Literal["audio", "scalar", "spatial"]
     sample_rate_hz: float
     n_samples: int
     color: str | tuple[float, float, float]
