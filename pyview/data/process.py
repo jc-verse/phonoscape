@@ -22,12 +22,7 @@ def get_spect(traj: Trajectory):
     )
     S = stft.spectrogram(traj.data)
     S_db = 20 * np.log10(S + np.finfo(float).eps)
-    extent = (
-        0.0,
-        traj.n_samples / traj.sample_rate_hz,
-        0.0,
-        traj.sample_rate_hz / 2,
-    )
+    extent = (0.0, traj.n_samples / traj.sample_rate_hz, 0.0, traj.sample_rate_hz / 2)
     return extent, S_db, hop / traj.sample_rate_hz
 
 

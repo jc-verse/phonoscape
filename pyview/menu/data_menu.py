@@ -1,11 +1,13 @@
 from typing import TYPE_CHECKING
 
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 from ..state import ScalarTrajDisplay
 from ..data.process import get_cog
+from ..modals.spectral_analysis_modal import open_spectral_analysis_dialog
 
 
 class DataMenu(QMenu):
@@ -17,7 +19,13 @@ class DataMenu(QMenu):
 
         self.addAction("Report", self._report)
         self.addAction("Track formants", parent._todo("Track formants"))
-        self.addAction("Spectral analysis...", parent._todo("Spectral analysis"))
+        
+        spect_config_action = QAction("Configure spectral analysis...", self)
+        # Without this, the action gets the "Preferences" role and shows up in
+        # the "Preferences" menu on MacOS.
+        spect_config_action.setMenuRole(QAction.MenuRole.NoRole)
+        spect_config_action.triggered.connect(lambda: open_spectral_analysis_dialog(self))
+        self.addAction(spect_config_action)
 
     def _report(self):
         print(

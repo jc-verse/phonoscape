@@ -1,8 +1,17 @@
 from dataclasses import dataclass
+from enum import IntFlag, auto
 from pathlib import Path
 from typing import Any, Literal, Unpack, TypedDict
 import numpy as np
 from numpy.typing import NDArray
+
+
+class ActiveAnalysis(IntFlag):
+    NONE = 0
+    LPC = auto()
+    DFT = auto()
+    AVG = auto()
+    CEPS = auto()
 
 
 @dataclass
@@ -24,6 +33,19 @@ class AppConfig:
     nudge_step_ms: float = 5.0
     playback_rate: float = 1.0
     frame_rate_fps: float = 50.0
+
+    # Spectral analysis
+    analysis_window_ms: float = 30.0
+    lpc_order: int = 0
+    fft_eval_points: int = 256
+    averaging_window_ms: float = 6.0
+    overlap_ms: float = 1.0
+    spl_reference_db: float = 20.0
+    spectral_display_cutoff_hz: float = 0.0
+    pre_emphasis: float = 0.98
+    active_analyses: int = 1
+    is_female: bool = False
+    spectrogram_bandwidth_mode: int = 1
 
 
 @dataclass
