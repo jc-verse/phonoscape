@@ -453,6 +453,12 @@ class TemporalView(QWidget):
         if self._toolbar_is_active() or event.xdata is None or event.button != 1:
             return
         if self._event_is_in_cursor_axes(event):
+            idx = self.axes.index(event.inaxes)
+            spec = self._get_temp_disp_specs()[idx]
+            self.root.traj_readout.update_readout(
+                spec, self.plotting_data[idx][1], float(event.xdata)
+            )
+        if self._event_is_in_cursor_axes(event):
             closest_label = None
             closest_dist = float("inf")
             for i, label in enumerate(self.state.labels):
@@ -470,7 +476,7 @@ class TemporalView(QWidget):
                     self.dragging = ("label", closest_label)
                 return
             self.dragging = "cursor"
-            self.root.set_cursor(float(event.xdata))
+            self.root.set_cursor(float(event.xdata), keep_readout=True)
         elif self._event_is_in_frame_axes(event):
             if event.dblclick:
                 self.root.set_selection(0, self.state.selected_value.duration_s)
@@ -492,9 +498,15 @@ class TemporalView(QWidget):
     def _on_motion(self, event) -> None:
         if not self.dragging or event.xdata is None:
             return
+        if self._event_is_in_cursor_axes(event):
+            idx = self.axes.index(event.inaxes)
+            spec = self._get_temp_disp_specs()[idx]
+            self.root.traj_readout.update_readout(
+                spec, self.plotting_data[idx][1], float(event.xdata)
+            )
         if self.dragging == "cursor":
             if self._event_is_in_cursor_axes(event):
-                self.root.set_cursor(float(event.xdata))
+                self.root.set_cursor(float(event.xdata), keep_readout=True)
             else:
                 # Cancel drag if moved outside of axes
                 self.dragging = None

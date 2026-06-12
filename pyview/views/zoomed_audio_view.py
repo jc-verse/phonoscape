@@ -51,7 +51,7 @@ class ZoomedAudioView(QWidget):
             -self.state.app_config.analysis_window_ms / 2000,
             self.state.app_config.analysis_window_ms / 2000,
         )
-        # TODO: right clicking gesture (context actions)
+        # TODO: right/double/modified clicking gesture (open new window)
 
         self.canvas.draw_idle()
 
@@ -92,5 +92,8 @@ class ZoomedAudioView(QWidget):
             len(audio_traj.signal), center_sample + window_size_samples // 2
         )
         audio_slice = audio_traj.signal[start_sample:end_sample]
-        t = np.arange(start_sample, end_sample) / audio_traj.sample_rate_hz - self.state.cursor_s
+        t = (
+            np.arange(start_sample, end_sample) / audio_traj.sample_rate_hz
+            - self.state.cursor_s
+        )
         return t, audio_slice

@@ -45,7 +45,7 @@ class FreqDomainView(QWidget):
             self.state.selected_value.audio_traj.spect.max() + 5,
         )
         self.ax.set_xlim(0, self.state.app_config.spectral_display_cutoff_hz)
-        # TODO: double clicking gesture (open new window)
+        # TODO: right/double/modified clicking gesture (open new window)
 
         self.canvas.draw_idle()
 

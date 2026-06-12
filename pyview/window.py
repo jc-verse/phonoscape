@@ -16,6 +16,7 @@ from .data.process import analyze_audio
 from .menu.menu_bar import MenuBar
 from .state import WindowState, AppConfig, TrajDisplay
 from .widgets.play_button import PlayButton, modes as play_modes
+from .widgets.traj_readout import TrajReadout
 from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
 from .views.spatial_view_2d import SpatialView2D
@@ -154,6 +155,9 @@ class VarWindow(QMainWindow):
         self.freq_domain_view = FreqDomainView(left, state=self.state)
         left_layout.addWidget(self.freq_domain_view, 1, 0, 1, 2)
 
+        self.traj_readout = TrajReadout(left, state=self.state)
+        left_layout.addWidget(self.traj_readout, 2, 0, 1, 1)
+
         self.zoomed_audio_view = ZoomedAudioView(left, state=self.state)
         left_layout.addWidget(self.zoomed_audio_view, 2, 1, 1, 1)
 
@@ -177,7 +181,7 @@ class VarWindow(QMainWindow):
         self.window_manager.remove_window(self.state.selected_variable)
         super().closeEvent(event)
 
-    def set_cursor(self, cursor_s: float) -> None:
+    def set_cursor(self, cursor_s: float, keep_readout = False) -> None:
         cursor_s = min(max(0, cursor_s), self.state.selected_value.duration_s)
         self.state.cursor_s = cursor_s
         self.cursor_box.setText(f"{cursor_s * 1000:.1f}")
@@ -186,6 +190,8 @@ class VarWindow(QMainWindow):
         if self.state.app_config.audio_traj is not None:
             self.freq_domain_view.update_plot(cursor=True)
             self.zoomed_audio_view.update_plot(cursor=True)
+        if not keep_readout:
+            self.traj_readout.clear_readout()
 
     def set_head(self, head_s: float) -> None:
         head_s = min(self.state.tail_s - self.state.min_sel_dur_s, head_s)

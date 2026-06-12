@@ -285,7 +285,15 @@ When the plot is 3D, you can customize the view via the [spatial options](#view-
 
 TODO
 
-It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis.
+It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis. For this reason, you must configure its window size through [spectral analysis](#data-menu) **Analysis window** instead of using the right-click context menu or a separate slider.
+
+### Trajectory read-out
+
+At the very bottom-left, there is a small panel through which you can read out the trajectory data at the temporal position you just clicked on. Unlike MVIEW:
+
+1. We show the name of the trajectory as well.
+2. This is just text output; the cursor/head/tail inputs have been moved to the [navbar](#navbar).
+3. The text is not cleared when the mouse is released or moved outside; it is persisted so you can copy it out.
 
 ## External procedures
 

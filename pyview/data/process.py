@@ -352,12 +352,14 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, config: AppConfig
         case x:
             raise ValueError(f"Unexpected content type for temporal display: {x}")
 
+
 @overload
 def compute_spline(
     spline_trajs: list[str],
     positions_by_name: dict[str, tuple[float, float]],
     polyline_spline: bool,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None: ...
+
 
 @overload
 def compute_spline(
@@ -369,7 +371,9 @@ def compute_spline(
 
 def compute_spline(
     spline_trajs: list[str],
-    positions_by_name: dict[str, tuple[float, float]] | dict[str, tuple[float, float, float]],
+    positions_by_name: (
+        dict[str, tuple[float, float]] | dict[str, tuple[float, float, float]]
+    ),
     polyline_spline: bool,
 ):
     is_3d = any(len(pos) == 3 for pos in positions_by_name.values())

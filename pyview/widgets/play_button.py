@@ -64,11 +64,7 @@ def play(state: WindowState) -> None:
 
 
 class PlayButton(QFrame):
-    def __init__(
-        self,
-        parent: QWidget,
-        state: WindowState,
-    ):
+    def __init__(self, parent: QWidget, state: WindowState):
         super().__init__(parent)
 
         self.state = state
