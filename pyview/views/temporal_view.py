@@ -117,166 +117,6 @@ class TemporalView(QWidget):
         else:
             self.canvas.draw_idle()
 
-    def update_plot(
-        self,
-        cursor: bool = False,
-        trajectories: bool = False,
-        frame: bool = False,
-        spect_ylim: bool = False,
-        spatial_ylim: bool = False,
-        labels: list[Label] | None = None,
-    ) -> None:
-        if cursor:
-            for line in self.cursor_artists:
-                line.set_xdata([self.state.cursor_s, self.state.cursor_s])
-        if trajectories:
-            self._refresh_plotting_data()
-            specs = self._get_temp_disp_specs()
-            for i, artist in enumerate(self.artists):
-                t, data = self.plotting_data[i]
-                if artist[0] == "image":
-                    artist[1].set_data(data)
-                    artist[1].set_extent(t)
-                elif artist[0] == "spatial-multi":
-                    for j, line in enumerate(artist[1]):
-                        sub_data = data[:, j]
-                        sub_data_center = (
-                            np.nanmax(sub_data) + np.nanmin(sub_data)
-                        ) / 2
-                        line.set_data(t, sub_data - sub_data_center)
-                elif artist[0] == "spatial-single":
-                    artist[1].set_data(t, data[:, 0])
-                elif artist[0] == "scalar":
-                    artist[1].set_data(t, data)
-                ax = self.axes[i]
-                if i == 0:
-                    ax.set_xlim(0, self.state.selected_value.duration_s)
-                if zero_artist := self.zero_artists[i]:
-                    zero_artist.set_visible(False)
-                if self.state.common_scaling is None or artist[0] in (
-                    "image",
-                    "scalar",
-                ):
-                    ax.relim(visible_only=True)
-                    ax.autoscale(axis="y")
-                else:
-                    scale = self.state.common_scaling[
-                        (
-                            0
-                            if specs[i].content == "movement"
-                            else 1 if specs[i].content == "velocity" else 2
-                        )
-                    ]
-                    if artist[0] == "spatial-multi":
-                        # Already centered
-                        ax.set_ylim(-scale / 2, scale / 2)
-                    else:
-                        data_center = (np.nanmax(data) + np.nanmin(data)) / 2
-                        ax.set_ylim(data_center - scale / 2, data_center + scale / 2)
-                if zero_artist := self.zero_artists[i]:
-                    ymin, ymax = ax.get_ylim()
-                    zero_visible = ymin < 0 < ymax
-                    zero_artist.set_visible(zero_visible)
-        if spatial_ylim and not trajectories:
-            for i, spec in enumerate(self._get_temp_disp_specs()):
-                if isinstance(spec, SpatialTrajDisplay):
-                    ax = self.axes[i]
-                    artist = self.artists[i]
-                    data = self.plotting_data[i][1]
-                    if self.state.common_scaling is None:
-                        ax.relim(visible_only=True)
-                        ax.autoscale(axis="y")
-                    else:
-                        scale = self.state.common_scaling[
-                            (
-                                0
-                                if spec.content == "movement"
-                                else 1 if spec.content == "velocity" else 2
-                            )
-                        ]
-                        if artist[0] == "spatial-multi":
-                            # Already centered
-                            ax.set_ylim(-scale / 2, scale / 2)
-                        else:
-                            data_center = (np.nanmax(data) + np.nanmin(data)) / 2
-                            ax.set_ylim(
-                                data_center - scale / 2, data_center + scale / 2
-                            )
-        # All of these may update ylim
-        if frame or (
-            (spatial_ylim or trajectories)
-            and self.state.selected_value.trajectories[
-                self.state.app_config.framing_traj
-            ].kind
-            == "spatial"
-        ):
-            head_s = self.state.head_s
-            tail_s = self.state.tail_s
-            for i, ax in enumerate(self.axes):
-                if i > 0:
-                    ax.set_xlim(head_s, tail_s)
-            ymin, ymax = self.axes[0].get_ylim()
-            self.frame_artist.set_verts(
-                [
-                    [
-                        (head_s, ymin),
-                        (head_s, ymax),
-                        (tail_s, ymax),
-                        (tail_s, ymin),
-                        (head_s, ymin),
-                    ]
-                ]
-            )
-        if spect_ylim:
-            for i, spec in enumerate(self._get_temp_disp_specs()):
-                if spec.content == "SPECT":
-                    ax = self.axes[i]
-                    ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
-        if labels:
-            for label in labels:
-                if label not in self.state.labels:
-                    # Label deleted
-                    for label_artists in self.label_artists:
-                        if label in label_artists:
-                            label_artists[label].remove()
-                            del label_artists[label]
-                    for label_text_artists in self.label_text_artists:
-                        if label in label_text_artists:
-                            label_text_artists[label].remove()
-                            del label_text_artists[label]
-                else:
-                    # Label added or updated
-                    for i, label_artists in enumerate(self.label_artists):
-                        if label in label_artists:
-                            la = label_artists[label]
-                            la.set_xdata([label.offset_s, label.offset_s])
-                        else:
-                            ax = self.axes[i]
-                            label_artists[label] = ax.axvline(
-                                label.offset_s,
-                                color="red",
-                                linewidth=0.8,
-                                zorder=999,
-                                clip_on=True,
-                            )
-                    for i, label_text_artists in enumerate(self.label_text_artists):
-                        if label in label_text_artists:
-                            lta = label_text_artists[label]
-                            lta.set_x(label.offset_s)
-                        else:
-                            ax = self.axes[i]
-                            text = ax.text(
-                                label.offset_s,
-                                0.5,
-                                label.name,
-                                color="red",
-                                zorder=999,
-                                clip_on=True,
-                            )
-                            label_text_artists[label] = text
-        if cursor or trajectories or frame or spect_ylim or spatial_ylim or labels:
-            self.canvas.draw_idle()
-
     def _plot_one_axis(
         self, ax: plt_axes.Axes, spec: TrajDisplay, i: int, duration_s: float
     ):
@@ -423,6 +263,156 @@ class TemporalView(QWidget):
             label_text_artists = None
 
         return artist, zero_artist, cursor_artist, label_artists, label_text_artists
+
+    def update_plot(
+        self,
+        cursor: bool = False,
+        trajectories: bool = False,
+        frame: bool = False,
+        spect_ylim: bool = False,
+        spatial_ylim: bool = False,
+        labels: list[Label] | None = None,
+    ) -> None:
+        if cursor:
+            for line in self.cursor_artists:
+                line.set_xdata([self.state.cursor_s, self.state.cursor_s])
+        if trajectories:
+            self._refresh_plotting_data()
+            for i, artist in enumerate(self.artists):
+                t, data = self.plotting_data[i]
+                if artist[0] == "image":
+                    artist[1].set_data(data)
+                    artist[1].set_extent(t)
+                elif artist[0] == "spatial-multi":
+                    for j, line in enumerate(artist[1]):
+                        sub_data = data[:, j]
+                        sub_data_center = (
+                            np.nanmax(sub_data) + np.nanmin(sub_data)
+                        ) / 2
+                        line.set_data(t, sub_data - sub_data_center)
+                elif artist[0] == "spatial-single":
+                    artist[1].set_data(t, data[:, 0])
+                elif artist[0] == "scalar":
+                    artist[1].set_data(t, data)
+                ax = self.axes[i]
+                if i == 0:
+                    ax.set_xlim(0, self.state.selected_value.duration_s)
+                if zero_artist := self.zero_artists[i]:
+                    zero_artist.set_visible(False)
+                if self.state.common_scaling is None or artist[0] in (
+                    "image",
+                    "scalar",
+                ):
+                    ax.relim(visible_only=True)
+                    ax.autoscale(axis="y")
+                # Otherwise the axis limits will be computed in spatial_ylim
+                if zero_artist := self.zero_artists[i]:
+                    ymin, ymax = ax.get_ylim()
+                    zero_visible = ymin < 0 < ymax
+                    zero_artist.set_visible(zero_visible)
+        if spatial_ylim or trajectories:
+            for i, (spec, ax, artist, (_, data)) in enumerate(
+                zip(
+                    self._get_temp_disp_specs(),
+                    self.axes,
+                    self.artists,
+                    self.plotting_data,
+                )
+            ):
+                if artist[0] in ("spatial-single", "spatial-multi"):
+                    if self.state.common_scaling is None:
+                        ax.relim(visible_only=True)
+                        ax.autoscale(axis="y")
+                    else:
+                        scale = self.state.common_scaling[
+                            (
+                                0
+                                if spec.content == "movement"
+                                else 1 if spec.content == "velocity" else 2
+                            )
+                        ]
+                        if artist[0] == "spatial-multi":
+                            # Already centered
+                            ax.set_ylim(-scale / 2, scale / 2)
+                        else:
+                            data_center = (np.nanmax(data) + np.nanmin(data)) / 2
+                            ax.set_ylim(
+                                data_center - scale / 2, data_center + scale / 2
+                            )
+        # All of these may update ylim
+        if frame or (
+            (spatial_ylim or trajectories)
+            and self.state.selected_value.trajectories[
+                self.state.app_config.framing_traj
+            ].kind
+            == "spatial"
+        ):
+            head_s = self.state.head_s
+            tail_s = self.state.tail_s
+            for i, ax in enumerate(self.axes):
+                if i > 0:
+                    ax.set_xlim(head_s, tail_s)
+            ymin, ymax = self.axes[0].get_ylim()
+            self.frame_artist.set_verts(
+                [
+                    [
+                        (head_s, ymin),
+                        (head_s, ymax),
+                        (tail_s, ymax),
+                        (tail_s, ymin),
+                        (head_s, ymin),
+                    ]
+                ]
+            )
+        if spect_ylim:
+            for i, spec in enumerate(self._get_temp_disp_specs()):
+                if spec.content == "SPECT":
+                    ax = self.axes[i]
+                    ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
+        if labels:
+            for label in labels:
+                if label not in self.state.labels:
+                    # Label deleted
+                    for label_artists in self.label_artists:
+                        if label in label_artists:
+                            label_artists[label].remove()
+                            del label_artists[label]
+                    for label_text_artists in self.label_text_artists:
+                        if label in label_text_artists:
+                            label_text_artists[label].remove()
+                            del label_text_artists[label]
+                else:
+                    # Label added or updated
+                    for i, label_artists in enumerate(self.label_artists):
+                        if label in label_artists:
+                            la = label_artists[label]
+                            la.set_xdata([label.offset_s, label.offset_s])
+                        else:
+                            ax = self.axes[i]
+                            label_artists[label] = ax.axvline(
+                                label.offset_s,
+                                color="red",
+                                linewidth=0.8,
+                                zorder=999,
+                                clip_on=True,
+                            )
+                    for i, label_text_artists in enumerate(self.label_text_artists):
+                        if label in label_text_artists:
+                            lta = label_text_artists[label]
+                            lta.set_x(label.offset_s)
+                        else:
+                            ax = self.axes[i]
+                            text = ax.text(
+                                label.offset_s,
+                                0.5,
+                                label.name,
+                                color="red",
+                                zorder=999,
+                                clip_on=True,
+                            )
+                            label_text_artists[label] = text
+        if cursor or trajectories or frame or spect_ylim or spatial_ylim or labels:
+            self.canvas.draw_idle()
 
     def _get_temp_disp_specs(self):
         framing_traj_name = self.state.app_config.framing_traj
