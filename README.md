@@ -285,6 +285,8 @@ When the plot is 3D, you can customize the view via the [spatial options](#view-
 
 TODO
 
+It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis.
+
 ## External procedures
 
 ### Data procedures

@@ -61,10 +61,7 @@ class FreqDomainView(QWidget):
 
         if cursor or data:
             f, spect_slice = self._get_current_spect()
-
             self.curve_artist.set_data(f, spect_slice)
-            self.ax.relim()
-            self.ax.autoscale_view()
 
         if xlim:
             self.ax.set_xlim(0, self.state.app_config.spectral_display_cutoff_hz)

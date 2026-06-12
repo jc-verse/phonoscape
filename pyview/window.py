@@ -20,6 +20,7 @@ from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
 from .views.spatial_view_2d import SpatialView2D
 from .views.freq_domain_view import FreqDomainView
+from .views.zoomed_audio_view import ZoomedAudioView
 
 
 class VarWindow(QMainWindow):
@@ -132,9 +133,15 @@ class VarWindow(QMainWindow):
         navbar_layout.addStretch(1)
 
         left = QFrame(central)
-        left_layout = QVBoxLayout(left)
+        left_layout = QGridLayout(left)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(4)
+
+        left_layout.setRowStretch(0, 10)
+        left_layout.setRowStretch(1, 7)
+        left_layout.setRowStretch(2, 3)
+        left_layout.setColumnStretch(0, 1)
+        left_layout.setColumnStretch(1, 1)
 
         root_layout.addWidget(left, 1, 0)
 
@@ -142,10 +149,13 @@ class VarWindow(QMainWindow):
             self.spatial_view = SpatialView3D(left, state=self.state)
         else:
             self.spatial_view = SpatialView2D(left, state=self.state)
-        left_layout.addWidget(self.spatial_view, stretch=1)
+        left_layout.addWidget(self.spatial_view, 0, 0, 1, 2)
 
         self.freq_domain_view = FreqDomainView(left, state=self.state)
-        left_layout.addWidget(self.freq_domain_view, stretch=1)
+        left_layout.addWidget(self.freq_domain_view, 1, 0, 1, 2)
+
+        self.zoomed_audio_view = ZoomedAudioView(left, state=self.state)
+        left_layout.addWidget(self.zoomed_audio_view, 2, 1, 1, 1)
 
         right = QFrame(central)
         right_layout = QVBoxLayout(right)
@@ -175,6 +185,7 @@ class VarWindow(QMainWindow):
         self.spatial_view.update_plot(points=True)
         if self.state.app_config.audio_traj is not None:
             self.freq_domain_view.update_plot(cursor=True)
+            self.zoomed_audio_view.update_plot(cursor=True)
 
     def set_head(self, head_s: float) -> None:
         head_s = min(self.state.tail_s - self.state.min_sel_dur_s, head_s)

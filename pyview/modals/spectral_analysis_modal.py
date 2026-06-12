@@ -178,6 +178,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
         ):
             config.analysis_window_ms = analysis_window_ms
             update_temporal_view = True
+            parent.root.zoomed_audio_view.update_plot(xlim=True)
         if lpc_order := parse_positive_num(lpc_order_entry, "lpc_order", int):
             config.lpc_order = lpc_order
         if fft_eval_points := parse_positive_num(
@@ -220,8 +221,8 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
                     ],
                     parent.state.app_config,
                 )
+                parent.root.freq_domain_view.update_plot(data=True)
             parent.root.temporal_view.update_plot(trajectories=True)
-            parent.root.freq_domain_view.update_plot(data=True)
         dialog.accept()
 
     def on_cancel() -> None:
