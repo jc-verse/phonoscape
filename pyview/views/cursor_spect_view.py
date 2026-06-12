@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from PySide6.QtWidgets import QVBoxLayout, QWidget
@@ -12,7 +13,7 @@ class CursorSpectView(QWidget):
         super().__init__(parent)
 
         self.state = state
-        self.legend = None
+        self.legend_artist = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -27,7 +28,17 @@ class CursorSpectView(QWidget):
         layout.addWidget(self.canvas)
 
         self.ax = self.figure.add_subplot(111)
-        self._style_axis()
+        self.ax.set_xlabel("Hz", color=plt.rcParams["text.color"])
+        self.ax.set_ylabel("dB", color=plt.rcParams["text.color"])
+
+        self.ax.tick_params(
+            axis="both", colors=plt.rcParams["text.color"], which="both"
+        )
+
+        for spine in self.ax.spines.values():
+            spine.set_color(plt.rcParams["text.color"])
+
+        self.ax.grid(True, color=(0.28, 0.28, 0.28), linewidth=0.5, alpha=0.65)
 
         self.lpc_artist = self.ax.plot(
             [], [], color="white", linewidth=0.8, label="LPC"
@@ -38,12 +49,18 @@ class CursorSpectView(QWidget):
 
         if self.state.selected_value.audio_traj is not None:
             self._update_spectrum_data()
+        self.ax.relim(visible_only=True)
+        self.ax.autoscale(axis="y")
 
         self.figure.tight_layout()
         self.canvas.draw_idle()
 
     def update_plot(
-        self, data: bool = False, cursor: bool = False, xlim: bool = False
+        self,
+        data: bool = False,
+        cursor: bool = False,
+        xlim: bool = False,
+        ylim: bool = False,
     ) -> None:
         if self.state.selected_value.audio_traj is None:
             return
@@ -54,23 +71,12 @@ class CursorSpectView(QWidget):
         if xlim:
             self.ax.set_xlim(0, self._spectral_cutoff_hz())
 
-        if data or cursor or xlim:
+        if ylim:
+            self.ax.relim(visible_only=True)
+            self.ax.autoscale(axis="y")
+
+        if data or cursor or xlim or ylim:
             self.canvas.draw_idle()
-
-    def _style_axis(self) -> None:
-        self.figure.patch.set_facecolor("black")
-        self.ax.set_facecolor("black")
-        self.ax.set_xlabel("Hz", color="white")
-        self.ax.set_ylabel("dB", color="white")
-        self.ax.set_xlim(0, self._spectral_cutoff_hz())
-        self.ax.set_ylim(-20, 0)
-
-        self.ax.tick_params(axis="both", colors="white", which="both")
-
-        for spine in self.ax.spines.values():
-            spine.set_color("white")
-
-        self.ax.grid(True, color=(0.28, 0.28, 0.28), linewidth=0.5, alpha=0.65)
 
     def _update_spectrum_data(self) -> None:
         spectra = get_cursor_spectra(self.state)
@@ -91,7 +97,24 @@ class CursorSpectView(QWidget):
 
         self.ax.set_xlim(0, self._spectral_cutoff_hz())
         self._expand_y_if_needed(spectra.lpc_db, spectra.dft_db)
-        self._update_legend()
+
+        visible_artists = [
+            artist
+            for artist in (self.lpc_artist, self.dft_artist)
+            if artist.get_visible() and len(artist.get_xdata()) > 1
+        ]
+
+        if self.legend_artist is not None:
+            self.legend_artist.remove()
+            self.legend_artist = None
+
+        if len(visible_artists) <= 1:
+            return
+
+        self.legend_artist = self.ax.legend(handles=visible_artists, loc="upper right")
+
+        for text in self.legend_artist.get_texts():
+            text.set_color("white")
 
     def _expand_y_if_needed(self, *spectra: np.ndarray | None) -> None:
         ymin, ymax = self.ax.get_ylim()
@@ -116,31 +139,6 @@ class CursorSpectView(QWidget):
 
         if changed:
             self.ax.set_ylim(ymin, ymax)
-
-    def _update_legend(self) -> None:
-        visible_artists = [
-            artist
-            for artist in (self.lpc_artist, self.dft_artist)
-            if artist.get_visible() and len(artist.get_xdata()) > 1
-        ]
-
-        if self.legend is not None:
-            self.legend.remove()
-            self.legend = None
-
-        if len(visible_artists) <= 1:
-            return
-
-        self.legend = self.ax.legend(
-            handles=visible_artists,
-            loc="upper right",
-            facecolor="black",
-            edgecolor="white",
-            framealpha=0.75,
-        )
-
-        for text in self.legend.get_texts():
-            text.set_color("white")
 
     def _spectral_cutoff_hz(self) -> float:
         audio = self.state.selected_value.audio_traj

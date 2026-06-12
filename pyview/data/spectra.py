@@ -19,27 +19,32 @@ def get_cursor_spectra(state: WindowState) -> CursorSpectra:
 
     config = state.app_config
     audio = state.selected_value.audio_traj
-    sample_rate_hz = audio.sample_rate_hz
-    fft_eval_points = max(1, int(config.fft_eval_points))
-    reference_db = max(float(config.spl_reference_db), 1.0)
 
     signal = get_analysis_frame(
-        audio.signal, state.cursor_s, sample_rate_hz, config.analysis_window_ms
+        audio.signal, state.cursor_s, audio.sample_rate_hz, config.analysis_window_ms
     )
     signal = apply_pre_emphasis(signal, config.pre_emphasis)
     signal = windows.hann(signal.size, sym=True) * signal
 
-    frequency_hz = np.linspace(0.0, sample_rate_hz / 2.0, fft_eval_points + 1)[1:]
+    frequency_hz = np.linspace(
+        0.0, audio.sample_rate_hz / 2.0, config.fft_eval_points + 1
+    )[1:]
     lpc_db = None
     dft_db = None
 
     if config.active_analyses & ActiveAnalysis.LPC:
         _, lpc_db = lpc_spectrum_db(
-            signal, sample_rate_hz, config.lpc_order, fft_eval_points, reference_db
+            signal,
+            audio.sample_rate_hz,
+            config.lpc_order,
+            config.fft_eval_points,
+            config.spl_reference_db,
         )
 
     if config.active_analyses & ActiveAnalysis.DFT:
-        dft_db = dft_spectrum_db(signal, fft_eval_points, reference_db)
+        dft_db = dft_spectrum_db(
+            signal, config.fft_eval_points, config.spl_reference_db
+        )
 
     return CursorSpectra(frequency_hz=frequency_hz, lpc_db=lpc_db, dft_db=dft_db)
 
@@ -68,11 +73,11 @@ def get_analysis_frame(
     return frame_signal
 
 
-def apply_pre_emphasis(signal: np.ndarray, mu: float) -> np.ndarray:
+def apply_pre_emphasis(signal: np.ndarray, mu: float | None) -> np.ndarray:
     if signal.size == 0:
         return signal
 
-    if mu < 0:
+    if mu is None:
         mu = get_adaptive_pre_emphasis(signal)
 
     if mu <= 0:

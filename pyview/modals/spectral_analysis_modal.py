@@ -52,44 +52,9 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
         )
         main_layout.addWidget(widget, row, 1, alignment=Qt.AlignmentFlag.AlignLeft)
 
-    analysis_window_entry = make_entry(f"{config.analysis_window_ms:.1f}")
-    lpc_order_entry = make_entry(f"{config.lpc_order:d}")
-    fft_eval_points_entry = make_entry(f"{config.fft_eval_points:d}")
-    averaging_window_entry = make_entry(f"{config.averaging_window_ms:.1f}")
-    overlap_entry = make_entry(f"{config.overlap_ms:.1f}")
-    spl_reference_entry = make_entry(f"{config.spl_reference_db:.1f}")
-    spectral_cutoff_entry = make_entry(f"{config.spectral_display_cutoff_hz:.1f}")
-    pre_emphasis_entry = make_entry(f"{abs(config.pre_emphasis):.2f}")
-
-    add_row(0, "Analysis window (ms):", analysis_window_entry)
-    add_row(1, "Number of LPC coeffs:", lpc_order_entry)
-    add_row(2, "# FFT eval points:", fft_eval_points_entry)
-    add_row(3, "Averaging window (ms):", averaging_window_entry)
-    add_row(4, "Overlap (ms):", overlap_entry)
-    add_row(5, "SPL reference (dB):", spl_reference_entry)
-    add_row(6, "Spectral display cutoff (Hz):", spectral_cutoff_entry)
-
-    pre_emphasis_frame = QFrame(main)
-    pre_emphasis_layout = QHBoxLayout(pre_emphasis_frame)
-    pre_emphasis_layout.setContentsMargins(0, 0, 0, 0)
-    pre_emphasis_layout.setSpacing(6)
-
-    adaptive_pre_emphasis_check = QCheckBox("Adaptive", pre_emphasis_frame)
-    adaptive_pre_emphasis_check.setChecked(config.pre_emphasis < 0)
-    adaptive_pre_emphasis_check.toggled.connect(
-        lambda checked: pre_emphasis_entry.setEnabled(not checked)
-    )
-
-    pre_emphasis_layout.addWidget(adaptive_pre_emphasis_check)
-    pre_emphasis_layout.addWidget(QLabel("pre-emphasis:", pre_emphasis_frame))
-    pre_emphasis_layout.addWidget(pre_emphasis_entry)
-    pre_emphasis_layout.addStretch(1)
-
-    main_layout.addWidget(pre_emphasis_frame, 8, 0, 1, 2)
-
     main_layout.addWidget(
         QLabel("Active analyses:", main),
-        9,
+        0,
         0,
         alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop,
     )
@@ -117,7 +82,44 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     active_analyses_layout.addWidget(averaged_dft_check, 1, 0)
     active_analyses_layout.addWidget(cepstral_smoothing_check, 1, 1)
 
-    main_layout.addWidget(active_analyses_frame, 9, 1)
+    main_layout.addWidget(active_analyses_frame, 0, 1)
+
+    analysis_window_entry = make_entry(f"{config.analysis_window_ms:.1f}")
+    lpc_order_entry = make_entry(f"{config.lpc_order:d}")
+    fft_eval_points_entry = make_entry(f"{config.fft_eval_points:d}")
+    averaging_window_entry = make_entry(f"{config.averaging_window_ms:.1f}")
+    overlap_entry = make_entry(f"{config.overlap_ms:.1f}")
+    spl_reference_entry = make_entry(f"{config.spl_reference_db:.1f}")
+    spectral_cutoff_entry = make_entry(f"{config.spectral_display_cutoff_hz:.1f}")
+    pre_emphasis_entry = make_entry(
+        f"{config.pre_emphasis:.2f}" if config.pre_emphasis is not None else ""
+    )
+
+    add_row(1, "Analysis window (ms):", analysis_window_entry)
+    add_row(2, "Number of LPC coeffs:", lpc_order_entry)
+    add_row(3, "# FFT eval points:", fft_eval_points_entry)
+    add_row(4, "Averaging window (ms):", averaging_window_entry)
+    add_row(5, "Overlap (ms):", overlap_entry)
+    add_row(6, "SPL reference (dB):", spl_reference_entry)
+    add_row(7, "Spectral display cutoff (Hz):", spectral_cutoff_entry)
+
+    pre_emphasis_frame = QFrame(main)
+    pre_emphasis_layout = QHBoxLayout(pre_emphasis_frame)
+    pre_emphasis_layout.setContentsMargins(0, 0, 0, 0)
+    pre_emphasis_layout.setSpacing(6)
+
+    adaptive_pre_emphasis_check = QCheckBox("(Adaptive)", pre_emphasis_frame)
+    adaptive_pre_emphasis_check.setChecked(config.pre_emphasis is None)
+    adaptive_pre_emphasis_check.toggled.connect(
+        lambda checked: pre_emphasis_entry.setEnabled(not checked)
+    )
+
+    pre_emphasis_layout.addWidget(adaptive_pre_emphasis_check)
+    pre_emphasis_layout.addWidget(QLabel("Pre-emphasis:", pre_emphasis_frame))
+    pre_emphasis_layout.addWidget(pre_emphasis_entry)
+    pre_emphasis_layout.addStretch(1)
+
+    main_layout.addWidget(pre_emphasis_frame, 8, 0, 1, 2)
 
     subject_gender_combo = QComboBox(main)
     subject_gender_combo.addItems(["Male", "Female"])
@@ -158,71 +160,27 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     @overload
-    def parse_positive_num(
-        field: QLineEdit, name: str, type: type[int]
+    def parse_num(
+        field: QLineEdit, name: str, type: type[int], limit: int = 0
     ) -> int | None: ...
     @overload
-    def parse_positive_num(
-        field: QLineEdit, name: str, type: type[float]
+    def parse_num(
+        field: QLineEdit, name: str, type: type[float], limit: float = 0.0
     ) -> float | None: ...
-    def parse_positive_num(field: QLineEdit, name: str, type) -> int | float | None:
+    def parse_num(
+        field: QLineEdit, name: str, type, limit: int | float = 0
+    ) -> int | float | None:
         try:
             value = type(field.text())
         except ValueError:
             return None
-        if value <= 0 or value == getattr(config, name):
+        if value <= limit or value == getattr(config, name):
             return None
         return value
 
     def on_ok() -> None:
         update_temporal_view = False
-        if analysis_window_ms := parse_positive_num(
-            analysis_window_entry, "analysis_window_ms", float
-        ):
-            update_temporal_view = (
-                update_temporal_view or analysis_window_ms != config.analysis_window_ms
-            )
-            config.analysis_window_ms = analysis_window_ms
-            if update_temporal_view:
-                parent.root.zoomed_audio_view.update_plot(xlim=True)
-        if lpc_order := parse_positive_num(lpc_order_entry, "lpc_order", int):
-            config.lpc_order = lpc_order
-        if fft_eval_points := parse_positive_num(
-            fft_eval_points_entry, "fft_eval_points", int
-        ):
-            update_temporal_view = (
-                update_temporal_view or fft_eval_points != config.fft_eval_points
-            )
-            config.fft_eval_points = fft_eval_points
-        if averaging_window_ms := parse_positive_num(
-            averaging_window_entry, "averaging_window_ms", float
-        ):
-            update_temporal_view = (
-                update_temporal_view
-                or averaging_window_ms != config.averaging_window_ms
-            )
-            config.averaging_window_ms = averaging_window_ms
-        if overlap_ms := parse_positive_num(overlap_entry, "overlap_ms", float):
-            update_temporal_view = (
-                update_temporal_view or overlap_ms != config.overlap_ms
-            )
-            config.overlap_ms = overlap_ms
-        if spl_reference_db := parse_positive_num(
-            spl_reference_entry, "spl_reference_db", float
-        ):
-            config.spl_reference_db = spl_reference_db
-        if spectral_display_cutoff_hz := parse_positive_num(
-            spectral_cutoff_entry, "spectral_display_cutoff_hz", float
-        ):
-            config.spectral_display_cutoff_hz = spectral_display_cutoff_hz
-            parent.root.cursor_spect_view.update_plot(xlim=True)
-            parent.root.temporal_view.update_plot(spect_ylim=True)
-        if adaptive_pre_emphasis_check.isChecked():
-            config.pre_emphasis = -1.0
-        elif pre_emphasis := parse_positive_num(
-            pre_emphasis_entry, "pre_emphasis", float
-        ):
-            config.pre_emphasis = pre_emphasis
+        update_spectrum_ylim = False
         active_analyses = ActiveAnalysis(0)
         if lpc_check.isChecked():
             active_analyses |= ActiveAnalysis.LPC
@@ -233,6 +191,51 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
         if cepstral_smoothing_check.isChecked():
             active_analyses |= ActiveAnalysis.CEPS
         config.active_analyses = active_analyses
+        if analysis_window_ms := parse_num(
+            analysis_window_entry, "analysis_window_ms", float
+        ):
+            update_temporal_view = (
+                update_temporal_view or analysis_window_ms != config.analysis_window_ms
+            )
+            config.analysis_window_ms = analysis_window_ms
+            if update_temporal_view:
+                parent.root.zoomed_audio_view.update_plot(xlim=True)
+        if lpc_order := parse_num(lpc_order_entry, "lpc_order", int):
+            config.lpc_order = lpc_order
+        if fft_eval_points := parse_num(fft_eval_points_entry, "fft_eval_points", int):
+            update_temporal_view = (
+                update_temporal_view or fft_eval_points != config.fft_eval_points
+            )
+            config.fft_eval_points = fft_eval_points
+        if averaging_window_ms := parse_num(
+            averaging_window_entry, "averaging_window_ms", float
+        ):
+            update_temporal_view = (
+                update_temporal_view
+                or averaging_window_ms != config.averaging_window_ms
+            )
+            config.averaging_window_ms = averaging_window_ms
+        if overlap_ms := parse_num(overlap_entry, "overlap_ms", float):
+            update_temporal_view = (
+                update_temporal_view or overlap_ms != config.overlap_ms
+            )
+            config.overlap_ms = overlap_ms
+        if spl_reference_db := parse_num(
+            spl_reference_entry, "spl_reference_db", float, -float("inf")
+        ):
+            update_spectrum_ylim = config.spl_reference_db != spl_reference_db
+            config.spl_reference_db = spl_reference_db
+        if spectral_display_cutoff_hz := parse_num(
+            spectral_cutoff_entry, "spectral_display_cutoff_hz", float
+        ):
+            config.spectral_display_cutoff_hz = spectral_display_cutoff_hz
+            parent.root.cursor_spect_view.update_plot(xlim=True)
+            parent.root.temporal_view.update_plot(spect_ylim=True)
+        if adaptive_pre_emphasis_check.isChecked():
+            config.pre_emphasis = None
+        elif pre_emphasis := parse_num(pre_emphasis_entry, "pre_emphasis", float):
+            if pre_emphasis <= 1:
+                config.pre_emphasis = pre_emphasis
         subject_gender = subject_gender_combo.currentText()
         is_female = subject_gender == "Female"
         update_temporal_view = update_temporal_view or is_female != config.is_female
@@ -255,7 +258,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
                     parent.state.app_config,
                 )
             parent.root.temporal_view.update_plot(trajectories=True)
-        parent.root.cursor_spect_view.update_plot(data=True)
+        parent.root.cursor_spect_view.update_plot(data=True, ylim=update_spectrum_ylim)
         dialog.accept()
 
     def on_cancel() -> None:

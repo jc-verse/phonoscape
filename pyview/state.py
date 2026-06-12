@@ -44,6 +44,7 @@ class AppConfig:
     playback_rate: float = 1.0
 
     # Spectral analysis
+    active_analyses: ActiveAnalysis = ActiveAnalysis.LPC
     analysis_window_ms: float = 30.0
     lpc_order: int = 26  # Need overriding based on sample rate
     fft_eval_points: int = 256
@@ -51,8 +52,7 @@ class AppConfig:
     overlap_ms: float = 1.0
     spl_reference_db: float = 20.0
     spectral_display_cutoff_hz: float = 11025.0  # Need overriding based on sample rate
-    pre_emphasis: float = 0.98
-    active_analyses: ActiveAnalysis = ActiveAnalysis.LPC
+    pre_emphasis: float | None = 0.98
     is_female: bool = False
     spectrogram_bandwidth_mode: SpectrogramBandwidth = SpectrogramBandwidth.WIDE
 

@@ -165,18 +165,17 @@ The following optional fields may be provided for each trajectory struct:
 
 - **Track formants**: TODO
 - **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), the external spectrum window (TODO), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
-  - **Analysis window (ms)** (default: 30ms): Configures the window size for the `RMS` and `ZC` temporal analyses, and the window size for the **Report** output.
-  - **Number of LPC coeffs** (default: `audio_sampling_rate / 1000 + 8` if female, otherwise `audio_sampling_rate / 1000 + 4`): TODO
-  - **# FFT eval points** (default: 256): Configures the frequency resolution of the `SPECT`. Unlike MVIEW, the actual number of FFT samples must be at least the window size in samples.
+  - **Active analyses** (default: LPC): TODO
+  - **Analysis window (ms)** (default: 30ms): Configures the window size for the `RMS` and `ZC` temporal analyses (unlike MVIEW which uses a fixed window), the window size for the **Report** output, and the cursor spectrum. The `SPECT` temporal analysis uses the **Averaging window** instead.
+  - **Number of LPC coeffs** (default: `audio_sampling_rate / 1000 + 8` if female, otherwise `audio_sampling_rate / 1000 + 4`): Configures the LPC analysis (if enabled) in the cursor spectrum.
+  - **# FFT eval points** (default: 256): Configures the frequency resolution of all relevant spectral analyses. Unlike MVIEW (in MATLAB fewer FFT eval points silently truncates the window), the number of FFT samples must be at least the window sample size.
   - **Averaging window (ms)** (default: 6ms): Configures the analysis window for the `SPECT` (I don't think this is right but this is how it is in MVIEW).
   - **Overlap (ms)** (default: 1ms): Configures the window shift for the `SPECT`.
-  - **SPL reference (dB)** (default: 20dB): TODO
+  - **SPL reference (dB)** (default: 20dB): Reference sound pressure level spectral offset. Larger values make the spectrum lower in dB. Affects the cursor spectrum. Changing this value resets the cursor spectrum's y-axis limits to default.
   - **Spectral display cutoff (Hz)** (default: `audio_sampling_rate / 2`): Affects visualization only. Configures the ymax of `SPECT` and the xmax of the time-slice spectrograms.
-  - **Adaptive pre-emphasis** (default: 0.98): TODO
-  - **Active analyses** (default: LPC): TODO
-  - **Subject gender** (default: Male): TODO
+  - **Pre-emphasis** (default: 0.98): If the **(Adaptive)** checkbox is checked, then the pre-emphasis coefficient is automatically determined by the signal (by computing the lag-1 autocorrelation). Otherwise, the specified coefficient is used (which should be between 0 and 1). Affects cursor spectrum only (TODO: this way is for MVIEW compatibility; `SPECT` uses hard-coded first-difference. I think this config should apply there too.)
+  - **Subject gender** (default: `--sex` [argument](#command-line-arguments)): Affects F0 heuristics.
   - **Spectrogram** (default: wide): Acts as a multiplier for **Averaging window** (and affects `SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
-  - **Spectrogram contrast**: TODO
 
 ### View menu
 
@@ -186,9 +185,9 @@ The following optional fields may be provided for each trajectory struct:
   - Select one displayed trajectory from the right-hand side to reorder (`^` and `v`).
   - Select one displayed trajectory from the right-hand side to customize its content. For spatial trajectories, you can choose to display position, velocity, or acceleration, and which dimensions to display. For scalar trajectories, you can choose to apply a temporal analysis (spectrogram, RMS, zero-crossing rate, fundamental frequency, etc.).
   - Select one trajectory from either side to customize its color. Unlike MVIEW, you can customize colors from the left-hand size too, which means you can customize a color in the spatial view even if you don't load it into the temporal view.
+  - Select a spectrogram to customize its color contrast. This is equivalent to the MVIEW vertical slider in the bottom left.
 
   The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
-
 - **Set common scaling**: Opens a dialog to configure the y-axis limits for all spatial trajectories.
   - **Adaptive scaling**: Each trajectory has its own y-axis limits, determined by the range of the trajectory data (i.e., matplotlib default auto-scaling logic). New in PyView.
   - Configured spreads: Configure a common spread for all movement/velocity/acceleration trajectories, respectively. The `ymax - ymin` will be equal to that value, leaving an equal margin on the top and bottom.
@@ -335,11 +334,24 @@ On right-click, the context menu is no longer shown. Configuration of the spatia
 
 ### Cursor spectrum
 
-TODO
+The cursor spectrum is the bottom-left panel. It shows the frequency spectrum of the audio signal at the cursor position, computed using the parameters configured in [spectral analysis](#data-menu):
+
+- **Active analyses**
+- **Analysis window (ms)**
+- **Number of LPC coeffs** (LPC-only)
+- **# FFT eval points**
+- **Averaging window (ms)** (AVG-only)
+- **SPL reference (dB)**
+- **Spectral display cutoff (Hz)**
+- **Pre-emphasis**
+
+Currently two modes are supported: Discrete Fourier Transform (DFT; cyan) and Linear Predictive Coding (LPC; white). By default only LPC is enabled.
+
+The x-axis limit is from 0 to the value configured by **Spectral display cutoff**. The y-axis is in dB, whose limits expand as the plot updates (i.e., as you move the cursor). The way to reset the limit is to re-adjust the [SPL reference](#data-menu) which effectively shifts the curve.
 
 It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line, centered at the plot). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis. For this reason, you must configure its window size through [spectral analysis](#data-menu) **Analysis window** instead of using the right-click context menu or a separate slider.
 
-The vertical slider here that customizes the spectrogram contrast has been moved to [Configure spectral analysis](#data-menu).
+The vertical slider here that customizes the spectrogram contrast has been moved to [Temporal layout](#view-menu).
 
 ### Read-out
 

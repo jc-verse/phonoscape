@@ -15,6 +15,7 @@ from ..state import TrajDisplay, DatasetVariable, Trajectory, Audio, F0Track, Ap
 def get_spect(traj: Trajectory, frame: int, win_ms: float, hop_ms: float, mult: int):
     # MVIEW temporal spectrogram uses first-difference pre-emphasis,
     # not the configurable PREEMP value.
+    # TODO: I think we should apply pre_emphasis here
     signal = np.diff(traj.data, prepend=traj.data[0])
 
     nperseg = round(traj.sample_rate_hz * win_ms / 1000)
@@ -49,14 +50,18 @@ def get_spect(traj: Trajectory, frame: int, win_ms: float, hop_ms: float, mult: 
 
 
 @overload
-def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: None = None) -> NDArray[np.float64]: ...
+def get_rms(
+    traj: Trajectory | Audio, win_ms: float, time_s: None = None
+) -> NDArray[np.float64]: ...
 
 
 @overload
 def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: float) -> float: ...
 
 
-def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: float | None = None) -> NDArray[np.float64] | float:
+def get_rms(
+    traj: Trajectory | Audio, win_ms: float, time_s: float | None = None
+) -> NDArray[np.float64] | float:
     window = max(1, round(traj.sample_rate_hz * win_ms / 1000))
     data = traj.data if isinstance(traj, Trajectory) else traj.signal
 
@@ -78,14 +83,18 @@ def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: float | None = None
 
 
 @overload
-def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: None = None) -> NDArray[np.float64]: ...
+def get_zc(
+    traj: Trajectory | Audio, win_ms: float, time_s: None = None
+) -> NDArray[np.float64]: ...
 
 
 @overload
 def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: float) -> float: ...
 
 
-def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: float | None = None) -> NDArray[np.float64] | float:
+def get_zc(
+    traj: Trajectory | Audio, win_ms: float, time_s: float | None = None
+) -> NDArray[np.float64] | float:
     window = max(1, round(traj.sample_rate_hz * win_ms / 1000))
     data = traj.data if isinstance(traj, Trajectory) else traj.signal
 
@@ -103,7 +112,10 @@ def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: float | None = None)
 
     wl2 = int(np.ceil(window / 2))
     s = np.concatenate([np.zeros(wl2), data, np.zeros(wl2)])
-    zc = cast(NDArray[np.float64], lfilter(np.ones(window), [1], np.concatenate([[0], np.abs(np.diff(s >= 0))])))
+    zc = cast(
+        NDArray[np.float64],
+        lfilter(np.ones(window), [1], np.concatenate([[0], np.abs(np.diff(s >= 0))])),
+    )
     zc = zc[wl2 * 2 :]
     return zc
 
