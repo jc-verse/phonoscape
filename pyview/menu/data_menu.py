@@ -1,12 +1,14 @@
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 from ..state import AudioTrajDisplay, ScalarTrajDisplay
-from ..data.process import get_cog
+from ..data.process import get_cog, get_zc, get_rms
 from ..modals.spectral_analysis_modal import open_spectral_analysis_dialog
 
 
@@ -38,8 +40,12 @@ class DataMenu(QMenu):
             # MVIEW does not pass any of the config into cog().
             # TODO: perhaps we should
             cog = get_cog(traj, self.state.cursor_s)
+            win_ms = self.state.app_config.analysis_window_ms
+            zc = get_zc(traj, win_ms, self.state.cursor_s)
+            rms = get_rms(traj, win_ms, self.state.cursor_s)
+            rms_db = 20 * np.log10(rms + np.finfo(float).eps)
             print(
-                f"Window {self.state.app_config.analysis_window_ms:.1f} ms:  {traj.zc[idx]} zero crossings, RMS = {traj.rms[idx]:.2f} ({traj.rms_db[idx]:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {cog.l1:.2f}, skew = {cog.skew:.2f}, kurt = {cog.kurt:.2f}"
+                f"Window {win_ms:.1f} ms:  {zc:.0f} zero crossings, RMS = {rms:.2f} ({rms_db:.2f} dB), F0 = {traj.f0.raw_hz[idx]:.2f} Hz, L1 = {cog.l1:.2f}, skew = {cog.skew:.2f}, kurt = {cog.kurt:.2f}"
             )
             print("Formants (BW):", end="")
             nf = len(traj.formants)

@@ -48,21 +48,62 @@ def get_spect(traj: Trajectory, frame: int, win_ms: float, hop_ms: float, mult: 
     return S_db
 
 
-def get_rms(traj: Trajectory, win_ms: float):
-    window = round(traj.sample_rate_hz * win_ms / 1000)
-    b = np.ones(window) / window  # rectwin(window) ./ window
-    rms: NDArray[np.float64] = np.sqrt(np.abs(filtfilt(b, [1], traj.data**2)))
+@overload
+def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: None = None) -> NDArray[np.float64]: ...
+
+
+@overload
+def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: float) -> float: ...
+
+
+def get_rms(traj: Trajectory | Audio, win_ms: float, time_s: float | None = None) -> NDArray[np.float64] | float:
+    window = max(1, round(traj.sample_rate_hz * win_ms / 1000))
+    data = traj.data if isinstance(traj, Trajectory) else traj.signal
+
+    if time_s is not None:
+        center = int(np.floor(time_s * traj.sample_rate_hz))
+        head = center - round(window / 2)
+        head = max(0, head)
+        tail = head + window
+        if tail > traj.n_samples:
+            tail = traj.n_samples
+            head = max(0, tail - window)
+
+        s = data[head:tail]
+        return float(np.sqrt(np.mean(s**2)))
+
+    b = np.ones(window) / window
+    rms: NDArray[np.float64] = np.sqrt(np.abs(filtfilt(b, [1], data**2)))
     return rms
 
 
-def get_zc(traj: Trajectory, win_ms: float):
-    wl = round(traj.sample_rate_hz * win_ms / 1000)
-    wl2 = int(np.ceil(wl / 2))
-    s = np.concatenate([np.zeros(wl2), traj.data, np.zeros(wl2)])
-    zc = cast(
-        NDArray[np.float64],
-        lfilter(np.ones(wl), [1], np.concatenate([[0], np.abs(np.diff(s >= 0))])),
-    )
+@overload
+def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: None = None) -> NDArray[np.float64]: ...
+
+
+@overload
+def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: float) -> float: ...
+
+
+def get_zc(traj: Trajectory | Audio, win_ms: float, time_s: float | None = None) -> NDArray[np.float64] | float:
+    window = max(1, round(traj.sample_rate_hz * win_ms / 1000))
+    data = traj.data if isinstance(traj, Trajectory) else traj.signal
+
+    if time_s is not None:
+        center = int(np.floor(time_s * traj.sample_rate_hz))
+        head = center - round(window / 2)
+        head = max(0, head)
+        tail = head + window
+        if tail > traj.n_samples:
+            tail = traj.n_samples
+            head = max(0, tail - window)
+
+        s = data[head:tail]
+        return float(np.sum(np.abs(np.diff(s >= 0))))
+
+    wl2 = int(np.ceil(window / 2))
+    s = np.concatenate([np.zeros(wl2), data, np.zeros(wl2)])
+    zc = cast(NDArray[np.float64], lfilter(np.ones(window), [1], np.concatenate([[0], np.abs(np.diff(s >= 0))])))
     zc = zc[wl2 * 2 :]
     return zc
 
