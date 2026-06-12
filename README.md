@@ -20,8 +20,8 @@ You can run `python -m pyview --help` to see the full list of command-line argum
 - First, you need to provide a `file` argument pointing to a `.mat` [dataset file](#dataset-format).
 - Then, you can optionally provide a `variables` pattern. It uses [`fnmatch`](https://docs.python.org/3/library/fnmatch.html), so you can use `*` to match a sequence of characters and `?` to match a single character. If no variable pattern is provided, then all variables in the dataset file are used.
 - Finally, you can provide any number of options:
-  - `--palate VAR` (MVIEW `PALATE`): use the variable `VAR` (in the `file`) to plot a palate curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of palate points. If unspecified, no palate is plotted.
-  - `--pharynx VAR` (MVIEW `PHARYNX`): use the variable `VAR` (in the `file`) to plot a pharynx curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of pharynx points. However, per MVIEW compatibility, if the pharynx trace is 2D and the spatial data is 3D, an extra column of zeros will be added as the y-axis. If unspecified, no pharynx is plotted.
+  - `--palate VAR` (MVIEW `PALATE`): use the variable `VAR` (in the `file`) to plot a palate curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of palate points. If unspecified, the variable `pal` is used if it exists and contains data in the required shape; otherwise no palate is plotted.
+  - `--pharynx VAR` (MVIEW `PHARYNX`): use the variable `VAR` (in the `file`) to plot a pharynx curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of pharynx points. However, per MVIEW compatibility, if the pharynx trace is 2D and the spatial data is 3D, an extra column of zeros will be added as the y-axis. If unspecified, the variable `pha` is used if it exists and contains data in the required shape; otherwise no pharynx is plotted.
   - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default.
   - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first audio trajectory is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
   - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
@@ -55,6 +55,7 @@ The `.mat` file contains three levels:
 Only variables that contain structs are considered valid variables. Other variables (those that contain plain arrays) are considered supplementary data. They are only useful if some other [argument](./arguments.md) refers to them:
 
 - `--palate`: looks for a variable containing a `[n_samples × n_dims]` array of palate points.
+- `--pharynx`: looks for a variable containing a `[n_samples × n_dims]` array of pharynx points.
 
 The following fields are required for each trajectory struct:
 
@@ -229,13 +230,15 @@ Unlike MVIEW, labels are ordered by their creation, not by their temporal positi
 - **Load labels**: Loads the labels from the app shared memory. The loaded labels replace the current labels.
 - **Labeling behavior**: TODO
 
-## Navbar
+## UI elements
+
+### Navbar
 
 The **Play** button has the exact same functionality as the one in the [play menu](#play-menu).
 
 You can read off and edit the cursor, head, and tail positions, all in milliseconds.
 
-## Temporal view
+### Temporal view
 
 The temporal view is the right panel. It displays the trajectories as time series, with time on the x-axis and the trajectory value(s) on the y-axis. The first plot is the _framing trajectory_ specified with the `--framing` [argument](#command-line-arguments). It always displays the full data. The current selection is highlighted. The cursor and labels are also visible.
 
@@ -263,7 +266,7 @@ Unlike MVIEW, all scalar trajectories with sampling rate >5000Hz—not just audi
 
 You can click in the temporal display trajectories to set the cursor, or drag to move the cursor. You can also drag a label to move it, or double-click one to edit it. You can right-click to create a label at the position (this invokes the custom labeling procedure).
 
-## Spatial view
+### Spatial view
 
 The spatial view is the top-left panel. It displays the locations of all spatial signals at the cursor position. It is not affected by which ones are temporally displayed; to exclude certain signals, you can use the `--spatial-exclude` [argument](#command-line-arguments). The plot is 2D or 3D depending on the data's dimensions (configurable via the `--comps` [argument](#command-line-arguments)).
 
@@ -277,6 +280,20 @@ If the `--spline` [argument](#command-line-arguments) is configured, the spline 
 
 When the plot is 3D, you can customize the view via the [spatial options](#view-menu) or the `--view` [argument](#command-line-arguments).
 
-## Spectrogram
+### Cursor spectrum
+
+TODO
+
+## External procedures
+
+### Data procedures
+
+TODO
+
+### Plotting procedures
+
+TODO
+
+### Labeling procedures
 
 TODO

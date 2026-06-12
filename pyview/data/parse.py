@@ -250,6 +250,14 @@ def normalize_args(
 
     palate_variable = args.get("palate")
     palate_trace = None
+    if (
+        palate_variable is None
+        and "pal" in other_data
+        and isinstance(other_data["pal"], np.ndarray)
+        and other_data["pal"].ndim == 2
+        and other_data["pal"].shape[1] >= 2
+    ):
+        palate_variable = "pal"
     if palate_variable is not None:
         palate_trace = other_data[palate_variable]
         if not isinstance(palate_trace, np.ndarray):
@@ -272,6 +280,14 @@ def normalize_args(
 
     pharynx_variable = args.get("pharynx")
     pharynx_trace = None
+    if (
+        pharynx_variable is None
+        and "pha" in other_data
+        and isinstance(other_data["pha"], np.ndarray)
+        and other_data["pha"].ndim == 2
+        and other_data["pha"].shape[1] >= 2
+    ):
+        pharynx_variable = "pha"
     if pharynx_variable is not None:
         pharynx_trace = other_data[pharynx_variable]
         if not isinstance(pharynx_trace, np.ndarray):
