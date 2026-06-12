@@ -42,7 +42,6 @@ class AppConfig:
     # Movement
     nudge_step_ms: float = 5.0
     playback_rate: float = 1.0
-    frame_rate_fps: float = 20.0
 
     # Spectral analysis
     analysis_window_ms: float = 30.0

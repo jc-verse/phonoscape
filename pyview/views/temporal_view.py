@@ -460,7 +460,7 @@ class TemporalView(QWidget):
         if self._event_is_in_cursor_axes(event):
             idx = self.axes.index(event.inaxes)
             spec = self._get_temp_disp_specs()[idx]
-            self.root.traj_readout.update_readout(
+            self.root.readout.readout_traj(
                 spec, self.plotting_data[idx][1], float(event.xdata)
             )
         if self._event_is_in_cursor_axes(event):
@@ -506,7 +506,7 @@ class TemporalView(QWidget):
         if self._event_is_in_cursor_axes(event):
             idx = self.axes.index(event.inaxes)
             spec = self._get_temp_disp_specs()[idx]
-            self.root.traj_readout.update_readout(
+            self.root.readout.readout_traj(
                 spec, self.plotting_data[idx][1], float(event.xdata)
             )
         if self.dragging == "cursor":

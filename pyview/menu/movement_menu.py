@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 from enum import Enum, auto
+from time import perf_counter
 
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QAction, QActionGroup
@@ -17,6 +18,8 @@ class CyclingMode(Enum):
     BACKWARD = auto()
     REFLECTIVE = auto()
 
+    __str__ = lambda self: self.name.capitalize()
+
 
 class MovementMenu(QMenu):
     def __init__(self, parent: MenuBar):
@@ -29,7 +32,10 @@ class MovementMenu(QMenu):
         self._cycling_direction = 0
 
         self._cycle_timer = QTimer(self)
+        self._cycle_timer.setSingleShot(True)
         self._cycle_timer.timeout.connect(self._cycle_once)
+
+        self._last_cycle_time: float | None = None
 
         self.addAction("Step forward", self._step_forward, shortcut="Ctrl+F")
         self.addAction("Step backward", self._step_backward, shortcut="Ctrl+B")
@@ -120,40 +126,61 @@ class MovementMenu(QMenu):
 
         if mode is CyclingMode.STOPPED:
             self._cycle_timer.stop()
-        elif not self._cycle_timer.isActive():
-            self._cycle_timer.setInterval(
-                int(1000 / self.state.app_config.frame_rate_fps)
-            )
-            self._cycle_timer.start()
+            self._last_cycle_time = None
+            self.root.readout.clear_readout()
+            return
+
+        self._last_cycle_time = None
+        if not self._cycle_timer.isActive():
+            self._cycle_timer.start(0)
 
     def _cycle_once(self) -> None:
         if self._cycling_mode is CyclingMode.STOPPED or self._cycling_direction == 0:
             self._cycle_timer.stop()
+            self._last_cycle_time = None
+            self.root.readout.clear_readout()
+            return
+
+        now = perf_counter()
+        if self._last_cycle_time is None:
+            self._last_cycle_time = now
+            self._cycle_timer.start(0)
+            return
+
+        elapsed_s = now - self._last_cycle_time
+        self._last_cycle_time = now
+
+        if elapsed_s <= 0:
+            self._cycle_timer.start(0)
             return
 
         head = self.state.head_s
         tail = self.state.tail_s
         cursor = self.state.cursor_s
+        playback_rate = self.state.app_config.playback_rate
 
-        step_s = (
-            int(1000 / self.state.app_config.frame_rate_fps)
-            / 1000
-            * self.state.app_config.playback_rate
-        )
-        new_cursor = cursor + step_s * self._cycling_direction
+        new_cursor = cursor + elapsed_s * playback_rate * self._cycling_direction
 
         if new_cursor < head:
             if self._cycling_mode is CyclingMode.REFLECTIVE:
                 self._cycling_direction *= -1
-                new_cursor = head
+                new_cursor = head + (head - new_cursor)
+                if new_cursor > tail:
+                    new_cursor = tail
             else:
-                new_cursor = tail
+                width = tail - head
+                new_cursor = tail if width <= 0 else tail - ((head - new_cursor) % width)
 
         elif new_cursor > tail:
             if self._cycling_mode is CyclingMode.REFLECTIVE:
                 self._cycling_direction *= -1
-                new_cursor = tail
+                new_cursor = tail - (new_cursor - tail)
+                if new_cursor < head:
+                    new_cursor = head
             else:
-                new_cursor = head
+                width = tail - head
+                new_cursor = head if width <= 0 else head + ((new_cursor - tail) % width)
 
         self.root.set_cursor(new_cursor)
+        self.root.readout.readout_fps(str(self._cycling_mode), elapsed_s, playback_rate)
+        self._cycle_timer.start(0)

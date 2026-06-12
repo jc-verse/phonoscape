@@ -64,7 +64,6 @@ class ViewMenu(QMenu):
                 spatial_3d_view_menu.addAction(action)
                 self.view_actions[label] = action
 
-            self._set_view(self.state.view)
             spatial_3d_view_menu.addSeparator()
 
             spatial_3d_view_menu.addAction(
@@ -79,13 +78,18 @@ class ViewMenu(QMenu):
             self.free_rotate_action.triggered.connect(self._free_rotate)
             spatial_3d_view_menu.addAction(self.free_rotate_action)
 
-            self._free_rotate()
-
             self.root.spatial_view.canvas.mpl_connect(
-                "button_release_event", self._on_spatial_axis_rotate
+                "motion_notify_event", self._on_spatial_axis_rotate
+            )
+            self.root.spatial_view.canvas.mpl_connect(
+                "button_release_event", self._on_spatial_axis_rotate_complete
             )
 
             self.addMenu(spatial_3d_view_menu)
+
+            self._set_view(self.state.view)
+            self.root.readout.clear_readout()
+            self._free_rotate()
 
         self.addSeparator()
         # On macOS, this menu includes an "Enter full screen" action. It's useful
@@ -108,6 +112,7 @@ class ViewMenu(QMenu):
     def _set_view_option(self, label: str) -> None:
         elev, azim, roll = views[label]
         self.root.state.view = (elev, azim, roll)
+        self.root.readout.readout_camera(elev=elev, azim=azim, roll=roll)
         self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
         self.root.spatial_view.canvas.draw_idle()
 
@@ -124,6 +129,7 @@ class ViewMenu(QMenu):
             action.blockSignals(False)
         elev, azim, roll = view
         self.root.state.view = view
+        self.root.readout.readout_camera(elev=elev, azim=azim, roll=roll)
         self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
         self.root.spatial_view.canvas.draw_idle()
 
@@ -134,6 +140,17 @@ class ViewMenu(QMenu):
         self.view_action_group.setExclusive(True)
 
     def _on_spatial_axis_rotate(self, event) -> None:
+        if not self.free_rotate_action.isChecked():
+            return
+        if event.inaxes is not self.root.spatial_view.ax:
+            return
+        self.root.readout.readout_camera(
+            elev=self.root.spatial_view.ax.elev,
+            azim=self.root.spatial_view.ax.azim,
+            roll=self.root.spatial_view.ax.roll,
+        )
+
+    def _on_spatial_axis_rotate_complete(self, event) -> None:
         if not self.free_rotate_action.isChecked():
             return
         if event.inaxes is not self.root.spatial_view.ax:

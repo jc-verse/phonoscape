@@ -13,6 +13,8 @@ python -m pyview ./test_data/S02_data.mat --palate S02_pal --temporal-display AU
 
 ## Central concepts
 
+TODO
+
 ## Command-line arguments
 
 You can run `python -m pyview --help` to see the full list of command-line arguments.
@@ -22,7 +24,7 @@ You can run `python -m pyview --help` to see the full list of command-line argum
 - Finally, you can provide any number of options:
   - `--palate VAR` (MVIEW `PALATE`): use the variable `VAR` (in the `file`) to plot a palate curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of palate points. If unspecified, the variable `pal` is used if it exists and contains data in the required shape; otherwise no palate is plotted.
   - `--pharynx VAR` (MVIEW `PHARYNX`): use the variable `VAR` (in the `file`) to plot a pharynx curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of pharynx points. However, per MVIEW compatibility, if the pharynx trace is 2D and the spatial data is 3D, an extra column of zeros will be added as the y-axis. If unspecified, the variable `pha` is used if it exists and contains data in the required shape; otherwise no pharynx is plotted.
-  - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default.
+  - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default. This is slightly different from MVIEW which disables spline by default, but in the command line it's hard to differentiate between `[]` (MVIEW "use `T*`") and `0` (MVIEW "disable"). If you want to hide the spline, just use the [**Hide spline**](#view-menu) action.
   - `--polyline-spline` (MVIEW `SPLINE` with a negative first index): specifies that the spline should be plotted as a polyline instead of a smooth curve. Might improve real-time update performance.
   - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first audio trajectory is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
   - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
@@ -31,11 +33,11 @@ You can run `python -m pyview --help` to see the full list of command-line argum
     - If designating a scalar trajectory (sampling rate < 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: ``VEL` (velocity), `ABSVEL` (absolute velocity).
     - If designating a spatial trajectory: `TRAJ`, optionally prefixed by `v` or `a`, and optionally suffixed by a subset of `xyz`, indicating if the trajectory should be movement, velocity, or acceleration, and which dimensions to plot. Specifying `xyz` is equivalent to no specification.
 
-    These specification names can also be obtained from the "Temporal layout" dialog.
+    These specification names can also be obtained from the "Temporal layout" dialog. By default, all trajectories are included in the temporal display; if audio is available, then its signal and `SPECT` trajectories are always ordered as the first two.
 
-  - `--spatial-exclude TRAJ1 TRAJ2 ...` (MVIEW `SPATEX`): a list of trajectory names to exclude from the spatial view (they are still included in every other analysis, including the temporal view). If unspecified, then no trajectory is excluded.
-  - `--comps COL1 COL2 ...` (MVIEW `IS3D`): equivalent to the dataset `NCOMPS` [field](#dataset-format), but used as a global fallback when the `NCOMPS` field is absent. This global configuration is also used for non-trajectory data, such as palate trace. A single number `N` is equivalent to `0 .. N-1`.
-  - `--view ELEV AZIM ROLL` (MVIEW `VIEW`): the initial view of the spatial display, in terms of elevation, azimuth, and roll (in degrees). This is only used if the data is 3D. If unspecified, it defaults to `(0, -90, 0)` (i.e., sagittal section, right view).
+  - `--spatial-exclude TRAJ1 TRAJ2 ...` (MVIEW `SPATEX`): a list of trajectory names to exclude from the spatial view (they are still included in every other analysis, including the temporal view). If unspecified, then no trajectory is excluded. Unlike MVIEW, wildcards are not supported; just pass each trajectory name individually.
+  - `--comps COL1 COL2 ...` (like MVIEW `IS3D`, but better): equivalent to the dataset `NCOMPS` [field](#dataset-format), but used as a global fallback when the `NCOMPS` field is absent. This global configuration is also used for non-trajectory data, such as palate trace. A single number `N` is equivalent to `0 .. N-1`.
+  - `--view ELEV AZIM ROLL` (like MVIEW `VIEW`, but matplotlib conventions): the initial view of the spatial display, in terms of elevation, azimuth, and roll (in degrees). This is only used if the data is 3D. If unspecified, it defaults to `(0, -90, 0)` (i.e., sagittal section, right view). See [spatial view](#view-menu) for more details.
   - `--head MS` (MVIEW `HEAD`): the position (in milliseconds) of the left edge of the temporal selection. If specified, it must be a non-negative number less than `--tail - 25`. If unspecified, it defaults to the start of the data (0 ms). It only has an effect on the first opened window; subsequent windows inherit the opening window's selection.
   - `--tail MS` (MVIEW `TAIL`): the position (in milliseconds) of the right edge of the temporal selection. If specified, it must be a non-negative number greater than `--head + 25`. If unspecified, it defaults to the end of the first variable's data. It only has an effect on the first opened window; subsequent windows inherit the opening window's selection.
   - `--sex SEX` (MVIEW `SEX`): the subject's sex. `M` for male; `F` for female. This can be later customized in the 'Configure spectral analysis' dialog, but it affects the default LPC degree. Default is `M`.
@@ -44,6 +46,8 @@ You can run `python -m pyview --help` to see the full list of command-line argum
 Note that the framing and audio trajectory discovery is slightly different from MVIEW's; for one, we never special-case the very first trajectory.
 
 The `NAME`, `VLIST` and `VLSEL` arguments are not supported because all of their downstream effects can be easily customized, and they interact poorly with other features (e.g., "Variables" menu, the `variables` argument, etc.). Please let me know if you have a specific use case.
+
+Other forms of `mview` data loader, including struct data and raw numeric arrays, are not supported. To pass a variable list, simply use a glob pattern like `{var1,var2}`. Other `mview` invocations including no-arg foregrounding and `abort` are also not supported because you shouldn't be interacting through the terminal.
 
 ## Dataset format
 
@@ -136,6 +140,7 @@ The following optional fields may be provided for each trajectory struct:
   - **Active analyses** (default: LPC): TODO
   - **Subject gender** (default: Male): TODO
   - **Spectrogram** (default: wide): Acts as a multiplier for **Averaging window** (and affects `SPECT` only). **Wide** = 1, **Mid 1** = 2, **Mid 2** = 3, **Narrow** = 4. The longer the window, the better the frequency resolution but poorer the temporal resolution.
+  - **Spectrogram contrast**: TODO
 
 ### View menu
 
@@ -155,7 +160,7 @@ The following optional fields may be provided for each trajectory struct:
   By default adaptive scaling is enabled and you cannot configure spreads. When you disable it, the spreads default to `1.1` of the maximum range across all _visible_ trajectories (different from MVIEW, which also considers invisible trajectories and therefore can end up with an excessively large common scale). The values you set (or default) are good for as long as the temporal display remains the same or adaptive scaling remains disabled; the next time you enable and re-disable adaptive scaling, or when you change the temporal display settings, the common scaling will be re-computed.
 
 - **Hide spline**: Only available when the `--spline` [argument](#command-line-arguments) (including its default value) specifies a non-empty set. Toggles the display of the spline curve.
-- **Spatial history**: Configures whether and how the spatial trajectories are plotted. By default it's **None**, meaning that only the current-time spatial positions are shown. When **History** is selected, each trajectory has additionally a curve showing its full spatial movement path in the selection. When **Hue** is selected, the same movement path is shown, but colored using a hue map showing the temporal progress instead of using the trajectory's color. This menu used to be available in the right-click context menu.
+- **Spatial history**: Configures whether and how the spatial trajectories are plotted. By default it's **None**, meaning that only the current-time spatial positions are shown. When **History** is selected, each trajectory has additionally a curve showing its full spatial movement path in the selection. When **Hue** is selected, the same movement path is shown, but colored using a hue map showing the temporal progress instead of using the trajectory's color. This menu used to be available in the right-click context menu. This is significantly different from how MVIEW works, which plots one set of paths each time "Hue" or "History" is clicked, allowing multiple selections to be viewed at once; I personally think my way is clearer, but let me know if that capability is useful.
 - **Spatial 3D view**: Only available when the display is 3-dimensional. Configure the view camera angle.
   - **2D/3D view (1/2/3)**: 6 predefined camera positions. These options are visually consistent with MVIEW, but MATLAB uses different specification conventions from matplotlib, so the physical parameters are different.
 
@@ -170,6 +175,8 @@ The following optional fields may be provided for each trajectory struct:
 
   - **Specify view**: Opens a dialog to configure your own elevation/azimuth/roll parameters.
   - **Free rotate**: Toggles whether the spatial view can be freely rotated by dragging with the mouse.
+
+TODO: not sure if I should implement circle-fitting.
 
 ### Play menu
 
@@ -188,7 +195,7 @@ Note that the behavior configured here applies to the "Play" button in the navba
 
 ### Selection menu
 
-Currently a minimum of 25ms is enforced for the selection duration. Customization will be allowed.
+Currently a minimum of 25ms is enforced for the selection duration, regardless of sampling rate (slightly different from MVIEW). Customization will be allowed.
 
 - **Set head to cursor**: As it says; clamped to `tail - 25ms`.
 - **Set tail to cursor**: As it says; clamped to `head + 25ms`.
@@ -198,6 +205,8 @@ Currently a minimum of 25ms is enforced for the selection duration. Customizatio
 - **Expand selection**: Expands the selection by 10% on each side, keeping the center fixed. The selection is at most the whole data. If one end is out of bounds, the selection is shifted to fit instead of truncated (unless it cannot fit).
 - **Shift selection left (Ctrl+L)**: Shifts the whole selection to the left by its width (until it touches the start of the data), keeping the width fixed.
 - **Shift selection right (Ctrl+R)**: Shifts the whole selection to the right by its width (until it touches the end of the data), keeping the width fixed.
+- **Auto-update**: TODO
+- **Update (Ctrl+U)**: TODO
 
 ### Movement menu
 
@@ -208,15 +217,16 @@ Currently a minimum of 25ms is enforced for the selection duration. Customizatio
 - **Reflective cycling**: Continuously shifts the cursor forward; if it hits one boundary, moves in the opposite direction.
 - **Stop cycling (Ctrl+X)**: As it says.
 - **Configure movement**: Opens a dialog to configure the movement behavior.
-  - **Nudge step size (ms)** (default: 5ms): The amount of time to move when stepping forward/backward, in milliseconds. (In MVIEW this also controls the cycling; in PyView you use playback rate and FPS instead.)
+  - **Nudge step size (ms)** (default: 5ms): The amount of time to move when stepping forward/backward, in milliseconds. (In MVIEW this also controls the cycling; in PyView you use playback rate instead.)
   - **Playback rate** (default: 1; i.e., synchronized with real time): How fast the simulated motion is relative to real time when cycling. For example, if the playback rate is 2, then the cursor moves twice as fast as real time, so a 10-second selection would take 5 seconds to cycle through.
-  - **Frame rate (FPS)** (default: 20): The frame rate of the simulated motion when cycling, in frames per second. You can get the "nudge step size" for cycling by `1000 / frame_rate_fps * playback_rate` ms. So by default it is 50ms. You don't want the frame rate too large (especially if it exceeds your screen's refresh rate!), because it can cause performance issues, and practically the signal probably have a sampling rate of ~100 Hz anyway. The animation tends to go out of sync at 30 FPS (sorry Python isn't really efficient for real-time stuff).
+  
+  While cycling, the [read-out panel](#read-out) displays the actual nudge step size and frame rate of the simulated motion. The frame rate mostly depends on how fast your computer can process each cursor update. On my M1 mac, it's around 10 FPS, so at 1x playback, each nudge step is approximately 100 ms (sorry Python isn't really efficient for real-time stuff). You can improve the temporal resolution by reducing the playback rate.
 
 ### Label menu
 
-Unlike MVIEW, labels are ordered by their creation, not by their temporal position. However, sorting and reordering is allowed if you prefer some other ordering.
+Unlike MVIEW, labels are ordered by their creation, not by their temporal position; this affects most actions below. However, sorting and reordering is allowed if you prefer some other ordering.
 
-- **Make label**: Opens a dialog to add a new simple label at the end of the labels list. By default it's at the cursor position. A name is required.
+- **Make label**: Opens a dialog to add a new simple label at the end of the labels list. By default it's at the cursor position. A name is required (unlike MVIEW).
 - **Edit labels**: Opens a dialog to edit the labels list. Each label has a name, a position (in ms), and an optional note. You can delete and reorder labels. You can also edit the name, position, and note of each label. The position must be between the start and the end of the data.
 - **Clear all labels (Ctrl+Y)**: As it says. Shows a confirmation dialog.
 - **Export labels**: Exports labels to a `.lab` text file. The format is the same as MVIEW:
@@ -267,7 +277,7 @@ Unlike MVIEW, all scalar trajectories with sampling rate >5000Hz—not just audi
 - **Spectral display cutoff**
 - **Spectrogram**
 
-You can click in the temporal display trajectories to set the cursor, or drag to move the cursor. You can also drag a label to move it, or double-click one to edit it. You can right-click to create a label at the position (this invokes the custom labeling procedure).
+You can click in the temporal display trajectories to set the cursor, or drag to move the cursor. You can also drag a label to move it, or double-click one to edit it. You can right-click to create a label at the position (this invokes the [labeling procedure](#labeling-procedures)).
 
 ### Spatial view
 
@@ -281,9 +291,9 @@ If the `--palate` or `--pharynx` [argument(s)](#command-line-arguments) are conf
 
 If the `--spline` [argument](#command-line-arguments) is configured, the spline curve (as a polyline if `--polyline-spline` is also specified) will be plotted in the spatial view. You can configure its display via the [**Hide spline**](#view-menu) action.
 
-The spatial view optionally shows the movement path of the trajectories within the selection as curves, either in the trajectory color or colored by temporal progress. You can configure this via the [**Spatial history**](#view-menu) menu.
+The spatial view optionally shows the movement path of the trajectories within the selection as curves, either in the trajectory color or colored by temporal progress. You can configure this via the [**Spatial history**](#view-menu) menu. (Again, the behavior is different from MVIEW.)
 
-When the plot is 3D, you can customize the view via the [spatial options](#view-menu) or the `--view` [argument](#command-line-arguments).
+When the plot is 3D, you can customize the camera via the [spatial options](#view-menu) or the `--view` [argument](#command-line-arguments). When "Free rotate" is enabled, you can drag the plot to rotate the camera. The current camera angle is shown in the [read-out panel](#read-out) at the bottom left.
 
 On right-click, the context menu is no longer shown. Configuration of the spatial history has been moved to the [View menu](#view-menu).
 
@@ -291,26 +301,83 @@ On right-click, the context menu is no longer shown. Configuration of the spatia
 
 TODO
 
-It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis. For this reason, you must configure its window size through [spectral analysis](#data-menu) **Analysis window** instead of using the right-click context menu or a separate slider.
+It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line, centered at the plot). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis. For this reason, you must configure its window size through [spectral analysis](#data-menu) **Analysis window** instead of using the right-click context menu or a separate slider.
 
-### Trajectory read-out
+The vertical slider here that customizes the spectrogram contrast has been moved to [Configure spectral analysis](#data-menu).
 
-At the very bottom-left, there is a small panel through which you can read out the trajectory data at the temporal position you just clicked on. Unlike MVIEW:
+### Read-out
 
-1. We show the name of the trajectory as well.
-2. This is just text output; the cursor/head/tail inputs have been moved to the [navbar](#navbar).
-3. The text is not cleared when the mouse is released or moved outside; it is persisted so you can copy it out.
+At the very bottom-left, there is a small panel. What it displays depends on what you just did.
+
+1. If you just clicked on a temporal trajectory, it shows the trajectory name (new in PyView!) and the value at the cursor. The text is not cleared when the mouse is released or moved outside; it is persisted so you can copy it out.
+2. If you just panned the 3D spatial view, it shows the current camera angle in terms of elevation, azimuth, and roll. In MVIEW, a separate message box is used for this.
+3. If you are [cycling](#movement-menu) through the selection, it shows the frame rate, playback rate, and effective nudge step size of the simulated motion.
+
+The cursor/head/tail inputs have been moved to the [navbar](#navbar).
 
 ## External procedures
 
 ### Data procedures
 
+Each data procedure must be defined in a file called `dp_<name>.py`. It must export a class whose name matches case-insensitively with `<name>`. The class must implement the following protocol:
+
+```py
 TODO
+```
+
+- `dp_AggVel`
+- `dp_AZEL`
+- `dp_EstTV`
+- `dp_F0`
+- `dp_FAlabels`
+- `dp_flip`
+- `dp_formants`
+- `dp_JawAngle`
+- `dp_LipAperture`
+- `dp_LP`
+- `dp_PalDist`
+- `dp_PCA`
+- `dp_SubtractJaw`
+- `dp_TongArea`
+- `dp_TongVel`
+- `dp_traj`
+- `dp_vel`
 
 ### Plotting procedures
 
+Each plotting procedure must be defined in a file called `pp_<name>.py`. It must export a class whose name matches case-insensitively with `<name>`. The class must implement the following protocol:
+
+```py
 TODO
+```
+
+- `pp_movie`
+- `pp_phase`
 
 ### Labeling procedures
 
+Each labeling procedure must be defined in a file called `lp_<name>.py`. It must export a class whose name matches case-insensitively with `<name>`. The class must implement the following protocol:
+
+```py
 TODO
+```
+
+Unlike MVIEW, the default labeling procedure is not special-cased; it is also defined in a file.
+
+- `lp_default`
+- `lp_exportvals`
+- `lp_extents`
+- `lp_findgest`
+- `lp_peaks`
+- `lp_PhaseAng`
+- `lp_snapex`
+
+## Loading/saving configuration
+
+TODO
+
+## Programmatic invocation
+
+Currently only the `pyview()` function is supported. It's not really designed as a utility library; you can find many better alternatives.
+
+The parameters are exactly the same as the [command line arguments](#command-line-arguments) (that is to say, the CLI is a very thin wrapper around the function). Just translate `-` to `_` and remove the leading `--`.

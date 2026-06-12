@@ -37,12 +37,10 @@ def open_movement_config_dialog(parent: MovementMenu) -> None:
 
     nudge_step_ms_field = QLineEdit(f"{config.nudge_step_ms:g}", main)
     playback_rate_field = QLineEdit(f"{config.playback_rate:g}", main)
-    frame_rate_fps_field = QLineEdit(f"{config.frame_rate_fps:g}", main)
 
     fields = [
         ("Nudge step size (ms)", nudge_step_ms_field),
         ("Playback rate", playback_rate_field),
-        ("Frame rate (FPS)", frame_rate_fps_field),
     ]
 
     for row, (label_text, field) in enumerate(fields):
@@ -79,9 +77,6 @@ def open_movement_config_dialog(parent: MovementMenu) -> None:
         )
         parent.state.app_config.playback_rate = parse_positive_float(
             playback_rate_field, config.playback_rate
-        )
-        parent.state.app_config.frame_rate_fps = parse_positive_float(
-            frame_rate_fps_field, config.frame_rate_fps
         )
         dialog.accept()
 
