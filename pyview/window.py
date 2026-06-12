@@ -181,12 +181,12 @@ class VarWindow(QMainWindow):
         self.window_manager.remove_window(self.state.selected_variable)
         super().closeEvent(event)
 
-    def set_cursor(self, cursor_s: float, keep_readout = False) -> None:
+    def set_cursor(self, cursor_s: float, keep_readout=False) -> None:
         cursor_s = min(max(0, cursor_s), self.state.selected_value.duration_s)
         self.state.cursor_s = cursor_s
         self.cursor_box.setText(f"{cursor_s * 1000:.1f}")
         self.temporal_view.update_plot(cursor=True)
-        self.spatial_view.update_plot(points=True)
+        self.spatial_view.update_plot(cursor=True)
         if self.state.app_config.audio_traj is not None:
             self.freq_domain_view.update_plot(cursor=True)
             self.zoomed_audio_view.update_plot(cursor=True)
@@ -198,12 +198,14 @@ class VarWindow(QMainWindow):
         self.state.head_s = head_s
         self.head_box.setText(f"{head_s * 1000:.1f}")
         self.temporal_view.update_plot(frame=True)
+        self.spatial_view.update_plot(frame=True)
 
     def set_tail(self, tail_s: float) -> None:
         tail_s = max(self.state.head_s + self.state.min_sel_dur_s, tail_s)
         self.state.tail_s = tail_s
         self.tail_box.setText(f"{tail_s * 1000:.1f}")
         self.temporal_view.update_plot(frame=True)
+        self.spatial_view.update_plot(frame=True)
 
     def set_selection(self, head_s: float, tail_s: float) -> None:
         width = tail_s - head_s
@@ -226,6 +228,7 @@ class VarWindow(QMainWindow):
         self.head_box.setText(f"{head_s * 1000:.1f}")
         self.tail_box.setText(f"{tail_s * 1000:.1f}")
         self.temporal_view.update_plot(frame=True)
+        self.spatial_view.update_plot(frame=True)
 
     def move_selection(self, delta_s: float) -> None:
         new_head = self.state.head_s + delta_s

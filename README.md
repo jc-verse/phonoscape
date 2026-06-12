@@ -153,10 +153,10 @@ The following optional fields may be provided for each trajectory struct:
 
   By default adaptive scaling is enabled and you cannot configure spreads. When you disable it, the spreads default to `1.1` of the maximum range across all _visible_ trajectories (different from MVIEW, which also considers invisible trajectories and therefore can end up with an excessively large common scale). The values you set (or default) are good for as long as the temporal display remains the same or adaptive scaling remains disabled; the next time you enable and re-disable adaptive scaling, or when you change the temporal display settings, the common scaling will be re-computed.
 
-- **Spatial options**: Configure the spatial display.
-  - **Hide spline**: Only available when the `--spline` [argument](#command-line-arguments) (including its default value) specifies a non-empty set. Toggles the display of the spline curve.
-  - **Free rotate**: Only available when the display is 3-dimensional. Toggles whether the spatial view can be freely rotated by dragging with the mouse.
-  - **2D/3D view (1/2/3)**: Only available when the display is 3-dimensional. 6 predefined camera positions. These options are visually consistent with MVIEW, but MATLAB uses different specification conventions from matplotlib, so the physical parameters are different.
+- **Hide spline**: Only available when the `--spline` [argument](#command-line-arguments) (including its default value) specifies a non-empty set. Toggles the display of the spline curve.
+- **Spatial history**: Configures whether and how the spatial trajectories are plotted. By default it's **None**, meaning that only the current-time spatial positions are shown. When **History** is selected, each trajectory has additionally a curve showing its full spatial movement path in the selection. When **Hue** is selected, the same movement path is shown, but colored using a hue map showing the temporal progress instead of using the trajectory's color. This menu used to be available in the right-click context menu.
+- **Spatial 3D view**: Only available when the display is 3-dimensional. Configure the view camera angle.
+  - **2D/3D view (1/2/3)**: 6 predefined camera positions. These options are visually consistent with MVIEW, but MATLAB uses different specification conventions from matplotlib, so the physical parameters are different.
 
     | Name        | Elevation | Azimuth | Roll | Behavior                          |
     | ----------- | --------- | ------- | ---- | --------------------------------- |
@@ -168,6 +168,7 @@ The following optional fields may be provided for each trajectory struct:
     | 3D view (3) | -20       | -117    | 0    | Left anteroinferior view          |
 
   - **Specify view**: Opens a dialog to configure your own elevation/azimuth/roll parameters.
+  - **Free rotate**: Toggles whether the spatial view can be freely rotated by dragging with the mouse.
 
 ### Play menu
 
@@ -279,7 +280,11 @@ If the `--palate` or `--pharynx` [argument(s)](#command-line-arguments) are conf
 
 If the `--spline` [argument](#command-line-arguments) is configured, the spline curve (as a polyline if `--polyline-spline` is also specified) will be plotted in the spatial view. You can configure its display via the [**Hide spline**](#view-menu) action.
 
+The spatial view optionally shows the movement path of the trajectories within the selection as curves, either in the trajectory color or colored by temporal progress. You can configure this via the [**Spatial history**](#view-menu) menu.
+
 When the plot is 3D, you can customize the view via the [spatial options](#view-menu) or the `--view` [argument](#command-line-arguments).
+
+On right-click, the context menu is no longer shown. Configuration of the spatial history has been moved to the [View menu](#view-menu).
 
 ### Cursor spectrum
 

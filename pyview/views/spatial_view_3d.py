@@ -1,10 +1,18 @@
-from typing import cast
+from typing import cast, Literal
 
+import numpy as np
+
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from mpl_toolkits.mplot3d.axes3d import Axes3D
-from mpl_toolkits.mplot3d.art3d import Path3DCollection, Line3D, Text3D
+from mpl_toolkits.mplot3d.art3d import (
+    Path3DCollection,
+    Line3D,
+    Text3D,
+    Line3DCollection,
+)
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import WindowState
@@ -16,6 +24,7 @@ class SpatialView3D(QWidget):
         super().__init__(parent)
 
         self.state = state
+        self.history: bool | Literal["hue"] = False
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -62,6 +71,8 @@ class SpatialView3D(QWidget):
         self.ax.margins(0)
 
         self.position_artists: dict[str, Path3DCollection] = {}
+        self.history_artists: dict[str, Line3D] = {}
+        self.hue_history_artists: dict[str, Line3DCollection] = {}
         self.text_artists: dict[str, Text3D] = {}
         self.spline_artist: Line3D | None = None
 
@@ -91,10 +102,15 @@ class SpatialView3D(QWidget):
             ):
                 continue
 
-            pos = round(self.state.cursor_s * traj.sample_rate_hz)
-            pos = max(0, min(traj.n_samples - 1, pos))
+            cursor_pos = round(self.state.cursor_s * traj.sample_rate_hz)
+            head_pos = round(self.state.head_s * traj.sample_rate_hz)
+            tail_pos = round(self.state.tail_s * traj.sample_rate_hz)
 
-            x, y, z = traj.data[pos, 0], traj.data[pos, 1], traj.data[pos, 2]
+            x, y, z = (
+                traj.data[cursor_pos, 0],
+                traj.data[cursor_pos, 1],
+                traj.data[cursor_pos, 2],
+            )
             positions_by_name[traj.name] = (x, y, z)
             self.position_artists[traj.name] = cast(
                 Path3DCollection,
@@ -102,6 +118,41 @@ class SpatialView3D(QWidget):
                     [x], [y], [z], s=35, depthshade=False, color=traj.color, zorder=10
                 ),
             )
+            xs = traj.data[head_pos:tail_pos, 0]
+            ys = traj.data[head_pos:tail_pos, 1]
+            zs = traj.data[head_pos:tail_pos, 2]
+
+            self.history_artists[traj.name] = cast(
+                Line3D,
+                self.ax.plot(
+                    xs,
+                    ys,
+                    zs,
+                    linewidth=0.8,
+                    color=traj.color,
+                    visible=False,
+                )[0],
+            )
+
+            points = np.column_stack([xs, ys, zs])
+            segments = (
+                np.stack([points[:-1], points[1:]], axis=1)
+                if len(points) > 1
+                else np.empty((0, 2, 3))
+            )
+            cmap = mpl.colormaps["hsv"]
+            colors = (
+                cmap(np.linspace(0.0, 1.0, len(segments)))
+                if len(segments)
+                else np.empty((0, 4))
+            )
+
+            hue_artist = Line3DCollection(
+                segments, colors=colors, linewidths=0.8, visible=False
+            )
+            self.ax.add_collection3d(hue_artist)
+            self.hue_history_artists[traj.name] = hue_artist
+
             self.text_artists[traj.name] = cast(
                 Text3D, self.ax.text(x, y, z, f" {traj.name}")
             )
@@ -127,8 +178,13 @@ class SpatialView3D(QWidget):
 
         self.canvas.draw_idle()
 
-    def update_plot(self, points: bool = False) -> None:
-        if points:
+    def update_plot(
+        self,
+        cursor: bool = False,
+        frame: bool = False,
+        history_mode: bool | Literal["hue"] | None = None,
+    ) -> None:
+        if cursor:
             positions_by_name: dict[str, tuple[float, float, float]] = {}
 
             for traj in self.state.selected_value.trajectories.values():
@@ -138,10 +194,13 @@ class SpatialView3D(QWidget):
                 ):
                     continue
 
-                pos = round(self.state.cursor_s * traj.sample_rate_hz)
-                pos = max(0, min(traj.n_samples - 1, pos))
+                cursor_pos = round(self.state.cursor_s * traj.sample_rate_hz)
 
-                x, y, z = traj.data[pos, 0], traj.data[pos, 1], traj.data[pos, 2]
+                x, y, z = (
+                    traj.data[cursor_pos, 0],
+                    traj.data[cursor_pos, 1],
+                    traj.data[cursor_pos, 2],
+                )
                 positions_by_name[traj.name] = (x, y, z)
                 self.position_artists[traj.name]._offsets3d = ([x], [y], [z])
                 self.text_artists[traj.name].set_position((x, y))
@@ -158,5 +217,51 @@ class SpatialView3D(QWidget):
                     self.spline_artist.set_data(x_new, y_new)
                     self.spline_artist.set_3d_properties(z_new)
 
-        if points:
+        # Avoid updating the history artists if it isn't visible, to save on performance.
+        if frame and self.history is not False or history_mode:
+            for traj in self.state.selected_value.trajectories.values():
+                if (
+                    traj.kind != "spatial"
+                    or traj.name in self.state.app_config.spatial_exclude
+                ):
+                    continue
+
+                head_pos = round(self.state.head_s * traj.sample_rate_hz)
+                tail_pos = round(self.state.tail_s * traj.sample_rate_hz)
+
+                xs = traj.data[head_pos:tail_pos, 0]
+                ys = traj.data[head_pos:tail_pos, 1]
+                zs = traj.data[head_pos:tail_pos, 2]
+
+                self.history_artists[traj.name].set_data_3d(xs, ys, zs)
+
+                points = np.column_stack([xs, ys, zs])
+                segments = (
+                    np.stack([points[:-1], points[1:]], axis=1)
+                    if len(points) > 1
+                    else np.empty((0, 2, 3))
+                )
+                cmap = mpl.colormaps["hsv"]
+                colors = (
+                    cmap(np.linspace(0.0, 1.0, len(segments)))
+                    if len(segments)
+                    else np.empty((0, 4))
+                )
+
+                hue_artist = self.hue_history_artists[traj.name]
+                hue_artist.set_segments(segments)
+                hue_artist.set_color(colors)
+
+        if history_mode is not None:
+            self.history = history_mode
+            show_plain = history_mode is True
+            show_hue = history_mode == "hue"
+
+            for artist in self.history_artists.values():
+                artist.set_visible(show_plain)
+
+            for artist in self.hue_history_artists.values():
+                artist.set_visible(show_hue)
+
+        if cursor or frame or (history_mode is not None):
             self.canvas.draw_idle()

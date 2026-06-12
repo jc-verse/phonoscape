@@ -25,8 +25,6 @@ class ViewMenu(QMenu):
         )
         self.addSeparator()
 
-        spatial_menu = QMenu("Spatial options", self)
-
         self.hide_spline_action = QAction(
             "Hide spline",
             self,
@@ -35,25 +33,24 @@ class ViewMenu(QMenu):
             enabled=bool(self.state.app_config.spline_trajs),
         )
         self.hide_spline_action.triggered.connect(self._hide_spline)
-        spatial_menu.addAction(self.hide_spline_action)
+        self.addAction(self.hide_spline_action)
+
+        spatial_history_menu = QMenu("Spatial history", self)
+        spatial_history_group = QActionGroup(self)
+        spatial_history_group.setExclusive(True)
+        for label, value in [("None", False), ("History", True), ("Hue", "hue")]:
+            action = QAction(label, self, checkable=True, checked=label == "None")
+            action.triggered.connect(
+                lambda checked=False, value=value: self.root.spatial_view.update_plot(
+                    history_mode=value
+                )
+            )
+            spatial_history_group.addAction(action)
+            spatial_history_menu.addAction(action)
+        self.addMenu(spatial_history_menu)
 
         if self.state.app_config.dimensions == 3:
-            spatial_menu.addSeparator()
-
-            self.free_rotate_action = QAction(
-                "Free rotate", self, checkable=True, checked=False
-            )
-            self.free_rotate_action.triggered.connect(self._free_rotate)
-            spatial_menu.addAction(self.free_rotate_action)
-
-            self._free_rotate()
-
-            self.root.spatial_view.canvas.mpl_connect(
-                "button_release_event", self._on_spatial_axis_rotate
-            )
-
-            spatial_menu.addSeparator()
-
+            spatial_3d_view_menu = QMenu("Spatial 3D view", self)
             self.view_action_group = QActionGroup(self)
             self.view_action_group.setExclusive(True)
             self.view_actions: dict[str, QAction] = {}
@@ -64,17 +61,35 @@ class ViewMenu(QMenu):
                     lambda checked=False, label=label: self._set_view_option(label)
                 )
                 self.view_action_group.addAction(action)
-                spatial_menu.addAction(action)
+                spatial_3d_view_menu.addAction(action)
                 self.view_actions[label] = action
 
             self._set_view(self.state.view)
+            spatial_3d_view_menu.addSeparator()
 
-            spatial_menu.addAction(
+            spatial_3d_view_menu.addAction(
                 "Specify view...",
                 lambda: open_spatial_view_dialog(self),
             )
+            spatial_3d_view_menu.addSeparator()
 
-        self.addMenu(spatial_menu)
+            self.free_rotate_action = QAction(
+                "Free rotate", self, checkable=True, checked=False
+            )
+            self.free_rotate_action.triggered.connect(self._free_rotate)
+            spatial_3d_view_menu.addAction(self.free_rotate_action)
+
+            self._free_rotate()
+
+            self.root.spatial_view.canvas.mpl_connect(
+                "button_release_event", self._on_spatial_axis_rotate
+            )
+
+            self.addMenu(spatial_3d_view_menu)
+
+        self.addSeparator()
+        # On macOS, this menu includes an "Enter full screen" action. It's useful
+        # but its icon shouldn't affect alignment of other items, so add a separator.
 
     def _hide_spline(self) -> None:
         if self.root.spatial_view.spline_artist is not None:
