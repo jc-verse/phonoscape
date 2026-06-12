@@ -94,7 +94,7 @@ class SpatialView2D(QWidget):
             x, y = traj.data[cursor_pos, 0], traj.data[cursor_pos, 1]
             positions_by_name[traj.name] = (x, y)
             self.position_artists[traj.name] = self.ax.scatter(
-                [x], [y], s=35, color=traj.color, zorder=10
+                [x], [y], s=35, color=self.state.colors[traj.name], zorder=10
             )
             xs = traj.data[head_pos:tail_pos, 0]
             ys = traj.data[head_pos:tail_pos, 1]
@@ -103,7 +103,7 @@ class SpatialView2D(QWidget):
                 xs,
                 ys,
                 linewidth=0.8,
-                color=traj.color,
+                color=self.state.colors[traj.name],
                 visible=False,
             )[0]
 
@@ -143,6 +143,7 @@ class SpatialView2D(QWidget):
         cursor: bool = False,
         frame: bool = False,
         history_mode: bool | Literal["hue"] | None = None,
+        colors: bool = False,
     ) -> None:
         if cursor:
             positions_by_name: dict[str, tuple[float, float]] = {}
@@ -215,5 +216,11 @@ class SpatialView2D(QWidget):
             for artist in self.hue_history_artists.values():
                 artist.set_visible(show_hue)
 
-        if cursor or frame or (history_mode is not None):
+        if colors:
+            for k, artist in self.position_artists.items():
+                artist.set_color(self.state.colors[k])
+            for k, artist in self.history_artists.items():
+                artist.set_color(self.state.colors[k])
+
+        if cursor or frame or (history_mode is not None) or colors:
             self.canvas.draw_idle()

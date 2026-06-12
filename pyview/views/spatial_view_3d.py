@@ -115,7 +115,13 @@ class SpatialView3D(QWidget):
             self.position_artists[traj.name] = cast(
                 Path3DCollection,
                 self.ax.scatter(
-                    [x], [y], [z], s=35, depthshade=False, color=traj.color, zorder=10
+                    [x],
+                    [y],
+                    [z],
+                    s=35,
+                    depthshade=False,
+                    color=self.state.colors[traj.name],
+                    zorder=10,
                 ),
             )
             xs = traj.data[head_pos:tail_pos, 0]
@@ -129,7 +135,7 @@ class SpatialView3D(QWidget):
                     ys,
                     zs,
                     linewidth=0.8,
-                    color=traj.color,
+                    color=self.state.colors[traj.name],
                     visible=False,
                 )[0],
             )
@@ -183,6 +189,7 @@ class SpatialView3D(QWidget):
         cursor: bool = False,
         frame: bool = False,
         history_mode: bool | Literal["hue"] | None = None,
+        colors: bool = False,
     ) -> None:
         if cursor:
             positions_by_name: dict[str, tuple[float, float, float]] = {}
@@ -263,5 +270,11 @@ class SpatialView3D(QWidget):
             for artist in self.hue_history_artists.values():
                 artist.set_visible(show_hue)
 
-        if cursor or frame or (history_mode is not None):
+        if colors:
+            for k, artist in self.position_artists.items():
+                artist.set_color(self.state.colors[k])
+            for k, artist in self.history_artists.items():
+                artist.set_color(self.state.colors[k])
+
+        if cursor or frame or (history_mode is not None) or colors:
             self.canvas.draw_idle()

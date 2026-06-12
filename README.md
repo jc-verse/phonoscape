@@ -79,7 +79,7 @@ The following optional fields are effectively variable-wide metadata. Only the f
 
 The following optional fields may be provided for each trajectory struct:
 
-- `COLOR` (array `[1 × 3]`, each in range `[0, 1]`): Specifies the RGB color. Scalar trajectories become text-color and spatial trajectories get an arbitrary color.
+- `COLOR` (array `[1 × 3]`, each in range `[0, 1]`): Specifies the RGB color. If unspecified, scalar trajectories become text-color and spatial trajectories get an arbitrary color. If specified, this value takes top priority on window initialization. Can later be customized through [temporal layout](#view-menu).
 - `SPREAD` (array `[1 × 2]`): TODO.
 - `NCOMPS` (number or array `[1 × n_dims]`):
   - If a number, must be either 2 or 3. If 3, then the trajectory data must have at least 3 dimensions, and the first 3 are used as XYZ coordinates for the spatial view. This is practically useless, though, because it can be inferred. So the only useful case is if `NCOMPS` is 2 but the trajectory data has 3 dimensions. In that case, only the first 2 dimensions are used for the spatial view, and the 3rd dimension is treated as `ANGLES`.
@@ -144,6 +144,7 @@ The following optional fields may be provided for each trajectory struct:
   - Select displayed trajectories from the right-hand side to remove (`x`) from the display area.
   - Select one displayed trajectory from the right-hand side to reorder (`^` and `v`).
   - Select one displayed trajectory from the right-hand side to customize its content. For spatial trajectories, you can choose to display position, velocity, or acceleration, and which dimensions to display. For scalar trajectories, you can choose to apply a temporal analysis (spectrogram, RMS, zero-crossing rate, fundamental frequency, etc.).
+  - Select one trajectory from either side to customize its color. Unlike MVIEW, you can customize colors from the left-hand size too, which means you can customize a color in the spatial view even if you don't load it into the temporal view.
 
   The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
 
@@ -177,8 +178,8 @@ Only available if an audio trajectory exists.
 - **Play (Ctrl+P)**: Play the audio at the specified interval:
   - **Selection**: Between head and tail.
   - **Entire file**: From the start to the end of the data.
-  - **To cursor**: Between head and the cursor. If cursor is before head, then play selection.
-  - **From cursor**: Between cursor and tail. If cursor is after tail, then play selection.
+  - **To cursor**: Between head and the cursor. If cursor is before head, then play selection. This is different from MVIEW, which plays nothing.
+  - **From cursor**: Between cursor and tail. If cursor is after tail, then play selection. This is different from MVIEW, which plays nothing.
   - **150ms @ cursor**: 150ms centered at the cursor, clamped to the selection (different from MVIEW; if you want the MVIEW behavior, slightly expand your selection).
   - **Between labels**: Only has an effect if the cursor is between two labels. Plays the audio between the previous and next labels.
 - **Select playback track**: TODO
@@ -248,7 +249,7 @@ You can drag the selection in the framing trajectory to shift it, or drag its bo
 
 All remaining plots are the _temporal display trajectories_ specified with the `--temporal-display` [argument](#command-line-arguments) and customizable via the ["Temporal layout" dialog](#view-menu). They only display the data within the current selection. The cursor and labels are also visible, should they be inside the selection.
 
-Currently, the trajectories' colors are determined by the `COLOR` field in the dataset or otherwise arbitrarily. Color selection will be supported. If the data is multidimensional, each dimension is plotted separately, with x being the most opaque and z being the most transparent (with a legend).
+The trajectories' colors are initialized by the `COLOR` field in the dataset or otherwise arbitrarily. You can select colors through [temporal layout](#view-menu). If the data is multidimensional, each dimension is plotted separately, with x being the most opaque and z being the most transparent (with a legend).
 
 Following MVIEW behavior, the velocity/acceleration of the whole vector (e.g., `vTD`) only displays the magnitude (and is therefore unsigned), while the velocity/acceleration of specific dimensions (e.g., `vTDx`, `vTDxy`) displays each separate dimension (and is signed).
 

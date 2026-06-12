@@ -1,11 +1,16 @@
 from typing import Literal, TYPE_CHECKING
 
+import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgb
+
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
     QComboBox,
     QDialog,
+    QColorDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -24,6 +29,17 @@ from ..state import (
     SpatialTrajDisplay,
     get_component_names,
 )
+
+
+def mpl_color_to_qcolor(color: str) -> QColor:
+    r, g, b = to_rgb(color)
+    return QColor.fromRgbF(r, g, b)
+
+
+def install_matplotlib_default_colors() -> None:
+    colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    for idx, color in enumerate(colors[:16]):
+        QColorDialog.setCustomColor(idx, mpl_color_to_qcolor(color))
 
 
 def open_tempcfg_dialog(parent: ViewMenu) -> None:
@@ -56,6 +72,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     main_layout.setRowStretch(5, 0)
     main_layout.setRowStretch(6, 0)
     main_layout.setRowStretch(7, 0)
+    main_layout.setRowStretch(8, 0)
 
     main_layout.addWidget(QLabel("Loaded", main), 0, 0)
     main_layout.addWidget(QLabel("Displayed", main), 0, 2)
@@ -130,6 +147,73 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
     comps_layout.addStretch(1)
     main_layout.addWidget(comps, 6, 0, 1, 3)
+
+    color_row = QFrame(main)
+    color_layout = QHBoxLayout(color_row)
+    color_layout.setContentsMargins(0, 10, 0, 0)
+    color_layout.setSpacing(8)
+
+    color_layout.addWidget(QLabel("Color:", color_row))
+
+    color_button = QPushButton("Select", color_row)
+    color_button.setEnabled(False)
+    color_button.setMinimumWidth(103)
+    color_layout.addWidget(color_button)
+    color_layout.addStretch(1)
+
+    main_layout.addWidget(color_row, 7, 0, 1, 3)
+
+    def selected_loaded_name() -> str | None:
+        selected_items = loaded_list.selectedItems()
+        if len(selected_items) != 1:
+            return None
+        return selected_items[0].text()
+
+    def selected_displayed_name() -> str | None:
+        idx = selected_displayed_index()
+        if idx is None:
+            return None
+        return displayed_specs[idx].traj_name
+
+    def selected_traj_name() -> str | None:
+        return selected_loaded_name() or selected_displayed_name()
+
+    def color_to_qcolor(color: str | tuple[float, float, float]) -> QColor:
+        if isinstance(color, str):
+            return QColor(color)
+        return QColor.fromRgbF(color[0], color[1], color[2])
+
+    def qcolor_to_rgb(color: QColor) -> tuple[float, float, float]:
+        return (color.redF(), color.greenF(), color.blueF())
+
+    def set_color_button_color(color: str | tuple[float, float, float]) -> None:
+        qcolor = color_to_qcolor(color)
+        r = qcolor.redF()
+        g = qcolor.greenF()
+        b = qcolor.blueF()
+
+        # WCAG relative luminance, with sRGB linearization.
+        def linearize(channel: float) -> float:
+            if channel <= 0.03928:
+                return channel / 12.92
+            return ((channel + 0.055) / 1.055) ** 2.4
+
+        luminance = 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+        text_color = "#000000" if luminance > 0.179 else "#ffffff"
+
+        color_button.setText(qcolor.name().upper())
+        color_button.setStyleSheet(
+            f"""
+            QPushButton {{
+                background-color: {qcolor.name()};
+                color: {text_color};
+            }}
+            QPushButton:disabled {{
+                background-color: palette(button);
+                color: palette(button-text);
+            }}
+            """
+        )
 
     def selected_displayed_index() -> int | None:
         selected_items = displayed_list.selectedItems()
@@ -238,6 +322,17 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             content_combo.blockSignals(False)
             raise Exception(f"Unknown spec type: {spec}")
 
+    def refresh_color_control() -> None:
+        traj_name = selected_traj_name()
+        if traj_name is None:
+            color_button.setEnabled(False)
+            color_button.setText("Select")
+            color_button.setStyleSheet("")
+            return
+
+        color_button.setEnabled(True)
+        set_color_button_color(parent.state.colors[traj_name])
+
     def rewrite_selected_spec() -> None:
         idx = selected_displayed_index()
         if idx is None:
@@ -286,11 +381,13 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         displayed_list.clearSelection()
         refresh_detail_controls()
         refresh_button_states()
+        refresh_color_control()
 
     def on_displayed_select() -> None:
         loaded_list.clearSelection()
         refresh_detail_controls()
         refresh_button_states()
+        refresh_color_control()
 
     def on_xfer() -> None:
         selected_rows = sorted(
@@ -339,6 +436,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         refresh_displayed_listbox()
         refresh_detail_controls()
         refresh_button_states()
+        refresh_color_control()
 
     def on_move(delta: Literal[1, -1]) -> None:
         idx = selected_displayed_index()
@@ -359,6 +457,27 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         refresh_detail_controls()
         refresh_button_states()
 
+    def on_color() -> None:
+        traj_name = selected_traj_name()
+        if traj_name is None:
+            return
+
+        traj = parent.state.selected_value.trajectories[traj_name]
+        initial = color_to_qcolor(parent.state.colors[traj_name])
+        install_matplotlib_default_colors()
+        color = QColorDialog.getColor(
+            initial,
+            dialog,
+            f"Set color for {traj.name}",
+            QColorDialog.ColorDialogOption.DontUseNativeDialog,
+        )
+
+        if not color.isValid():
+            return
+
+        parent.state.colors[traj_name] = qcolor_to_rgb(color)
+        set_color_button_color(parent.state.colors[traj_name])
+
     loaded_list.itemSelectionChanged.connect(on_loaded_select)
     displayed_list.itemSelectionChanged.connect(on_displayed_select)
 
@@ -372,17 +491,19 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     y_check.toggled.connect(lambda _checked: rewrite_selected_spec())
     if z_check is not None:
         z_check.toggled.connect(lambda _checked: rewrite_selected_spec())
+    color_button.clicked.connect(on_color)
 
     buttons = QFrame(main)
     buttons_layout = QHBoxLayout(buttons)
     buttons_layout.setContentsMargins(0, 16, 0, 0)
     buttons_layout.setSpacing(12)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    main_layout.addWidget(buttons, 7, 0, 1, 3)
+    main_layout.addWidget(buttons, 8, 0, 1, 3)
 
     def on_ok() -> None:
         parent.state.temporal_disp_specs = displayed_specs
         parent.root.temporal_view.reset_plot()
+        parent.root.spatial_view.update_plot(colors=True)
         dialog.accept()
 
     def on_cancel() -> None:

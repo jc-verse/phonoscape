@@ -111,7 +111,8 @@ class Trajectory:
     kind: Literal["audio", "scalar", "spatial"]
     sample_rate_hz: float
     n_samples: int
-    color: str | tuple[float, float, float]
+    # As specified in the dataset
+    color: str | tuple[float, float, float] | None
     data: NDArray[np.float64]
     angles: NDArray[np.float64] | None
 
@@ -166,6 +167,8 @@ class WindowState:
     labels: list[Label]
     selected_variable: str
     temporal_disp_specs: list[TrajDisplay]
+    # Actually used (with defaults/customization/inheritance)
+    colors: dict[str, str | tuple[float, float, float]]
     app_config: AppConfig
     view: tuple[float, float, float]
     common_scaling: tuple[float, float, float] | None

@@ -30,6 +30,7 @@ class VarWindow(QMainWindow):
         window_manager: WindowManager,
         selected_variable: str,
         temporal_disp_specs: list[TrajDisplay],
+        colors: dict[str, str | tuple[float, float, float]],
         app_config: AppConfig,
         view: tuple[float, float, float],
         head_s: float,
@@ -44,6 +45,7 @@ class VarWindow(QMainWindow):
             labels=[],
             selected_variable=selected_variable,
             temporal_disp_specs=temporal_disp_specs,
+            colors=colors,
             app_config=app_config,
             view=view,
             common_scaling=None,
@@ -267,6 +269,10 @@ class WindowManager:
             window_manager=self,
             selected_variable=name,
             temporal_disp_specs=parent_window.state.temporal_disp_specs,
+            colors={
+                k: selected_value.trajectories[k].color or v
+                for k, v in parent_window.state.colors.items()
+            },
             app_config=parent_window.state.app_config,
             view=parent_window.state.view,
             head_s=new_head,

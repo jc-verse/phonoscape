@@ -73,9 +73,6 @@ def load_variables(
     for k, v in data.items():
         trajectories: dict[str, Trajectory] = {}
         estimated_durations = []
-        prop_cycle = plt.rcParams["axes.prop_cycle"]
-        colors = prop_cycle.by_key()["color"]
-        colors_iter = iter(colors)
         for name, srate, signal, color, nComps, angles in zip(
             v["NAME"],
             v["SRATE"],
@@ -121,13 +118,9 @@ def load_variables(
                 sample_rate_hz=float(srate),
                 n_samples=signal.shape[0],
                 color=(
-                    tuple(color)
-                    if color is not None
-                    else (
-                        plt.rcParams["text.color"]
-                        if kind == "scalar" or kind == "audio"
-                        else next(colors_iter)
-                    )
+                    color
+                    if isinstance(color, str)
+                    else tuple(color) if color is not None else None
                 ),
                 data=signal,
                 angles=angles,
@@ -458,4 +451,15 @@ def normalize_args(
         config.lpc_order = round(audio_sr / 1000) + (8 if config.is_female else 4)
         config.spectral_display_cutoff_hz = args.get("spect_lim") or (audio_sr / 2)
 
-    return config, temporal_disp_specs
+    prop_cycle = plt.rcParams["axes.prop_cycle"]
+    colors = prop_cycle.by_key()["color"]
+    colors_iter = iter(colors)
+    colors: dict[str, str | tuple[float, float, float]] = {}
+    for name, traj in first_variable.trajectories.items():
+        colors[name] = traj.color or (
+            plt.rcParams["text.color"]
+            if traj.kind == "scalar" or traj.kind == "audio"
+            else next(colors_iter)
+        )
+
+    return config, temporal_disp_specs, colors

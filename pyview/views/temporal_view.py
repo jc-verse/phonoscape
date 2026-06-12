@@ -135,7 +135,7 @@ class TemporalView(QWidget):
                         sub_data - sub_data_center,
                         linewidth=0.8,
                         label=spec.components[j],
-                        color=traj.color,
+                        color=self.state.colors[traj.name],
                         alpha=(1 - j * 0.3),
                     )[0]
                     artist[1].append(a)
@@ -150,7 +150,9 @@ class TemporalView(QWidget):
             else:
                 artist = (
                     "spatial-single",
-                    ax.plot(t, data[:, 0], linewidth=0.8, color=traj.color)[0],
+                    ax.plot(
+                        t, data[:, 0], linewidth=0.8, color=self.state.colors[traj.name]
+                    )[0],
                 )
         elif spec.content == "SPECT":
             artist = (
@@ -165,7 +167,10 @@ class TemporalView(QWidget):
             )
             ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
         elif spec.content in ("SIGNAL", "RMS", "F0", "ZC", "MOVEMENT", "VEL", "ABSVEL"):
-            artist = ("scalar", ax.plot(t, data, linewidth=0.8, color=traj.color)[0])
+            artist = (
+                "scalar",
+                ax.plot(t, data, linewidth=0.8, color=self.state.colors[traj.name])[0],
+            )
         else:
             raise ValueError(
                 f"Unexpected content type for temporal display: {spec.content}"

@@ -19,7 +19,7 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
     if not data:
         raise ValueError(f"No matching variables found for pattern {variables!r}")
 
-    app_config, temporal_disp_specs = normalize_args(
+    app_config, temporal_disp_specs, colors = normalize_args(
         path, kwargs, data, other_data, dimensions
     )
 
@@ -56,6 +56,7 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
         window_manager=window_manager,
         selected_variable=selected_variable,
         temporal_disp_specs=temporal_disp_specs,
+        colors=colors,
         app_config=app_config,
         view=kwargs.get("view") or (0, -90, 0),
         head_s=head_s,
