@@ -161,6 +161,8 @@ The following optional fields may be provided for each trajectory struct:
 
   Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except spectrograms), depending on which dimensions are being viewed.
 
+  TODO: LaTeX/Markdown/CSV/JSON/Excel-paste-compatible output.
+
 - **Track formants**: TODO
 - **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), the external spectrum window (TODO), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
   - **Analysis window (ms)** (default: 30ms): Configures the window size for the `RMS` and `ZC` temporal analyses, and the window size for the **Report** output.

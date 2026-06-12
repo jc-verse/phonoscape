@@ -116,7 +116,7 @@ class WindowCloneWindow(QMainWindow):
         temporal_subfig = self.figure.add_subfigure(outer[0, 1])
 
         _clone_into_fig(source_window.spatial_view.figure, spatial_subfig)
-        _clone_into_fig(source_window.freq_domain_view.figure, freq_subfig)
+        _clone_into_fig(source_window.cursor_spect_view.figure, freq_subfig)
         _clone_into_fig(source_window.temporal_view.figure, temporal_subfig)
 
         self.canvas = FigureCanvasQTAgg(self.figure)

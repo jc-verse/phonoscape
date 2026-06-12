@@ -1,7 +1,7 @@
 from numpy.typing import NDArray
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QLabel, QWidget, QSizePolicy
 
 from ..state import WindowState, TrajDisplay, SpatialTrajDisplay
 
@@ -11,6 +11,7 @@ class Readout(QFrame):
         super().__init__(parent)
 
         self.state = state
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         self.label = QLabel(self)
         self.label.setWordWrap(True)
@@ -18,6 +19,8 @@ class Readout(QFrame):
         self.label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.label.setCursor(Qt.CursorShape.IBeamCursor)
         self.label.setStyleSheet("font-size: 16px;")
+        self.label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        self.label.setMinimumSize(0, 0)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
@@ -42,7 +45,9 @@ class Readout(QFrame):
         self.label.setText(value_str)
 
     def readout_camera(self, elev: float, azim: float, roll: float):
-        value_str = f"Camera angle\nazim={azim:.1f}°\nelev={elev:.1f}°\nroll={roll:.1f}°"
+        value_str = (
+            f"Camera angle\nazim={azim:.1f}°\nelev={elev:.1f}°\nroll={roll:.1f}°"
+        )
         self.label.setText(value_str)
 
     def readout_fps(self, cycle_mode: str, elapsed_s: float, playback_rate: float):

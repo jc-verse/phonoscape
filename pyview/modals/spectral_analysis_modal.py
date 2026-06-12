@@ -76,6 +76,9 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
 
     adaptive_pre_emphasis_check = QCheckBox("Adaptive", pre_emphasis_frame)
     adaptive_pre_emphasis_check.setChecked(config.pre_emphasis < 0)
+    adaptive_pre_emphasis_check.toggled.connect(
+        lambda checked: pre_emphasis_entry.setEnabled(not checked)
+    )
 
     pre_emphasis_layout.addWidget(adaptive_pre_emphasis_check)
     pre_emphasis_layout.addWidget(QLabel("pre-emphasis:", pre_emphasis_frame))
@@ -176,24 +179,34 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
         if analysis_window_ms := parse_positive_num(
             analysis_window_entry, "analysis_window_ms", float
         ):
+            update_temporal_view = (
+                update_temporal_view or analysis_window_ms != config.analysis_window_ms
+            )
             config.analysis_window_ms = analysis_window_ms
-            update_temporal_view = True
-            parent.root.zoomed_audio_view.update_plot(xlim=True)
+            if update_temporal_view:
+                parent.root.zoomed_audio_view.update_plot(xlim=True)
         if lpc_order := parse_positive_num(lpc_order_entry, "lpc_order", int):
             config.lpc_order = lpc_order
         if fft_eval_points := parse_positive_num(
             fft_eval_points_entry, "fft_eval_points", int
         ):
+            update_temporal_view = (
+                update_temporal_view or fft_eval_points != config.fft_eval_points
+            )
             config.fft_eval_points = fft_eval_points
-            update_temporal_view = True
         if averaging_window_ms := parse_positive_num(
             averaging_window_entry, "averaging_window_ms", float
         ):
+            update_temporal_view = (
+                update_temporal_view
+                or averaging_window_ms != config.averaging_window_ms
+            )
             config.averaging_window_ms = averaging_window_ms
-            update_temporal_view = True
         if overlap_ms := parse_positive_num(overlap_entry, "overlap_ms", float):
+            update_temporal_view = (
+                update_temporal_view or overlap_ms != config.overlap_ms
+            )
             config.overlap_ms = overlap_ms
-            update_temporal_view = True
         if spl_reference_db := parse_positive_num(
             spl_reference_entry, "spl_reference_db", float
         ):
@@ -202,8 +215,28 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
             spectral_cutoff_entry, "spectral_display_cutoff_hz", float
         ):
             config.spectral_display_cutoff_hz = spectral_display_cutoff_hz
-            parent.root.freq_domain_view.update_plot(xlim=True)
+            parent.root.cursor_spect_view.update_plot(xlim=True)
             parent.root.temporal_view.update_plot(spect_ylim=True)
+        if adaptive_pre_emphasis_check.isChecked():
+            config.pre_emphasis = -1.0
+        elif pre_emphasis := parse_positive_num(
+            pre_emphasis_entry, "pre_emphasis", float
+        ):
+            config.pre_emphasis = pre_emphasis
+        active_analyses = ActiveAnalysis(0)
+        if lpc_check.isChecked():
+            active_analyses |= ActiveAnalysis.LPC
+        if dft_check.isChecked():
+            active_analyses |= ActiveAnalysis.DFT
+        if averaged_dft_check.isChecked():
+            active_analyses |= ActiveAnalysis.AVG
+        if cepstral_smoothing_check.isChecked():
+            active_analyses |= ActiveAnalysis.CEPS
+        config.active_analyses = active_analyses
+        subject_gender = subject_gender_combo.currentText()
+        is_female = subject_gender == "Female"
+        update_temporal_view = update_temporal_view or is_female != config.is_female
+        config.is_female = is_female
         spectrogram_bandwidth_mode = spectrogram_combo.currentIndex() + 1
         if spectrogram_bandwidth_mode != config.spectrogram_bandwidth_mode.value:
             config.spectrogram_bandwidth_mode = SpectrogramBandwidth(
@@ -221,8 +254,8 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
                     ],
                     parent.state.app_config,
                 )
-                parent.root.freq_domain_view.update_plot(data=True)
             parent.root.temporal_view.update_plot(trajectories=True)
+        parent.root.cursor_spect_view.update_plot(data=True)
         dialog.accept()
 
     def on_cancel() -> None:

@@ -198,12 +198,13 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                 return channel / 12.92
             return ((channel + 0.055) / 1.055) ** 2.4
 
-        luminance = 0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+        luminance = (
+            0.2126 * linearize(r) + 0.7152 * linearize(g) + 0.0722 * linearize(b)
+        )
         text_color = "#000000" if luminance > 0.179 else "#ffffff"
 
         color_button.setText(qcolor.name().upper())
-        color_button.setStyleSheet(
-            f"""
+        color_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {qcolor.name()};
                 color: {text_color};
@@ -212,8 +213,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                 background-color: palette(button);
                 color: palette(button-text);
             }}
-            """
-        )
+            """)
 
     def selected_displayed_index() -> int | None:
         selected_items = displayed_list.selectedItems()

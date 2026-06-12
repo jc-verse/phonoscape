@@ -20,7 +20,7 @@ from .widgets.readout import Readout
 from .views.temporal_view import TemporalView
 from .views.spatial_view_3d import SpatialView3D
 from .views.spatial_view_2d import SpatialView2D
-from .views.freq_domain_view import FreqDomainView
+from .views.cursor_spect_view import CursorSpectView
 from .views.zoomed_audio_view import ZoomedAudioView
 
 
@@ -154,8 +154,8 @@ class VarWindow(QMainWindow):
             self.spatial_view = SpatialView2D(left, state=self.state)
         left_layout.addWidget(self.spatial_view, 0, 0, 1, 2)
 
-        self.freq_domain_view = FreqDomainView(left, state=self.state)
-        left_layout.addWidget(self.freq_domain_view, 1, 0, 1, 2)
+        self.cursor_spect_view = CursorSpectView(left, state=self.state)
+        left_layout.addWidget(self.cursor_spect_view, 1, 0, 1, 2)
 
         self.readout = Readout(left, state=self.state)
         left_layout.addWidget(self.readout, 2, 0, 1, 1)
@@ -190,7 +190,7 @@ class VarWindow(QMainWindow):
         self.temporal_view.update_plot(cursor=True)
         self.spatial_view.update_plot(cursor=True)
         if self.state.app_config.audio_traj is not None:
-            self.freq_domain_view.update_plot(cursor=True)
+            self.cursor_spect_view.update_plot(cursor=True)
             self.zoomed_audio_view.update_plot(cursor=True)
         if not keep_readout:
             self.readout.clear_readout()

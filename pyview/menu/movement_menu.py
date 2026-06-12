@@ -169,7 +169,9 @@ class MovementMenu(QMenu):
                     new_cursor = tail
             else:
                 width = tail - head
-                new_cursor = tail if width <= 0 else tail - ((head - new_cursor) % width)
+                new_cursor = (
+                    tail if width <= 0 else tail - ((head - new_cursor) % width)
+                )
 
         elif new_cursor > tail:
             if self._cycling_mode is CyclingMode.REFLECTIVE:
@@ -179,7 +181,9 @@ class MovementMenu(QMenu):
                     new_cursor = head
             else:
                 width = tail - head
-                new_cursor = head if width <= 0 else head + ((new_cursor - tail) % width)
+                new_cursor = (
+                    head if width <= 0 else head + ((new_cursor - tail) % width)
+                )
 
         self.root.set_cursor(new_cursor)
         self.root.readout.readout_fps(str(self._cycling_mode), elapsed_s, playback_rate)
