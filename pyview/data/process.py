@@ -1,4 +1,4 @@
-from typing import cast, Literal
+from typing import cast, Literal, overload
 from dataclasses import dataclass
 
 from amfm_decompy import basic_tools
@@ -6,6 +6,7 @@ from amfm_decompy import pYAAPT
 import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import ShortTimeFFT, windows, filtfilt, lfilter
+from scipy.interpolate import splprep, splev
 
 
 from ..state import TrajDisplay, DatasetVariable, Trajectory, Audio, F0Track, AppConfig
@@ -350,3 +351,66 @@ def get_plotting_data(var: DatasetVariable, spec: TrajDisplay, config: AppConfig
             return t, accs
         case x:
             raise ValueError(f"Unexpected content type for temporal display: {x}")
+
+@overload
+def compute_spline(
+    spline_trajs: list[str],
+    positions_by_name: dict[str, tuple[float, float]],
+    polyline_spline: bool,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]] | None: ...
+
+@overload
+def compute_spline(
+    spline_trajs: list[str],
+    positions_by_name: dict[str, tuple[float, float, float]],
+    polyline_spline: bool,
+) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]] | None: ...
+
+
+def compute_spline(
+    spline_trajs: list[str],
+    positions_by_name: dict[str, tuple[float, float]] | dict[str, tuple[float, float, float]],
+    polyline_spline: bool,
+):
+    is_3d = any(len(pos) == 3 for pos in positions_by_name.values())
+    spline_points: list[tuple[float, float]] = []
+
+    for name in spline_trajs:
+        if name in positions_by_name:
+            # Whacky, just pretend it's 2D
+            spline_points.append(cast(tuple[float, float], positions_by_name[name]))
+        else:
+            raise ValueError(
+                f"Spline trajectory '{name}' not found among spatial trajectories"
+            )
+
+    if len(spline_points) < 2:
+        return None
+
+    p = np.asarray(spline_points, dtype=float)
+    k = min(3, len(spline_points) - 1)
+    if is_3d:
+        x_raw, y_raw, z_raw = p[:, 0], p[:, 1], p[:, 2]
+        if polyline_spline:
+            return x_raw, y_raw, z_raw
+
+        try:
+            tck, _u = splprep([x_raw, y_raw, z_raw], s=0, k=k)
+            u_new = np.linspace(0, 1, 100)
+            x_new, y_new, z_new = splev(u_new, tck)
+            return x_new, y_new, z_new
+        except Exception:
+            return x_raw, y_raw, z_raw
+
+    else:
+        x_raw, y_raw = p[:, 0], p[:, 1]
+        if polyline_spline:
+            return x_raw, y_raw
+
+        try:
+            tck, _u = splprep([x_raw, y_raw], s=0, k=k)
+            u_new = np.linspace(0, 1, 100)
+            x_new, y_new = splev(u_new, tck)
+            return x_new, y_new
+        except Exception:
+            return x_raw, y_raw

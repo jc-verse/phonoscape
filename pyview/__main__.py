@@ -57,6 +57,11 @@ if __name__ == "__main__":
         help="List of trajectory names to apply spline interpolation (default: all spatial trajectories starting with 'T').",
     )
     parser.add_argument(
+        "--polyline-spline",
+        action="store_true",
+        help="Connect the --spline points with a polyline instead of a smooth spline.",
+    )
+    parser.add_argument(
         "--audio",
         type=str,
         metavar="TRAJ",
@@ -127,6 +132,7 @@ if __name__ == "__main__":
         palate=args.palate,
         pharynx=args.pharynx,
         spline=args.spline,
+        polyline_spline=args.polyline_spline,
         audio=args.audio,
         framing=args.framing,
         temporal_display=args.temporal_display,

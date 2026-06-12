@@ -23,6 +23,7 @@ You can run `python -m pyview --help` to see the full list of command-line argum
   - `--palate VAR` (MVIEW `PALATE`): use the variable `VAR` (in the `file`) to plot a palate curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of palate points. If unspecified, the variable `pal` is used if it exists and contains data in the required shape; otherwise no palate is plotted.
   - `--pharynx VAR` (MVIEW `PHARYNX`): use the variable `VAR` (in the `file`) to plot a pharynx curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of pharynx points. However, per MVIEW compatibility, if the pharynx trace is 2D and the spatial data is 3D, an extra column of zeros will be added as the y-axis. If unspecified, the variable `pha` is used if it exists and contains data in the required shape; otherwise no pharynx is plotted.
   - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default.
+  - `--polyline-spline` (MVIEW `SPLINE` with a negative first index): specifies that the spline should be plotted as a polyline instead of a smooth curve. Might improve real-time update performance.
   - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first audio trajectory is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
   - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
   - `--temporal-display SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot. See [temporal view](#temporal-view) for more details regarding their presentation.
@@ -276,7 +277,7 @@ The axes' ranges are set to contain all spatial movements across all variables, 
 
 If the `--palate` or `--pharynx` [argument(s)](#command-line-arguments) are configured, they will be plotted in the spatial view as lines.
 
-If the `--spline` [argument](#command-line-arguments) is configured, the spline curve will be plotted in the spatial view. You can configure its display via the [**Hide spline**](#view-menu) action.
+If the `--spline` [argument](#command-line-arguments) is configured, the spline curve (as a polyline if `--polyline-spline` is also specified) will be plotted in the spatial view. You can configure its display via the [**Hide spline**](#view-menu) action.
 
 When the plot is 3D, you can customize the view via the [spatial options](#view-menu) or the `--view` [argument](#command-line-arguments).
 

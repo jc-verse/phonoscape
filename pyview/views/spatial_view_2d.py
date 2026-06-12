@@ -1,17 +1,15 @@
-from typing import cast, Any
-
-import numpy as np
-from scipy.interpolate import splprep, splev
+from typing import cast
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
-from matplotlib.collections import PathCollection
 from matplotlib.figure import Figure
+from matplotlib.collections import PathCollection
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import WindowState
+from ..data.process import compute_spline
 
 
 class SpatialView2D(QWidget):
@@ -94,7 +92,11 @@ class SpatialView2D(QWidget):
             self.text_artists[traj.name] = self.ax.text(x, y, f" {traj.name}")
 
         if self.state.app_config.spline_trajs is not None:
-            spline = self._compute_spline(positions_by_name)
+            spline = compute_spline(
+                self.state.app_config.spline_trajs,
+                positions_by_name,
+                self.state.app_config.polyline_spline,
+            )
             if spline is not None:
                 x_new, y_new = spline
                 self.spline_artist = self.ax.plot(
@@ -124,40 +126,14 @@ class SpatialView2D(QWidget):
                 self.text_artists[traj.name].set_position((x, y))
 
             if self.spline_artist is not None:
-                spline = self._compute_spline(positions_by_name)
+                spline = compute_spline(
+                    self.state.app_config.spline_trajs,
+                    positions_by_name,
+                    self.state.app_config.polyline_spline,
+                )
                 if spline is not None:
                     x_new, y_new = spline
                     self.spline_artist.set_data(x_new, y_new)
 
         if points:
             self.canvas.draw_idle()
-
-    def _compute_spline(
-        self, positions_by_name: dict[str, tuple[float, float]]
-    ) -> tuple[Any, Any] | None:
-        assert self.state.app_config.spline_trajs is not None
-
-        spline_points: list[tuple[float, float]] = []
-
-        for name in self.state.app_config.spline_trajs:
-            if name in positions_by_name:
-                spline_points.append(positions_by_name[name])
-            else:
-                raise ValueError(
-                    f"Spline trajectory '{name}' not found among spatial trajectories"
-                )
-
-        if len(spline_points) < 2:
-            return None
-
-        p = np.asarray(spline_points, dtype=float)
-        k = min(3, len(spline_points) - 1)
-        x_raw, y_raw = p[:, 0], p[:, 1]
-
-        try:
-            tck, _u = splprep([x_raw, y_raw], s=0, k=k)
-            u_new = np.linspace(0, 1, 100)
-            x_new, y_new = splev(u_new, tck)
-            return x_new, y_new
-        except Exception:
-            return x_raw, y_raw

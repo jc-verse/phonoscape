@@ -29,6 +29,7 @@ class AppConfig:
     palate_trace: NDArray[np.float64] | None
     pharynx_trace: NDArray[np.float64] | None
     spline_trajs: list[str]
+    polyline_spline: bool
     audio_traj: str | None
     framing_traj: str
     spatial_bounds: (

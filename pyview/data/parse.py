@@ -23,6 +23,7 @@ class CmdArgs(TypedDict, total=False):
     palate: str | None
     pharynx: str | None
     spline: list[str] | None
+    polyline_spline: bool | None
     audio: str | None
     framing: str | None
     temporal_display: list[str] | None
@@ -437,6 +438,7 @@ def normalize_args(
         palate_trace=palate_trace,
         pharynx_trace=pharynx_trace,
         spline_trajs=spline_trajs,
+        polyline_spline=args.get("polyline_spline") or False,
         audio_traj=audio_traj,
         framing_traj=framing_traj,
         spatial_bounds=(

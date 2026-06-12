@@ -1,7 +1,4 @@
-from typing import cast, Any
-
-import numpy as np
-from scipy.interpolate import splprep, splev
+from typing import cast
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -11,6 +8,7 @@ from mpl_toolkits.mplot3d.art3d import Path3DCollection, Line3D, Text3D
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 from ..state import WindowState
+from ..data.process import compute_spline
 
 
 class SpatialView3D(QWidget):
@@ -23,6 +21,8 @@ class SpatialView3D(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # At construction time, Qt widgets often still report very small sizes.
+        # Keep the old structure, but fall back to a reasonable initial figure size.
         width = parent.width() if parent.width() > 1 else 600
         height = parent.height() if parent.height() > 1 else 400
         dpi = self.screen().logicalDotsPerInch()
@@ -107,7 +107,11 @@ class SpatialView3D(QWidget):
             )
 
         if self.state.app_config.spline_trajs is not None:
-            spline = self._compute_spline(positions_by_name)
+            spline = compute_spline(
+                self.state.app_config.spline_trajs,
+                positions_by_name,
+                self.state.app_config.polyline_spline,
+            )
             if spline is not None:
                 x_new, y_new, z_new = spline
                 self.spline_artist = cast(
@@ -144,7 +148,11 @@ class SpatialView3D(QWidget):
                 self.text_artists[traj.name].set_3d_properties(z, zdir="x")
 
             if self.spline_artist is not None:
-                spline = self._compute_spline(positions_by_name)
+                spline = compute_spline(
+                    self.state.app_config.spline_trajs,
+                    positions_by_name,
+                    self.state.app_config.polyline_spline,
+                )
                 if spline is not None:
                     x_new, y_new, z_new = spline
                     self.spline_artist.set_data(x_new, y_new)
@@ -152,33 +160,3 @@ class SpatialView3D(QWidget):
 
         if points:
             self.canvas.draw_idle()
-
-    def _compute_spline(
-        self, positions_by_name: dict[str, tuple[float, float, float]]
-    ) -> tuple[Any, Any, Any] | None:
-        assert self.state.app_config.spline_trajs is not None
-
-        spline_points: list[tuple[float, float, float]] = []
-
-        for name in self.state.app_config.spline_trajs:
-            if name in positions_by_name:
-                spline_points.append(positions_by_name[name])
-            else:
-                raise ValueError(
-                    f"Spline trajectory '{name}' not found among spatial trajectories"
-                )
-
-        if len(spline_points) < 2:
-            return None
-
-        p = np.asarray(spline_points, dtype=float)
-        k = min(3, len(spline_points) - 1)
-        x_raw, y_raw, z_raw = p[:, 0], p[:, 1], p[:, 2]
-
-        try:
-            tck, _u = splprep([x_raw, y_raw, z_raw], s=0, k=k)
-            u_new = np.linspace(0, 1, 100)
-            x_new, y_new, z_new = splev(u_new, tck)
-            return x_new, y_new, z_new
-        except Exception:
-            return x_raw, y_raw, z_raw
