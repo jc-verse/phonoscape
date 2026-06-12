@@ -1,19 +1,53 @@
 # PyView
 
-Python port of MView
+Python port of MVIEW
+
+## Quick start
+
+To try PyView, clone the repository and install the dependencies:
 
 ```bash
 uv sync
 source .venv/bin/activate
 ```
 
+Then execute the following command. You do need to have your own dataset file.
+
 ```bash
 python -m pyview ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
+Prepackaged distributions will be available in the future.
+
+## Why PyView?
+
+PyView strives to be 100% MVIEW-compatible: any input that works in MVIEW, probably works here; anything you can do in MVIEW, you probably can achieve here. Even the user interface and interactions should be familiar. Compare to MVIEW:
+
+1. No more MATLAB. No compatibility issues; no license required; no slow startup times and unfamiliar programming environments.
+2. Completely Command Line Interface (CLI) based; launch from your favorite terminal.
+3. More intuitive, consistent, and modern interface.
+4. Smoother interactions.
+5. Tons of bugs fixed, features implemented, and quality-of-life improvements made.
+
+## Still WIP
+
+PyView is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
+
+1. [External procedures](#external-procedures)
+2. Cursor spectrum, external spectrum window, formant tracking
+3. File export (configuration, data, etc.)
+4. Dataset import: `LABELS`, `CONTOURS`, `SPREAD` fields
+5. Circle-fitting (for tongue shape)
+6. Small things: select playback track, auto-update/manual-update
+
 ## Central concepts
 
-TODO
+- **Dataset**: although not hard-enforced, it is highly, highly recommended that each time PyView is opened with a `.mat` file for one subject, using the same data collection procedure. Many things are shared across windows: the palate/pharynx trace, metadata about the trajectories, the spatial bounds, 2D/3D configuration, etc. If your variables are not consistent in their semantics, PyView _will break_.
+- **Variable**: your `.mat` file can contain many variables. Each window is associated with one variable. Each variable represents one condition. You may wish to chop up each recording session's data into many variables for easier manipulation.
+- **Trajectory**: for the exact storage format, see [dataset format](#dataset-format). At a high level, these trajectories are assumed to be synchronized (sampling rate taken into account). We differentiate between three kinds of trajectories: audio (scalar, sampling rate ≥ 5000 Hz), physiological scalar (scalar, sampling rate < 5000 Hz), and spatial (2D or 3D). This determines how they can each be analyzed temporally. Each variable can have one "privileged" audio trajectory; this one is used for audio playback and spectral analysis.
+- **Cursor**: TODO
+- **Selection**: TODO
+- **Label**: TODO
 
 ## Command-line arguments
 
@@ -380,4 +414,8 @@ TODO
 
 Currently only the `pyview()` function is supported. It's not really designed as a utility library; you can find many better alternatives.
 
-The parameters are exactly the same as the [command line arguments](#command-line-arguments) (that is to say, the CLI is a very thin wrapper around the function). Just translate `-` to `_` and remove the leading `--`.
+The parameters are exactly the same as the [command line arguments](#command-line-arguments) (that is to say, the CLI is a very thin wrapper around the function). Just translate `-` to `_` and remove the leading `--`. For example:
+
+```py
+pyview("./test_data/S02_data.mat", "*", palate="S02_pal", temporal_display=["AUDIO_SPECT", "TDx", "vTDx", "TDz", "vTDz"])
+```
