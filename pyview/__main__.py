@@ -38,12 +38,16 @@ if __name__ == "__main__":
         help="Glob pattern to filter variables (default: '*').",
     )
     parser.add_argument(
-        "--palate", type=str, 
-        metavar="VAR", help="Variable name for palate trace (optional)."
+        "--palate",
+        type=str,
+        metavar="VAR",
+        help="Variable name for palate trace (optional).",
     )
     parser.add_argument(
-        "--pharynx", type=str, 
-        metavar="VAR", help="Variable name for pharynx trace (optional)."
+        "--pharynx",
+        type=str,
+        metavar="VAR",
+        help="Variable name for pharynx trace (optional).",
     )
     parser.add_argument(
         "--spline",

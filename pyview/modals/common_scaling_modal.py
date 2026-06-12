@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
@@ -7,6 +9,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QCheckBox,
     QLineEdit,
     QPushButton,
     QVBoxLayout,
@@ -14,6 +17,27 @@ from PySide6.QtWidgets import (
 
 if TYPE_CHECKING:
     from ..menu.view_menu import ViewMenu
+    from ..views.temporal_view import TemporalView
+from ..state import SpatialTrajDisplay
+
+
+def get_visible_scaling(temporal_view: TemporalView) -> tuple[float, float, float]:
+    values = {"movement": [], "velocity": [], "acceleration": []}
+
+    for i, spec in enumerate(temporal_view._get_temp_disp_specs()):
+        if not isinstance(spec, SpatialTrajDisplay):
+            continue
+        data = temporal_view.plotting_data[i][1]
+        for j in range(data.shape[1]):
+            values[spec.content].append(np.nanmax(data[:, j]) - np.nanmin(data[:, j]))
+
+    fallback = temporal_view.state.common_scaling or (0.0, 0.0, 0.0)
+
+    return (
+        max(values["movement"]) * 1.1 if values["movement"] else fallback[0],
+        max(values["velocity"]) * 1.1 if values["velocity"] else fallback[1],
+        max(values["acceleration"]) * 1.1 if values["acceleration"] else fallback[2],
+    )
 
 
 def open_common_scaling_dialog(parent: ViewMenu) -> None:
@@ -31,14 +55,13 @@ def open_common_scaling_dialog(parent: ViewMenu) -> None:
     main_layout = QGridLayout(main)
     main_layout.setContentsMargins(0, 0, 0, 0)
     main_layout.setHorizontalSpacing(6)
-    main_layout.setVerticalSpacing(0)
+    main_layout.setVerticalSpacing(4)
 
-    # TODO: Real state
-    scaling = [0.0, 0.0, 0.0]
+    scaling = parent.state.common_scaling
 
-    mvt_entry = QLineEdit(f"{scaling[0]:.2f}", main)
-    vel_entry = QLineEdit(f"{scaling[1]:.2f}", main)
-    acc_entry = QLineEdit(f"{scaling[2]:.2f}", main)
+    mvt_entry = QLineEdit(f"{scaling[0]:.2f}" if scaling is not None else "", main)
+    vel_entry = QLineEdit(f"{scaling[1]:.2f}" if scaling is not None else "", main)
+    acc_entry = QLineEdit(f"{scaling[2]:.2f}" if scaling is not None else "", main)
 
     mvt_entry.setFixedWidth(80)
     vel_entry.setFixedWidth(80)
@@ -57,6 +80,34 @@ def open_common_scaling_dialog(parent: ViewMenu) -> None:
     )
     main_layout.addWidget(acc_entry, 0, 5)
 
+    adaptive_checkbox = QCheckBox("Adaptive scaling", main)
+    adaptive_checkbox.setChecked(parent.state.common_scaling is None)
+    main_layout.addWidget(adaptive_checkbox, 1, 1, 1, 5)
+
+    entries = (mvt_entry, vel_entry, acc_entry)
+
+    def set_entries_enabled(enabled: bool) -> None:
+        for entry in entries:
+            entry.setEnabled(enabled)
+
+    def populate_entries_from_visible() -> None:
+        visible_scaling = get_visible_scaling(parent.root.temporal_view)
+        mvt_entry.setText(f"{visible_scaling[0]:.2f}")
+        vel_entry.setText(f"{visible_scaling[1]:.2f}")
+        acc_entry.setText(f"{visible_scaling[2]:.2f}")
+
+    def on_adaptive_changed(checked: bool) -> None:
+        if checked:
+            for entry in entries:
+                entry.clear()
+            set_entries_enabled(False)
+        else:
+            populate_entries_from_visible()
+            set_entries_enabled(True)
+
+    adaptive_checkbox.toggled.connect(on_adaptive_changed)
+    on_adaptive_changed(adaptive_checkbox.isChecked())
+
     outer_layout.addWidget(main)
 
     buttons = QFrame(dialog)
@@ -67,7 +118,19 @@ def open_common_scaling_dialog(parent: ViewMenu) -> None:
     outer_layout.addWidget(buttons)
 
     def on_ok() -> None:
-        # TODO: Update state
+        if adaptive_checkbox.isChecked():
+            parent.state.common_scaling = None
+        else:
+            try:
+                parent.state.common_scaling = (
+                    float(mvt_entry.text()),
+                    float(vel_entry.text()),
+                    float(acc_entry.text()),
+                )
+            except ValueError:
+                return
+
+        parent.root.temporal_view.update_plot(spatial_ylim=True)
         dialog.accept()
 
     def on_cancel() -> None:

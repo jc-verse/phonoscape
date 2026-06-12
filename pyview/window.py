@@ -44,6 +44,7 @@ class VarWindow(QMainWindow):
             temporal_disp_specs=temporal_disp_specs,
             app_config=app_config,
             view=view,
+            common_scaling=None,
             cursor_s=0.0,
             head_s=head_s,
             tail_s=tail_s,

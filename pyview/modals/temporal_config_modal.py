@@ -18,7 +18,12 @@ from PySide6.QtWidgets import (
 if TYPE_CHECKING:
     from ..menu.view_menu import ViewMenu
 
-from ..state import AudioTrajDisplay, ScalarTrajDisplay, SpatialTrajDisplay
+from ..state import (
+    AudioTrajDisplay,
+    ScalarTrajDisplay,
+    SpatialTrajDisplay,
+    get_component_names,
+)
 
 
 def open_tempcfg_dialog(parent: ViewMenu) -> None:
@@ -311,9 +316,9 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
                             traj_name=traj_name,
                             traj_dims=parent.state.app_config.dimensions,
                             content="movement",
-                            components=["x", "y", "z"][
-                                : parent.state.app_config.dimensions
-                            ],
+                            components=get_component_names(
+                                parent.state.app_config.dimensions
+                            ),
                         )
                     )
 

@@ -15,6 +15,7 @@ from ..state import (
     ScalarTrajDisplay,
     SpatialTrajDisplay,
     AppConfig,
+    get_component_names,
 )
 
 
@@ -204,7 +205,7 @@ def parse_trajectory_display_spec(
                 )
             components.append("z")
         if not components:
-            components = ["x", "y", "z"][:dimensions]
+            components = get_component_names(dimensions)
         return SpatialTrajDisplay(
             traj_name=base_name,
             traj_dims=dimensions,

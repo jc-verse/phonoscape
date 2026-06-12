@@ -145,7 +145,12 @@ The following optional fields may be provided for each trajectory struct:
 
   The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
 
-- **Set common scaling**: Opens a dialog. TODO
+- **Set common scaling**: Opens a dialog to configure the y-axis limits for all spatial trajectories.
+  - **Adaptive scaling**: Each trajectory has its own y-axis limits, determined by the range of the trajectory data (i.e., matplotlib default auto-scaling logic). New in PyView.
+  - Configured spreads: Configure a common spread for all movement/velocity/acceleration trajectories, respectively. The `ymax - ymin` will be equal to that value, leaving an equal margin on the top and bottom.
+
+  By default adaptive scaling is enabled and you cannot configure spreads. When you disable it, the spreads default to `1.1` of the maximum range across all _visible_ trajectories (different from MVIEW, which also considers invisible trajectories and therefore can end up with an excessively large common scale). The values you set (or default) are good for as long as the temporal display remains the same or adaptive scaling remains disabled; the next time you enable and re-disable adaptive scaling, or when you change the temporal display settings, the common scaling will be re-computed.
+
 - **Spatial options**: Configure the spatial display.
   - **Hide spline**: Only available when the `--spline` [argument](#command-line-arguments) (including its default value) specifies a non-empty set. Toggles the display of the spline curve.
   - **Free rotate**: Only available when the display is 3-dimensional. Toggles whether the spatial view can be freely rotated by dragging with the mouse.
@@ -234,13 +239,21 @@ You can read off and edit the cursor, head, and tail positions, all in milliseco
 
 The temporal view is the right panel. It displays the trajectories as time series, with time on the x-axis and the trajectory value(s) on the y-axis. The first plot is the _framing trajectory_ specified with the `--framing` [argument](#command-line-arguments). It always displays the full data. The current selection is highlighted. The cursor and labels are also visible.
 
-All remaining plots are the _temporal display trajectories_ specified with the `--temporal-display` [argument](#command-line-arguments) and customizable via the ["Temporal layout" dialog](#view-menu). They only display the data within the current selection. The cursor and labels are also visible.
+You can drag the selection in the framing trajectory to shift it, or drag its boundaries to resize. Double-clicking resets it to the entire data.
 
-Currently, the trajectories' colors are determined by the `COLOR` field in the dataset or otherwise arbitrarily. Color selection will be supported. If the data is multidimensional, each dimension is plotted separately, with x being the most opaque and z being the most transparent (with a legend). The zero line is shown as a dashed line if in the visible y-range.
+All remaining plots are the _temporal display trajectories_ specified with the `--temporal-display` [argument](#command-line-arguments) and customizable via the ["Temporal layout" dialog](#view-menu). They only display the data within the current selection. The cursor and labels are also visible, should they be inside the selection.
 
-Currently, each axis' y-range is adaptive to the range of the trajectory data. [Common scaling](#view-menu) will be supported.
+Currently, the trajectories' colors are determined by the `COLOR` field in the dataset or otherwise arbitrarily. Color selection will be supported. If the data is multidimensional, each dimension is plotted separately, with x being the most opaque and z being the most transparent (with a legend).
 
-Unlike MVIEW, all scalar trajectories—not just audio—support spectrogram display (this was nominally supported in MVIEW but in reality it seems to be sketchy). Short Time Fourier Transform (STFT) is used. You can customize its data using the following [spectral analysis](#data-menu) options:
+Following MVIEW behavior, the velocity/acceleration of the whole vector (e.g., `vTD`) only displays the magnitude (and is therefore unsigned), while the velocity/acceleration of specific dimensions (e.g., `vTDx`, `vTDxy`) displays each separate dimension (and is signed).
+
+If multiple curves are plotted, each curve will be re-centered (`curve - (max(curve) + min(curve)) / 2`) to avoid inflating the y-range.
+
+By default, each axis' y-range is adaptive to the range of the trajectory data (using matplotlib's default auto-scaling). You can also configure [common scaling](#view-menu) for spatial trajectories, so that all movement/velocity/acceleration trajectories each share the same y-span.
+
+If a single curve is plotted and it is not movement (i.e., scalar, velocity, or acceleration), the zero line will be indicated as a dashed line should it be within the y-span of the plot.
+
+Unlike MVIEW, all scalar trajectories with sampling rate >5000Hz—not just audio—support spectrogram display (this was nominally supported in MVIEW but in reality it seems to be sketchy). Short Time Fourier Transform (STFT) is used. You can customize its data using the following [spectral analysis](#data-menu) options:
 
 - **# FFT eval points**
 - **Averaging window**
@@ -248,21 +261,21 @@ Unlike MVIEW, all scalar trajectories—not just audio—support spectrogram dis
 - **Spectral display cutoff**
 - **Spectrogram**
 
-Following MVIEW behavior, the velocity/acceleration of the whole vector (e.g., `vTD`) only displays the magnitude (and is therefore unsigned), while the velocity/acceleration of specific dimensions (e.g., `vTDx`, `vTDxy`) displays each separate dimension (and is signed).
-
-You can drag the selection in the framing trajectory to shift it, or drag its boundaries to resize. Double-clicking resets it to the entire data.
-
 You can click in the temporal display trajectories to set the cursor, or drag to move the cursor. You can also drag a label to move it, or double-click one to edit it. You can right-click to create a label at the position (this invokes the custom labeling procedure).
 
 ## Spatial view
 
-The spatial view is the top-left panel. It displays the locations of all spatial signals at the cursor position (and is not affected by which ones are temporally displayed). The plot is 2D or 3D depending on the data's dimensions (configurable via the `--comps` [argument](#command-line-arguments)).
+The spatial view is the top-left panel. It displays the locations of all spatial signals at the cursor position. It is not affected by which ones are temporally displayed; to exclude certain signals, you can use the `--spatial-exclude` [argument](#command-line-arguments). The plot is 2D or 3D depending on the data's dimensions (configurable via the `--comps` [argument](#command-line-arguments)).
 
 The sensors' colors are consistent with the temporal trajectories' colors.
 
-The axes' ranges are set to contain all spatial movements across all variables.
+The axes' ranges are set to contain all spatial movements across all variables, not just the current variable (unlike MVIEW).
 
-When the plot is 3D, you can customize the view via the [spatial options](#view-menu). You can also configure display of the spline.
+If the `--palate` or `--pharynx` [argument(s)](#command-line-arguments) are configured, they will be plotted in the spatial view as lines.
+
+If the `--spline` [argument](#command-line-arguments) is configured, the spline curve will be plotted in the spatial view. You can configure its display via the [**Hide spline**](#view-menu) action.
+
+When the plot is 3D, you can customize the view via the [spatial options](#view-menu) or the `--view` [argument](#command-line-arguments).
 
 ## Spectrogram
 

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import IntFlag, Enum, auto
 from pathlib import Path
-from typing import Any, Literal, Unpack, TypedDict
+from typing import Any, Literal, Unpack, TypedDict, cast
 import numpy as np
 from numpy.typing import NDArray
 
@@ -167,6 +167,7 @@ class WindowState:
     temporal_disp_specs: list[TrajDisplay]
     app_config: AppConfig
     view: tuple[float, float, float]
+    common_scaling: tuple[float, float, float] | None
     cursor_s: float
     head_s: float
     tail_s: float
@@ -193,3 +194,7 @@ class WindowState:
 
     def delete_labels(self, label_idx: list[int]):
         return [self.labels.pop(i) for i in sorted(label_idx, reverse=True)]
+
+
+def get_component_names(dimensions: int):
+    return cast(list[Literal["x", "y", "z"]], ["x", "y", "z"][:dimensions])

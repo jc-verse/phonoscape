@@ -77,7 +77,10 @@ class SpatialView2D(QWidget):
         positions_by_name: dict[str, tuple[float, float]] = {}
 
         for traj in self.state.selected_value.trajectories.values():
-            if traj.kind != "spatial" or traj.name in self.state.app_config.spatial_exclude:
+            if (
+                traj.kind != "spatial"
+                or traj.name in self.state.app_config.spatial_exclude
+            ):
                 continue
 
             pos = round(self.state.cursor_s * traj.sample_rate_hz)
@@ -105,7 +108,10 @@ class SpatialView2D(QWidget):
             positions_by_name: dict[str, tuple[float, float]] = {}
 
             for traj in self.state.selected_value.trajectories.values():
-                if traj.kind != "spatial" or traj.name in self.state.app_config.spatial_exclude:
+                if (
+                    traj.kind != "spatial"
+                    or traj.name in self.state.app_config.spatial_exclude
+                ):
                     continue
 
                 pos = round(self.state.cursor_s * traj.sample_rate_hz)

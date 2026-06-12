@@ -1,5 +1,7 @@
 from typing import Literal, TYPE_CHECKING
 
+import numpy as np
+
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
@@ -18,12 +20,16 @@ from ..state import (
     ScalarTrajDisplay,
     SpatialTrajDisplay,
     Label,
+    get_component_names,
 )
 from ..data.process import get_plotting_data
 from ..modals.label_modal import open_label_dialog
+from ..modals.common_scaling_modal import get_visible_scaling
 
 ArtistType = (
-    tuple[Literal["spatial"], list[Line2D]]
+    tuple[Literal["spatial-single"], Line2D]
+    # Multiple components are recentered
+    | tuple[Literal["spatial-multi"], list[Line2D]]
     | tuple[Literal["image"], AxesImage]
     | tuple[Literal["scalar"], Line2D]
 )
@@ -83,6 +89,11 @@ class TemporalView(QWidget):
         ]
 
         self._refresh_plotting_data()
+        # When the first trajectory of its kind is added, there is no computed
+        # common scaling. We fill this in.
+        # Otherwise, we should also invalidate previous computation/specification.
+        if self.state.common_scaling is not None:
+            self.state.common_scaling = get_visible_scaling(self)
 
         duration_s = self.state.selected_value.duration_s
         self.artists: list[ArtistType] = []
@@ -101,7 +112,10 @@ class TemporalView(QWidget):
             if label_text_artists is not None:
                 self.label_text_artists.append(label_text_artists)
 
-        self.canvas.draw_idle()
+        if self.state.common_scaling:
+            self.update_plot(spatial_ylim=True)
+        else:
+            self.canvas.draw_idle()
 
     def update_plot(
         self,
@@ -109,6 +123,7 @@ class TemporalView(QWidget):
         trajectories: bool = False,
         frame: bool = False,
         spect_ylim: bool = False,
+        spatial_ylim: bool = False,
         labels: list[Label] | None = None,
     ) -> None:
         if cursor:
@@ -116,28 +131,85 @@ class TemporalView(QWidget):
                 line.set_xdata([self.state.cursor_s, self.state.cursor_s])
         if trajectories:
             self._refresh_plotting_data()
+            specs = self._get_temp_disp_specs()
             for i, artist in enumerate(self.artists):
                 t, data = self.plotting_data[i]
                 if artist[0] == "image":
                     artist[1].set_data(data)
                     artist[1].set_extent(t)
-                elif artist[0] == "spatial":
-                    for j in range(data.shape[1]):
-                        artist[1][j].set_data(t, data[:, j])
+                elif artist[0] == "spatial-multi":
+                    for j, line in enumerate(artist[1]):
+                        sub_data = data[:, j]
+                        sub_data_center = (
+                            np.nanmax(sub_data) + np.nanmin(sub_data)
+                        ) / 2
+                        line.set_data(t, sub_data - sub_data_center)
+                elif artist[0] == "spatial-single":
+                    artist[1].set_data(t, data[:, 0])
                 elif artist[0] == "scalar":
                     artist[1].set_data(t, data)
-                if artist := self.zero_artists[i]:
-                    artist.set_visible(False)
                 ax = self.axes[i]
-                ax.relim(visible_only=True)
-                ax.autoscale(axis="y")
                 if i == 0:
                     ax.set_xlim(0, self.state.selected_value.duration_s)
-                if artist := self.zero_artists[i]:
+                if zero_artist := self.zero_artists[i]:
+                    zero_artist.set_visible(False)
+                if self.state.common_scaling is None or artist[0] in (
+                    "image",
+                    "scalar",
+                ):
+                    ax.relim(visible_only=True)
+                    ax.autoscale(axis="y")
+                else:
+                    scale = self.state.common_scaling[
+                        (
+                            0
+                            if specs[i].content == "movement"
+                            else 1 if specs[i].content == "velocity" else 2
+                        )
+                    ]
+                    if artist[0] == "spatial-multi":
+                        # Already centered
+                        ax.set_ylim(-scale / 2, scale / 2)
+                    else:
+                        data_center = (np.nanmax(data) + np.nanmin(data)) / 2
+                        ax.set_ylim(data_center - scale / 2, data_center + scale / 2)
+                if zero_artist := self.zero_artists[i]:
                     ymin, ymax = ax.get_ylim()
                     zero_visible = ymin < 0 < ymax
-                    artist.set_visible(zero_visible)
-        if frame:
+                    zero_artist.set_visible(zero_visible)
+        if spatial_ylim and not trajectories:
+            for i, spec in enumerate(self._get_temp_disp_specs()):
+                if isinstance(spec, SpatialTrajDisplay):
+                    ax = self.axes[i]
+                    artist = self.artists[i]
+                    data = self.plotting_data[i][1]
+                    if self.state.common_scaling is None:
+                        ax.relim(visible_only=True)
+                        ax.autoscale(axis="y")
+                    else:
+                        scale = self.state.common_scaling[
+                            (
+                                0
+                                if spec.content == "movement"
+                                else 1 if spec.content == "velocity" else 2
+                            )
+                        ]
+                        if artist[0] == "spatial-multi":
+                            # Already centered
+                            ax.set_ylim(-scale / 2, scale / 2)
+                        else:
+                            data_center = (np.nanmax(data) + np.nanmin(data)) / 2
+                            ax.set_ylim(
+                                data_center - scale / 2, data_center + scale / 2
+                            )
+        # All of these may update ylim
+        if frame or (
+            (spatial_ylim or trajectories)
+            and self.state.selected_value.trajectories[
+                self.state.app_config.framing_traj
+            ].kind
+            == "spatial"
+        ):
             head_s = self.state.head_s
             tail_s = self.state.tail_s
             for i, ax in enumerate(self.axes):
@@ -202,7 +274,7 @@ class TemporalView(QWidget):
                                 clip_on=True,
                             )
                             label_text_artists[label] = text
-        if cursor or trajectories or frame or spect_ylim or labels:
+        if cursor or trajectories or frame or spect_ylim or spatial_ylim or labels:
             self.canvas.draw_idle()
 
     def _plot_one_axis(
@@ -212,25 +284,33 @@ class TemporalView(QWidget):
         t, data = self.plotting_data[i]
         artist: ArtistType | None = None
         if isinstance(spec, SpatialTrajDisplay):
-            artist = ("spatial", [])
-            for j in range(data.shape[1]):
-                a = ax.plot(
-                    t,
-                    data[:, j],
-                    linewidth=0.8,
-                    label=spec.components[j],
-                    color=traj.color,
-                    alpha=(1 - j * 0.3),
-                )[0]
-                artist[1].append(a)
-
+            # Plotting multiple components: recenter
             if len(spec.components) > 1:
+                artist = ("spatial-multi", [])
+                for j in range(data.shape[1]):
+                    sub_data = data[:, j]
+                    sub_data_center = (np.nanmax(sub_data) + np.nanmin(sub_data)) / 2
+                    a = ax.plot(
+                        t,
+                        sub_data - sub_data_center,
+                        linewidth=0.8,
+                        label=spec.components[j],
+                        color=traj.color,
+                        alpha=(1 - j * 0.3),
+                    )[0]
+                    artist[1].append(a)
+
                 ax.legend(
                     loc="upper right",
                     frameon=True,
                     borderpad=0.2,
                     handlelength=1.2,
                     handletextpad=0.3,
+                )
+            else:
+                artist = (
+                    "spatial-single",
+                    ax.plot(t, data[:, 0], linewidth=0.8, color=traj.color)[0],
                 )
         elif spec.content == "SPECT":
             artist = (
@@ -280,7 +360,7 @@ class TemporalView(QWidget):
         for spine in ax.spines.values():
             spine.set_visible(True)
 
-        if spec.content != "SPECT":
+        if artist[0] in ("spatial-single", "scalar") and spec.content != "movement":
             ymin, ymax = ax.get_ylim()
             zero_visible = ymin < 0 < ymax
             zero_artist = ax.axhline(
@@ -291,9 +371,10 @@ class TemporalView(QWidget):
                 zorder=0,
                 visible=zero_visible,
             )
-            # Reset limits because invisible line still affects autoscaling
-            ax.relim(visible_only=True)
-            ax.autoscale(axis="y")
+            if self.state.common_scaling is None:
+                # Reset limits because invisible line still affects autoscaling
+                ax.relim(visible_only=True)
+                ax.autoscale(axis="y")
         else:
             zero_artist = None
 
@@ -356,7 +437,7 @@ class TemporalView(QWidget):
                     content="movement",
                     traj_name=framing_traj_name,
                     traj_dims=self.state.app_config.dimensions,
-                    components=["x", "y", "z"][: self.state.app_config.dimensions],
+                    components=get_component_names(self.state.app_config.dimensions),
                 )
             )
         )
