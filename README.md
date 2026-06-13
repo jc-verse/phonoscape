@@ -34,7 +34,7 @@ PyView strives to be 100% MVIEW-compatible: any input that works in MVIEW, proba
 PyView is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
 
 1. [External procedures](#external-procedures)
-2. Cursor spectrum, external spectrum window, formant tracking
+2. External spectrum window, formant tracking
 3. File export (configuration, data, etc.)
 4. Dataset import: `LABELS`, `CONTOURS`, `SPREAD` fields
 5. Circle-fitting (for tongue shape)
@@ -185,7 +185,7 @@ The following optional fields may be provided for each trajectory struct:
   - Select one displayed trajectory from the right-hand side to reorder (`^` and `v`).
   - Select one displayed trajectory from the right-hand side to customize its content. For spatial trajectories, you can choose to display position, velocity, or acceleration, and which dimensions to display. For scalar trajectories, you can choose to apply a temporal analysis (spectrogram, RMS, zero-crossing rate, fundamental frequency, etc.).
   - Select one trajectory from either side to customize its color. Unlike MVIEW, you can customize colors from the left-hand size too, which means you can customize a color in the spatial view even if you don't load it into the temporal view.
-  - Select a spectrogram to customize its color contrast. This is equivalent to the MVIEW vertical slider in the bottom left.
+  - Select a spectrogram to customize its color contrast. This is equivalent to the MVIEW vertical slider in the bottom left. The spectrogram is power-law normalized. The higher the setting, the higher the gamma parameter, and the sharper the contrast.
 
   The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
 - **Set common scaling**: Opens a dialog to configure the y-axis limits for all spatial trajectories.
@@ -311,6 +311,8 @@ Unlike MVIEW, all scalar trajectories with sampling rate >5000Hz—not just audi
 - **Overlap**
 - **Spectral display cutoff**
 - **Spectrogram**
+
+You can also configure its contrast using the [temporal display configuration](#view-menu).
 
 You can click in the temporal display trajectories to set the cursor, or drag to move the cursor. You can also drag a label to move it, or double-click one to edit it. You can right-click to create a label at the position (this invokes the [labeling procedure](#labeling-procedures)).
 

@@ -61,6 +61,7 @@ class AppConfig:
 class AudioTrajDisplay:
     traj_name: str
     content: Literal["SIGNAL", "SPECT", "RMS", "ZC", "F0"]
+    spect_contrast: float = 0.5
 
     def __str__(self) -> str:
         if self.content == "SIGNAL":

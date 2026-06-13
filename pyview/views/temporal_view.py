@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.axes as plt_axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+from matplotlib.colors import PowerNorm
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.lines import Line2D
@@ -33,6 +34,23 @@ ArtistType = (
     | tuple[Literal["image"], AxesImage]
     | tuple[Literal["scalar"], Line2D]
 )
+
+
+def contrast_gamma_from_db_range(data: np.ndarray, contrast: float):
+    lo = np.nanpercentile(data, 1)
+    hi = np.nanpercentile(data, 99.5)
+    db_range = max(hi - lo, 1.0)
+
+    target_db_below_peak = min(40.0, 0.5 * db_range)
+    target_display_level = 0.12
+
+    x = 1.0 - target_db_below_peak / db_range
+    x = np.clip(x, 1e-6, 1.0 - 1e-6)
+
+    gamma_max = np.log(target_display_level) / np.log(x)
+    gamma_max = np.clip(gamma_max, 1.0, 30.0)
+
+    return 1.0 + np.clip(contrast, 0.0, 1.0) * (gamma_max - 1.0)
 
 
 class TemporalView(QWidget):
@@ -162,6 +180,9 @@ class TemporalView(QWidget):
                     aspect="auto",
                     origin="lower",
                     extent=t,
+                    norm=PowerNorm(
+                        gamma=contrast_gamma_from_db_range(data, spec.spect_contrast)
+                    ),
                     cmap="gray_r",
                 ),
             )

@@ -14,10 +14,11 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QVBoxLayout,
     QLabel,
     QListWidget,
     QPushButton,
-    QVBoxLayout,
+    QSlider,
 )
 
 if TYPE_CHECKING:
@@ -73,6 +74,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     main_layout.setRowStretch(6, 0)
     main_layout.setRowStretch(7, 0)
     main_layout.setRowStretch(8, 0)
+    main_layout.setRowStretch(9, 0)
 
     main_layout.addWidget(QLabel("Loaded", main), 0, 0)
     main_layout.addWidget(QLabel("Displayed", main), 0, 2)
@@ -163,6 +165,23 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
     main_layout.addWidget(color_row, 7, 0, 1, 3)
 
+    spect_contrast = QFrame(main)
+    spect_contrast_layout = QHBoxLayout(spect_contrast)
+    spect_contrast_layout.setContentsMargins(0, 10, 0, 0)
+    spect_contrast_layout.setSpacing(8)
+
+    spect_contrast_label = QLabel("Spectrogram contrast:", spect_contrast)
+    spect_contrast_layout.addWidget(spect_contrast_label)
+
+    spect_contrast_slider = QSlider(Qt.Orientation.Horizontal, spect_contrast)
+    spect_contrast_slider.setRange(0, 100)
+    spect_contrast_slider.setEnabled(False)
+    spect_contrast_slider.setMinimumWidth(180)
+    spect_contrast_layout.addWidget(spect_contrast_slider)
+
+    spect_contrast_layout.addStretch(1)
+    main_layout.addWidget(spect_contrast, 8, 0, 1, 3)
+
     def selected_loaded_name() -> str | None:
         selected_items = loaded_list.selectedItems()
         if len(selected_items) != 1:
@@ -220,6 +239,17 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         if len(selected_items) != 1:
             return None
         return displayed_list.row(selected_items[0])
+
+    def selected_spectrogram_spec() -> AudioTrajDisplay | None:
+        idx = selected_displayed_index()
+        if idx is None:
+            return None
+
+        spec = displayed_specs[idx]
+        if isinstance(spec, AudioTrajDisplay) and spec.content == "SPECT":
+            return spec
+
+        return None
 
     def set_component_state(enabled: bool) -> None:
         x_check.setEnabled(enabled)
@@ -333,6 +363,23 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         color_button.setEnabled(True)
         set_color_button_color(parent.state.colors[traj_name])
 
+    def refresh_spect_contrast_control() -> None:
+        spec = selected_spectrogram_spec()
+
+        spect_contrast.setVisible(spec is not None)
+
+        if spec is None:
+            spect_contrast_slider.blockSignals(True)
+            spect_contrast_slider.setValue(0)
+            spect_contrast_slider.setEnabled(False)
+            spect_contrast_slider.blockSignals(False)
+            return
+
+        spect_contrast_slider.blockSignals(True)
+        spect_contrast_slider.setValue(round(spec.spect_contrast * 100))
+        spect_contrast_slider.setEnabled(True)
+        spect_contrast_slider.blockSignals(False)
+
     def rewrite_selected_spec() -> None:
         idx = selected_displayed_index()
         if idx is None:
@@ -344,6 +391,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
             displayed_specs[idx] = AudioTrajDisplay(
                 traj_name=old.traj_name,
                 content=content_combo.currentText(),
+                spect_contrast=old.spect_contrast,
             )
 
         elif isinstance(old, ScalarTrajDisplay):
@@ -376,18 +424,22 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         displayed_list.setCurrentRow(idx)
         refresh_detail_controls()
         refresh_button_states()
+        refresh_color_control()
+        refresh_spect_contrast_control()
 
     def on_loaded_select() -> None:
         displayed_list.clearSelection()
         refresh_detail_controls()
         refresh_button_states()
         refresh_color_control()
+        refresh_spect_contrast_control()
 
     def on_displayed_select() -> None:
         loaded_list.clearSelection()
         refresh_detail_controls()
         refresh_button_states()
         refresh_color_control()
+        refresh_spect_contrast_control()
 
     def on_xfer() -> None:
         selected_rows = sorted(
@@ -437,6 +489,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         refresh_detail_controls()
         refresh_button_states()
         refresh_color_control()
+        refresh_spect_contrast_control()
 
     def on_move(delta: Literal[1, -1]) -> None:
         idx = selected_displayed_index()
@@ -478,6 +531,21 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
         parent.state.colors[traj_name] = qcolor_to_rgb(color)
         set_color_button_color(parent.state.colors[traj_name])
 
+    def on_spect_contrast_changed(value: int) -> None:
+        idx = selected_displayed_index()
+        if idx is None:
+            return
+
+        old = displayed_specs[idx]
+        if not isinstance(old, AudioTrajDisplay) or old.content != "SPECT":
+            return
+
+        displayed_specs[idx] = AudioTrajDisplay(
+            traj_name=old.traj_name,
+            content=old.content,
+            spect_contrast=value / 100.0,
+        )
+
     loaded_list.itemSelectionChanged.connect(on_loaded_select)
     displayed_list.itemSelectionChanged.connect(on_displayed_select)
 
@@ -492,13 +560,14 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     if z_check is not None:
         z_check.toggled.connect(lambda _checked: rewrite_selected_spec())
     color_button.clicked.connect(on_color)
+    spect_contrast_slider.valueChanged.connect(on_spect_contrast_changed)
 
     buttons = QFrame(main)
     buttons_layout = QHBoxLayout(buttons)
     buttons_layout.setContentsMargins(0, 16, 0, 0)
     buttons_layout.setSpacing(12)
     buttons_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    main_layout.addWidget(buttons, 8, 0, 1, 3)
+    main_layout.addWidget(buttons, 9, 0, 1, 3)
 
     def on_ok() -> None:
         parent.state.temporal_disp_specs = displayed_specs
@@ -518,6 +587,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
 
     refresh_detail_controls()
     refresh_button_states()
+    refresh_spect_contrast_control()
 
     dialog.resize(520, 420)
 
