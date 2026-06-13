@@ -171,7 +171,7 @@ The following optional fields may be provided for each trajectory struct:
   - **# FFT eval points** (default: 256): Configures the frequency resolution of all relevant spectral analyses. Unlike MVIEW (in MATLAB fewer FFT eval points silently truncates the window), the number of FFT samples must be at least the window sample size.
   - **Averaging window (ms)** (default: 6ms): Configures the analysis window for the `SPECT` (I don't think this is right but this is how it is in MVIEW).
   - **Overlap (ms)** (default: 1ms): Configures the window shift for the `SPECT`.
-  - **SPL reference (dB)** (default: 20dB): Reference sound pressure level spectral offset. Larger values make the spectrum lower in dB. Affects the cursor spectrum. Changing this value resets the cursor spectrum's y-axis limits to default.
+  - **SPL reference (μPa)** (default: 20μPa): Reference amplitude used when converting cursor/external spectra to dB. MVIEW's default is 20, corresponding nominally to 20µPa, but this is only physically meaningful for calibrated pressure signals. For ordinary digital audio, it acts as a vertical dB normalization/plotting offset.
   - **Spectral display cutoff (Hz)** (default: `audio_sampling_rate / 2`): Affects visualization only. Configures the ymax of `SPECT` and the xmax of the time-slice spectrograms.
   - **Pre-emphasis** (default: 0.98): If the **(Adaptive)** checkbox is checked, then the pre-emphasis coefficient is automatically determined by the signal (by computing the lag-1 autocorrelation). Otherwise, the specified coefficient is used (which should be between 0 and 1). Affects cursor spectrum only (TODO: this way is for MVIEW compatibility; `SPECT` uses hard-coded first-difference. I think this config should apply there too.)
   - **Subject gender** (default: `--sex` [argument](#command-line-arguments)): Affects F0 heuristics.
@@ -344,7 +344,7 @@ The cursor spectrum is the bottom-left panel. It shows the frequency spectrum of
 - **# FFT eval points**
 - **Averaging window (ms)** (AVG-only)
 - **Overlap (ms)** (AVG-only)
-- **SPL reference (dB)**
+- **SPL reference (μPa)**
 - **Spectral display cutoff (Hz)**
 - **Pre-emphasis**
 

@@ -89,7 +89,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     fft_eval_points_entry = make_entry(f"{config.fft_eval_points:d}")
     averaging_window_entry = make_entry(f"{config.averaging_window_ms:.1f}")
     overlap_entry = make_entry(f"{config.overlap_ms:.1f}")
-    spl_reference_entry = make_entry(f"{config.spl_reference_db:.1f}")
+    spl_reference_entry = make_entry(f"{config.spl_reference_μPa:.1f}")
     spectral_cutoff_entry = make_entry(f"{config.spectral_display_cutoff_hz:.1f}")
     pre_emphasis_entry = make_entry(
         f"{config.pre_emphasis:.2f}" if config.pre_emphasis is not None else ""
@@ -100,7 +100,7 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
     add_row(3, "# FFT eval points:", fft_eval_points_entry)
     add_row(4, "Averaging window (ms):", averaging_window_entry)
     add_row(5, "Overlap (ms):", overlap_entry)
-    add_row(6, "SPL reference (dB):", spl_reference_entry)
+    add_row(6, "SPL reference (μPa):", spl_reference_entry)
     add_row(7, "Spectral display cutoff (Hz):", spectral_cutoff_entry)
 
     pre_emphasis_frame = QFrame(main)
@@ -220,11 +220,11 @@ def open_spectral_analysis_dialog(parent: DataMenu) -> None:
                 update_temporal_view or overlap_ms != config.overlap_ms
             )
             config.overlap_ms = overlap_ms
-        if spl_reference_db := parse_num(
-            spl_reference_entry, "spl_reference_db", float, -float("inf")
+        if spl_reference_μPa := parse_num(
+            spl_reference_entry, "spl_reference_μPa", float, -float("inf")
         ):
-            update_spectrum_ylim = config.spl_reference_db != spl_reference_db
-            config.spl_reference_db = spl_reference_db
+            update_spectrum_ylim = config.spl_reference_μPa != spl_reference_μPa
+            config.spl_reference_μPa = spl_reference_μPa
         if spectral_display_cutoff_hz := parse_num(
             spectral_cutoff_entry, "spectral_display_cutoff_hz", float
         ):

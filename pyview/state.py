@@ -50,7 +50,7 @@ class AppConfig:
     fft_eval_points: int = 256
     averaging_window_ms: float = 6.0
     overlap_ms: float = 1.0
-    spl_reference_db: float = 20.0
+    spl_reference_μPa: float = 20.0
     spectral_display_cutoff_hz: float = 11025.0  # Need overriding based on sample rate
     pre_emphasis: float | None = 0.98
     is_female: bool = False

@@ -43,12 +43,12 @@ def get_cursor_spectra(state: WindowState) -> CursorSpectra:
             audio.sample_rate_hz,
             config.lpc_order,
             config.fft_eval_points,
-            config.spl_reference_db,
+            config.spl_reference_μPa,
         )
 
     if config.active_analyses & ActiveAnalysis.DFT:
         dft_db = dft_spectrum_db(
-            windowed_signal, config.fft_eval_points, config.spl_reference_db
+            windowed_signal, config.fft_eval_points, config.spl_reference_μPa
         )
 
     if config.active_analyses & ActiveAnalysis.AVG:
@@ -58,7 +58,7 @@ def get_cursor_spectra(state: WindowState) -> CursorSpectra:
             config.fft_eval_points,
             config.averaging_window_ms,
             config.overlap_ms,
-            config.spl_reference_db,
+            config.spl_reference_μPa,
         )
 
     if config.active_analyses & ActiveAnalysis.CEPS:
@@ -66,7 +66,7 @@ def get_cursor_spectra(state: WindowState) -> CursorSpectra:
             windowed_signal,
             audio.sample_rate_hz,
             config.fft_eval_points,
-            config.spl_reference_db,
+            config.spl_reference_μPa,
         )
 
     return CursorSpectra(
