@@ -1,10 +1,11 @@
+from typing import Literal
 from dataclasses import dataclass
 
 import numpy as np
 from scipy.linalg import solve_toeplitz
 from scipy.signal import freqz, lfilter, windows
 
-from ..state import ActiveAnalysis, WindowState
+from ..state import ActiveAnalysis, WindowState, Audio
 
 
 @dataclass(frozen=True)
@@ -176,7 +177,7 @@ def dft_spectrum_db(
     signal: np.ndarray, fft_eval_points: int, reference_db: float
 ) -> np.ndarray:
     spectrum = np.abs(np.fft.fft(signal, fft_eval_points * 2))
-    spectrum = spectrum[:fft_eval_points + 1]
+    spectrum = spectrum[: fft_eval_points + 1]
     return 20.0 * np.log10(spectrum / reference_db + np.finfo(float).eps)
 
 
@@ -255,3 +256,135 @@ def ceps_spectrum_db(
     smoothed_spectrum = np.exp(np.abs(np.fft.fft(cepstrum))[: fft_eval_points + 1])
 
     return 20.0 * np.log10(smoothed_spectrum / reference_db + np.finfo(float).eps)
+
+
+@dataclass(frozen=True)
+class CogMeasure:
+    l1: float
+    skew: float
+    kurt: float
+
+
+def get_cog(
+    traj: Audio,
+    time_s: float,
+    alg: Literal["AVG", "WIN"],
+    spec: Literal["MAG", "POW"],
+    preemp: float | None,
+    cutoff_hz: float,
+    window_ms: float,
+    fft_eval_points: int,
+    avg_window_ms: float,
+    overlap_ms: float,
+) -> CogMeasure:
+    signal = get_analysis_frame(traj.signal, time_s, traj.sample_rate_hz, window_ms)
+    signal = apply_pre_emphasis(signal, preemp)
+    algorithm = alg.upper()
+    use_power = spec.upper() == "POW"
+    if spec.upper() not in {"MAG", "POW"}:
+        raise ValueError(f"unrecognized spectrum type ({spec})")
+    if algorithm == "AVG":
+        spectrum = _cog_avg_spectrum(
+            signal,
+            traj.sample_rate_hz,
+            fft_eval_points,
+            avg_window_ms,
+            overlap_ms,
+            use_power,
+        )
+    elif algorithm == "WIN":
+        spectrum = _cog_win_spectrum(signal, fft_eval_points, use_power)
+    else:
+        raise ValueError(f"unrecognized COG algorithm: {alg}")
+    return _cog_moments(spectrum, traj.sample_rate_hz, fft_eval_points, cutoff_hz)
+
+
+def _cog_avg_spectrum(
+    signal: np.ndarray,
+    sample_rate_hz: float,
+    fft_eval_points: int,
+    avg_window_ms: float,
+    overlap_ms: float,
+    use_power: bool,
+) -> np.ndarray:
+    avg_window_samples = max(1, int(np.floor(avg_window_ms * sample_rate_hz / 1000.0)))
+    shift_samples = max(1, int(np.floor(overlap_ms * sample_rate_hz / 1000.0)))
+    n_frames = round(signal.size / shift_samples) + 1
+
+    window = np.hamming(avg_window_samples)
+    padded_signal = np.concatenate(
+        (np.zeros(avg_window_samples), signal, np.zeros(avg_window_samples))
+    )
+    start_sample = int(np.ceil(avg_window_samples / 2.0)) - 1
+
+    spectra = np.zeros((fft_eval_points, n_frames), dtype=np.float64)
+
+    for frame_idx in range(n_frames):
+        chunk = padded_signal[start_sample : start_sample + avg_window_samples]
+        fft_vals = np.fft.fft(window * chunk, n=fft_eval_points * 2)
+        spectra[:, frame_idx] = _cog_fft_bins(fft_vals, fft_eval_points, use_power)
+        start_sample += shift_samples
+
+    return spectra.mean(axis=1)
+
+
+def _cog_win_spectrum(
+    signal: np.ndarray, fft_eval_points: int, use_power: bool
+) -> np.ndarray:
+    window = np.hanning(signal.size)
+    fft_vals = np.fft.fft(window * signal, n=fft_eval_points * 2)
+    return _cog_fft_bins(fft_vals, fft_eval_points, use_power)
+
+
+def _cog_fft_bins(
+    fft_vals: np.ndarray, fft_eval_points: int, use_power: bool
+) -> np.ndarray:
+    one_sided = fft_vals[:fft_eval_points]
+
+    if use_power:
+        return np.real(one_sided) ** 2 + np.imag(one_sided) ** 2
+
+    return np.abs(one_sided)
+
+
+def _cog_moments(
+    spectrum: np.ndarray,
+    sample_rate_hz: float,
+    fft_eval_points: int,
+    cutoff_hz: float,
+) -> CogMeasure:
+    upper_bin = round(cutoff_hz * fft_eval_points * 2.0 / sample_rate_hz)
+    upper_bin = min(fft_eval_points, upper_bin)
+
+    if upper_bin <= 1:
+        return CogMeasure(l1=np.nan, skew=np.nan, kurt=np.nan)
+
+    spectrum = spectrum[:upper_bin]
+    total = float(np.sum(spectrum))
+
+    if total <= 0.0 or not np.isfinite(total):
+        return CogMeasure(l1=np.nan, skew=np.nan, kurt=np.nan)
+
+    normalized = spectrum / total
+    normalized = normalized[1:]
+
+    frequencies_hz = (
+        np.linspace(1.0, float(upper_bin), upper_bin - 1)
+        * sample_rate_hz
+        / (fft_eval_points * 2.0)
+    )
+
+    l1 = float(np.sum(frequencies_hz * normalized))
+    centered = frequencies_hz - l1
+
+    l2 = float(np.sum(centered**2 * normalized))
+    l3 = float(np.sum(centered**3 * normalized))
+    l4 = float(np.sum(centered**4 * normalized))
+
+    if l2 <= 0.0 or not np.isfinite(l2):
+        return CogMeasure(l1=l1, skew=np.nan, kurt=np.nan)
+
+    skew = l3 / (l2**1.5)
+    kurt = l4 / (l2**2) - 3.0
+
+    return CogMeasure(l1=l1, skew=float(skew), kurt=float(kurt))

@@ -14,10 +14,14 @@ class SelectionMenu(QMenu):
         self.root = parent.root
 
         self.addAction(
-            "Set head to cursor", lambda: self.root.set_head(self.state.cursor_s), shortcut="Ctrl+D",
+            "Set head to cursor",
+            lambda: self.root.set_head(self.state.cursor_s),
+            shortcut="Ctrl+D",
         )
         self.addAction(
-            "Set tail to cursor", lambda: self.root.set_tail(self.state.cursor_s), shortcut="Ctrl+T",
+            "Set tail to cursor",
+            lambda: self.root.set_tail(self.state.cursor_s),
+            shortcut="Ctrl+T",
         )
         self.addAction("Set selection to label pair", self._set_sel_to_lbl_pair)
         self.addAction(

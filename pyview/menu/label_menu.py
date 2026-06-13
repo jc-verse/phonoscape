@@ -35,9 +35,11 @@ class LabelMenu(QMenu):
         self.addSeparator()
         self.addAction("Save labels...", self._save_labels)
         self.addAction("Load labels...", self._load_labels)
-        labeling_behavior_menu = QMenu("Labeling behavior", self, shortcut="Ctrl+K")
+        labeling_behavior_menu = QMenu("Labeling behavior", self)
         labeling_behavior_menu.addAction("Clear", parent._todo("Clear"))
-        labeling_behavior_menu.addAction("Select...", parent._todo("Select..."))
+        labeling_behavior_menu.addAction(
+            "Select...", parent._todo("Select..."), shortcut="Ctrl+K"
+        )
         labeling_behavior_menu.addAction("Configure...", parent._todo("Configure..."))
         self.addMenu(labeling_behavior_menu)
 

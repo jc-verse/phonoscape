@@ -2,13 +2,14 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QMenu
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
 from ..state import AudioTrajDisplay, ScalarTrajDisplay
-from ..data.process import get_cog, get_zc, get_rms
+from ..data.process import get_zc, get_rms
+from ..data.spectra import get_cog
 from ..modals.spectral_analysis_modal import open_spectral_analysis_dialog
 
 
@@ -20,16 +21,18 @@ class DataMenu(QMenu):
         self.root = parent.root
 
         self.addAction("Report", self._report)
-        self.addAction("Track formants", parent._todo("Track formants"), shortcut="Ctrl+J")
+        self.addAction(
+            "Track formants", parent._todo("Track formants"), shortcut="Ctrl+J"
+        )
 
-        spect_config_action = QAction("Configure spectral analysis...", self, shortcut="Ctrl+A")
+        spect_config_action = self.addAction(
+            "Configure spectral analysis...",
+            QKeySequence("Ctrl+A"),
+            lambda: open_spectral_analysis_dialog(self),
+        )
         # Without this, the action gets the "Preferences" role and shows up in
         # the "Preferences" menu on MacOS.
         spect_config_action.setMenuRole(QAction.MenuRole.NoRole)
-        spect_config_action.triggered.connect(
-            lambda: open_spectral_analysis_dialog(self)
-        )
-        self.addAction(spect_config_action)
 
     def _report(self):
         print(
@@ -37,9 +40,19 @@ class DataMenu(QMenu):
         )
         if traj := self.state.selected_value.audio_traj:
             idx = round(self.state.cursor_s * traj.sample_rate_hz)
-            # MVIEW does not pass any of the config into cog().
-            # TODO: perhaps we should
-            cog = get_cog(traj, self.state.cursor_s)
+            cog = get_cog(
+                traj,
+                self.state.cursor_s,
+                # MVIEW does not pass any of the config into cog().
+                alg="AVG",
+                spec="MAG",
+                cutoff_hz=self.state.app_config.spectral_display_cutoff_hz,
+                preemp=self.state.app_config.pre_emphasis,
+                window_ms=self.state.app_config.analysis_window_ms,
+                fft_eval_points=self.state.app_config.fft_eval_points,
+                avg_window_ms=self.state.app_config.averaging_window_ms,
+                overlap_ms=self.state.app_config.overlap_ms,
+            )
             win_ms = self.state.app_config.analysis_window_ms
             zc = get_zc(traj, win_ms, self.state.cursor_s)
             rms = get_rms(traj, win_ms, self.state.cursor_s)
@@ -65,9 +78,9 @@ class DataMenu(QMenu):
             if isinstance(spec, AudioTrajDisplay):
                 traj_measures.append((str(spec), data[idx]))
             elif isinstance(spec, ScalarTrajDisplay):
-                if spec.content in {"SIGNAL", "RMS", "ZC", "F0"}:
+                if spec.content in {"RMS", "ZC", "F0"}:
                     traj_measures.append((str(spec), data[idx]))
-                # Ignore SPECT
+                # Ignore SPECT and SIGNAL
             else:
                 if (
                     spec.content in {"velocity", "acceleration"}

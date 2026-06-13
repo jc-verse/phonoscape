@@ -159,7 +159,9 @@ The following optional fields may be provided for each trajectory struct:
   Vals:   -59.3   -7.6 ...
   ```
 
-  Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except spectrograms), depending on which dimensions are being viewed.
+  The second row only shows analysis from the "privileged" audio track, if it exists. The analysis window length is used by all analyses on this row. The spectral center of gravity (COG) analysis (L1, skewness, kurtosis) uses some additional parameters: # FFT eval points, spectral display cutoff, pre-emphasis, and averaging window and overlap (only if the algorithm is averaging). In MVIEW, all of these parameters are hard-coded. Currently the algorithm is fixed to be averaging (instead of windowing) and the spectrum is fixed to be magnitude (instead of power).
+
+  Note that the "Traj" list outputs at least one column for each temporally displayed trajectory (except raw audio signals and spectrograms; unlike MVIEW, analyzed trajectories of non-"privileged" audio tracks are still reported here), depending on which dimensions are being viewed.
 
   TODO: LaTeX/Markdown/CSV/JSON/Excel-paste-compatible output.
 
