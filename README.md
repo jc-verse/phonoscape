@@ -34,7 +34,7 @@ PyView strives to be 100% MVIEW-compatible: any input that works in MVIEW, proba
 PyView is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
 
 1. [External procedures](#external-procedures)
-2. External spectrum window, formant tracking
+2. Formant tracking
 3. File export (configuration, data, etc.)
 4. Dataset import: `LABELS`, `CONTOURS`, `SPREAD` fields
 5. Circle-fitting (for tongue shape)
@@ -164,7 +164,7 @@ The following optional fields may be provided for each trajectory struct:
   TODO: LaTeX/Markdown/CSV/JSON/Excel-paste-compatible output.
 
 - **Track formants**: TODO
-- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), the external spectrum window (TODO), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
+- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
   - **Active analyses** (default: LPC): TODO
   - **Analysis window (ms)** (default: 30ms): Configures the window size for the `RMS` and `ZC` temporal analyses (unlike MVIEW which uses a fixed window), the window size for the **Report** output, and the cursor spectrum. The `SPECT` temporal analysis uses the **Averaging window** instead.
   - **Number of LPC coeffs** (default: `audio_sampling_rate / 1000 + 8` if female, otherwise `audio_sampling_rate / 1000 + 4`): Configures the LPC analysis (if enabled) in the cursor spectrum.
@@ -343,15 +343,16 @@ The cursor spectrum is the bottom-left panel. It shows the frequency spectrum of
 - **Number of LPC coeffs** (LPC-only)
 - **# FFT eval points**
 - **Averaging window (ms)** (AVG-only)
+- **Overlap (ms)** (AVG-only)
 - **SPL reference (dB)**
 - **Spectral display cutoff (Hz)**
 - **Pre-emphasis**
 
-Currently two modes are supported: Discrete Fourier Transform (DFT; cyan) and Linear Predictive Coding (LPC; white). By default only LPC is enabled.
+All 4 modes are supported and displayed in the same panel: Linear Predictive Coding (LPC), Discrete Fourier Transform (DFT), Average (AVG), Cepstral (CEPS). By default only LPC is enabled. In MVIEW, only the former two are displayed in the main panel; in PyView, all of them are, rendering the external spectrum unnecessary.
 
 The x-axis limit is from 0 to the value configured by **Spectral display cutoff**. The y-axis is in dB, whose limits expand as the plot updates (i.e., as you move the cursor). The way to reset the limit is to re-adjust the [SPL reference](#data-menu) which effectively shifts the curve.
 
-It also includes a small zoomed view of the audio signal around the cursor (shown as a green dashed line, centered at the plot). Unlike MVIEW, it's slightly more useful: the zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis. For this reason, you must configure its window size through [spectral analysis](#data-menu) **Analysis window** instead of using the right-click context menu or a separate slider.
+It also includes a small zoomed view of the audio signal around the cursor. This is not the same as the MVIEW's plot at this position: instead, it's more similar to the audio clip shown when right-clicked on the cursor spectrum (however, also unlike MVIEW, the clip strictly only includes `[cursor - window / 2, cursor + window / 2]`, while MVIEW includes `[cursor - window, cursor + window]`). The zoom window is always synchronized with the analysis window, so you know the raw signal that's submitted for spectral analysis. For this reason, you must configure its window size through [spectral analysis](#data-menu) **Analysis window** instead of using the right-click context menu or a separate slider. In addition to the audio signal, it shows the cursor (centered, green dash line) and the Hann window curve (yellow).
 
 The vertical slider here that customizes the spectrogram contrast has been moved to [Temporal layout](#view-menu).
 

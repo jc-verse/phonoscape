@@ -31,18 +31,29 @@ class ZoomedAudioView(QWidget):
 
         if self.state.selected_value.audio_traj is None:
             return
-        t, audio_slice = self._get_current_audio_slice()
+        t, audio_slice, window_overlay = self._get_current_audio_slice()
 
         self.figure.clear()
         self.ax = self.figure.add_subplot(111)
         self.ax.set_xticks([])
         self.ax.set_yticks([])
         self.curve_artist = self.ax.plot(
-            t, audio_slice, color=plt.rcParams["text.color"], linewidth=0.8
+            t,
+            audio_slice,
+            color=self.state.colors[self.state.selected_value.audio_traj.name],
+            linewidth=0.8,
         )[0]
         self.cursor_artist = self.ax.axvline(
             0, color="green", linestyle="--", linewidth=0.8
         )
+        self.window_artist = self.ax.plot(
+            np.linspace(-1, 1, window_overlay.size)
+            * (self.state.app_config.analysis_window_ms / 2000),
+            window_overlay,
+            color="yellow",
+            linewidth=0.8,
+            alpha=0.75,
+        )[0]
         self.ax.set_ylim(
             self.state.selected_value.audio_traj.signal.min(),
             self.state.selected_value.audio_traj.signal.max(),
@@ -51,7 +62,6 @@ class ZoomedAudioView(QWidget):
             -self.state.app_config.analysis_window_ms / 2000,
             self.state.app_config.analysis_window_ms / 2000,
         )
-        # TODO: right/double/modified clicking gesture (open new window)
 
         self.canvas.draw_idle()
 
@@ -72,8 +82,13 @@ class ZoomedAudioView(QWidget):
             )
 
         if data or cursor or xlim:
-            t, audio_slice = self._get_current_audio_slice()
+            t, audio_slice, window_overlay = self._get_current_audio_slice()
             self.curve_artist.set_data(t, audio_slice)
+            self.window_artist.set_data(
+                np.linspace(-1, 1, window_overlay.size)
+                * (self.state.app_config.analysis_window_ms / 2000),
+                window_overlay,
+            )
 
         if data or cursor or xlim:
             self.canvas.draw_idle()
@@ -96,4 +111,8 @@ class ZoomedAudioView(QWidget):
             np.arange(start_sample, end_sample) / audio_traj.sample_rate_hz
             - self.state.cursor_s
         )
-        return t, audio_slice
+
+        ymax = self.state.selected_value.audio_traj.signal.max()
+        window = np.hanning(audio_slice.size) * ymax
+
+        return t, audio_slice, window

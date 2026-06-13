@@ -12,6 +12,8 @@ class CursorSpectra:
     frequency_hz: np.ndarray
     lpc_db: np.ndarray | None
     dft_db: np.ndarray | None
+    avg_db: np.ndarray | None
+    ceps_db: np.ndarray | None
 
 
 def get_cursor_spectra(state: WindowState) -> CursorSpectra:
@@ -24,17 +26,20 @@ def get_cursor_spectra(state: WindowState) -> CursorSpectra:
         audio.signal, state.cursor_s, audio.sample_rate_hz, config.analysis_window_ms
     )
     signal = apply_pre_emphasis(signal, config.pre_emphasis)
-    signal = windows.hann(signal.size, sym=True) * signal
+    windowed_signal = windows.hann(signal.size, sym=True) * signal
 
+    # For some reason, MVIEW actually uses f = linspace(0, sr/2, frame+1)
     frequency_hz = np.linspace(
         0.0, audio.sample_rate_hz / 2.0, config.fft_eval_points + 1
-    )[1:]
+    )
     lpc_db = None
     dft_db = None
+    avg_db = None
+    ceps_db = None
 
     if config.active_analyses & ActiveAnalysis.LPC:
-        _, lpc_db = lpc_spectrum_db(
-            signal,
+        lpc_db = lpc_spectrum_db(
+            windowed_signal,
             audio.sample_rate_hz,
             config.lpc_order,
             config.fft_eval_points,
@@ -43,10 +48,34 @@ def get_cursor_spectra(state: WindowState) -> CursorSpectra:
 
     if config.active_analyses & ActiveAnalysis.DFT:
         dft_db = dft_spectrum_db(
-            signal, config.fft_eval_points, config.spl_reference_db
+            windowed_signal, config.fft_eval_points, config.spl_reference_db
         )
 
-    return CursorSpectra(frequency_hz=frequency_hz, lpc_db=lpc_db, dft_db=dft_db)
+    if config.active_analyses & ActiveAnalysis.AVG:
+        avg_db = avg_spectrum_db(
+            signal,
+            audio.sample_rate_hz,
+            config.fft_eval_points,
+            config.averaging_window_ms,
+            config.overlap_ms,
+            config.spl_reference_db,
+        )
+
+    if config.active_analyses & ActiveAnalysis.CEPS:
+        ceps_db = ceps_spectrum_db(
+            windowed_signal,
+            audio.sample_rate_hz,
+            config.fft_eval_points,
+            config.spl_reference_db,
+        )
+
+    return CursorSpectra(
+        frequency_hz=frequency_hz,
+        lpc_db=lpc_db,
+        dft_db=dft_db,
+        avg_db=avg_db,
+        ceps_db=ceps_db,
+    )
 
 
 def get_analysis_frame(
@@ -135,18 +164,94 @@ def lpc_spectrum_db(
     reference_db: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     a, gain = lpc_autocorr(signal, order)
-    frequency_hz, response = freqz(gain, a, worN=fft_eval_points + 1, fs=sample_rate_hz)
+    _, response = freqz(gain, a, worN=fft_eval_points + 1, fs=sample_rate_hz)
 
-    frequency_hz = frequency_hz[1:]
-    response = np.abs(response[1:])
+    response = np.abs(response)
     spectrum_db = 20.0 * np.log10(response / reference_db + np.finfo(float).eps)
 
-    return frequency_hz, spectrum_db
+    return spectrum_db
 
 
 def dft_spectrum_db(
     signal: np.ndarray, fft_eval_points: int, reference_db: float
 ) -> np.ndarray:
     spectrum = np.abs(np.fft.fft(signal, fft_eval_points * 2))
-    spectrum = spectrum[1 : fft_eval_points + 1]
+    spectrum = spectrum[:fft_eval_points + 1]
     return 20.0 * np.log10(spectrum / reference_db + np.finfo(float).eps)
+
+
+def avg_spectrum_db(
+    signal: np.ndarray,
+    sample_rate_hz: float,
+    fft_eval_points: int,
+    averaging_window_ms: float,
+    overlap_ms: float,
+    reference_db: float,
+) -> np.ndarray:
+    avg_window_samples = max(
+        1, int(np.floor(averaging_window_ms * sample_rate_hz / 1000.0))
+    )
+    avg_window_samples = avg_window_samples + 1 - avg_window_samples % 2
+    shift_samples = max(1, int(np.floor(overlap_ms * sample_rate_hz / 1000.0)))
+    avg_fft_points = 2 ** int(np.ceil(np.log2(avg_window_samples)))
+    n_frames = round(signal.size / shift_samples) + 1
+
+    window = windows.hamming(avg_window_samples, sym=True)
+    padded_signal = np.concatenate(
+        (np.zeros(avg_window_samples), signal, np.zeros(avg_window_samples))
+    )
+    start_sample = int(np.ceil(avg_window_samples / 2.0))
+
+    spectra = np.zeros((avg_fft_points + 1, n_frames))
+
+    for frame_idx in range(n_frames):
+        frame = padded_signal[start_sample : start_sample + avg_window_samples]
+        frame_spectrum = np.abs(np.fft.fft(window * frame, avg_fft_points * 2))
+        spectra[:, frame_idx] = frame_spectrum[: avg_fft_points + 1]
+        start_sample += shift_samples
+
+    averaged_spectrum = spectra.mean(axis=1)
+
+    source_frequency_hz = np.linspace(0.0, sample_rate_hz / 2.0, avg_fft_points + 1)
+    target_frequency_hz = np.linspace(0.0, sample_rate_hz / 2.0, fft_eval_points + 1)
+    interpolated = np.interp(
+        target_frequency_hz, source_frequency_hz, averaged_spectrum
+    )
+
+    return 20.0 * np.log10(interpolated / reference_db + np.finfo(float).eps)
+
+
+def ceps_spectrum_db(
+    signal: np.ndarray,
+    sample_rate_hz: float,
+    fft_eval_points: int,
+    reference_db: float,
+) -> np.ndarray:
+    spectrum = np.abs(np.fft.fft(signal, fft_eval_points * 2))
+    cepstrum = np.real(
+        np.fft.ifft(np.log(spectrum + np.finfo(float).eps), fft_eval_points * 2)
+    )
+
+    search = np.abs(cepstrum[10:fft_eval_points])
+
+    if search.size == 0 or np.mean(search) <= np.finfo(float).eps:
+        n_coefficients = round(25 * sample_rate_hz / 10000.0)
+    else:
+        peak_offset = int(np.argmax(search))
+        peak_idx = peak_offset + 10
+        peak_value = search[peak_offset]
+
+        if (
+            peak_value / np.mean(search) > 10.0
+            and round(sample_rate_hz / peak_idx) < 200
+        ):
+            n_coefficients = round(peak_idx / 3.0)
+        else:
+            n_coefficients = round(25 * sample_rate_hz / 10000.0)
+
+    n_coefficients = int(np.clip(n_coefficients, 1, fft_eval_points - 1))
+    cepstrum[n_coefficients : fft_eval_points * 2 - n_coefficients] = 0.0
+
+    smoothed_spectrum = np.exp(np.abs(np.fft.fft(cepstrum))[: fft_eval_points + 1])
+
+    return 20.0 * np.log10(smoothed_spectrum / reference_db + np.finfo(float).eps)
