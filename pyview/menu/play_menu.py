@@ -35,7 +35,7 @@ class PlayMenu(QMenu):
 
         self.addSeparator()
         self.addAction(
-            "Select playback track...", parent._todo("Select playback track")
+            "Select playback track...", parent._todo("Select playback track"), shortcut="Ctrl+8"
         )
 
     def _set_play_mode(self, mode: str) -> None:

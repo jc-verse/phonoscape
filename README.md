@@ -34,11 +34,11 @@ PyView strives to be 100% MVIEW-compatible: any input that works in MVIEW, proba
 PyView is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
 
 1. [External procedures](#external-procedures)
-2. Formant tracking
+2. F0/Formant tracking
 3. File export (configuration, data, etc.)
 4. Dataset import: `LABELS`, `CONTOURS`, `SPREAD` fields
 5. Circle-fitting (for tongue shape)
-6. Small things: select playback track, auto-update/manual-update
+6. Small things: select playback track, auto-update/manual-update, fix entire window export layout
 
 ## Central concepts
 
@@ -144,7 +144,7 @@ The following optional fields may be provided for each trajectory struct:
   - **Temporal view**: Open the right panel only.
   - **Spatial view**: Open the top-left panel only.
   - **Entire window**: Clone all plots in the current window as a single matplotlib figure. Currently the layout is broken.
-- **Close window**: Closes the current window only.
+- **Close window (Ctrl+W)**: Closes the current window only.
 - **Close all**: Closes all variable windows, which should quit the application.
 
 ### Data menu
@@ -163,14 +163,14 @@ The following optional fields may be provided for each trajectory struct:
 
   TODO: LaTeX/Markdown/CSV/JSON/Excel-paste-compatible output.
 
-- **Track formants**: TODO
-- **Spectral analysis**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
+- **Track formants (Ctrl+J)**: TODO
+- **Spectral analysis (Ctrl+A)**: Opens a dialog to configure the spectrogram parameters. These parameters may affect: the cursor spectrum in the bottom left, the temporal analysis in the temporal view (`SPECT`, `RMS`, `ZC`, `F0`), and the **Report** action. Note that the "nudge" setting has been moved to the ["Configure movement"](#movement-menu) dialog.
   - **Active analyses** (default: LPC): TODO
   - **Analysis window (ms)** (default: 30ms): Configures the window size for the `RMS` and `ZC` temporal analyses (unlike MVIEW which uses a fixed window), the window size for the **Report** output, and the cursor spectrum. The `SPECT` temporal analysis uses the **Averaging window** instead.
   - **Number of LPC coeffs** (default: `audio_sampling_rate / 1000 + 8` if female, otherwise `audio_sampling_rate / 1000 + 4`): Configures the LPC analysis (if enabled) in the cursor spectrum.
   - **# FFT eval points** (default: 256): Configures the frequency resolution of all relevant spectral analyses. Unlike MVIEW (in MATLAB fewer FFT eval points silently truncates the window), the number of FFT samples must be at least the window sample size.
-  - **Averaging window (ms)** (default: 6ms): Configures the analysis window for the `SPECT` (I don't think this is right but this is how it is in MVIEW).
-  - **Overlap (ms)** (default: 1ms): Configures the window shift for the `SPECT`.
+  - **Averaging window (ms)** (default: 6ms): Configures the window size for the `SPECT` (I don't think this is the best way but this is how it is in MVIEW) and the AVG analysis (if enabled).
+  - **Overlap (ms)** (default: 1ms): Configures the window shift for the `SPECT` and the AVG analysis (if enabled).
   - **SPL reference (μPa)** (default: 20μPa): Reference amplitude used when converting cursor/external spectra to dB. MVIEW's default is 20, corresponding nominally to 20µPa, but this is only physically meaningful for calibrated pressure signals. For ordinary digital audio, it acts as a vertical dB normalization/plotting offset.
   - **Spectral display cutoff (Hz)** (default: `audio_sampling_rate / 2`): Affects visualization only. Configures the ymax of `SPECT` and the xmax of the time-slice spectrograms.
   - **Pre-emphasis** (default: 0.98): If the **(Adaptive)** checkbox is checked, then the pre-emphasis coefficient is automatically determined by the signal (by computing the lag-1 autocorrelation). Otherwise, the specified coefficient is used (which should be between 0 and 1). Affects cursor spectrum only (TODO: this way is for MVIEW compatibility; `SPECT` uses hard-coded first-difference. I think this config should apply there too.)
@@ -179,7 +179,7 @@ The following optional fields may be provided for each trajectory struct:
 
 ### View menu
 
-- **Temporal layout**: Configure which trajectories to display in the temporal view. It launches a dialog where you can:
+- **Temporal layout (Ctrl+C)**: Configure which trajectories to display in the temporal view. It launches a dialog where you can:
   - Select available trajectories from the left-hand side to add (`>`) to the display area on the right-hand side.
   - Select displayed trajectories from the right-hand side to remove (`x`) from the display area.
   - Select one displayed trajectory from the right-hand side to reorder (`^` and `v`).
@@ -224,7 +224,7 @@ Only available if an audio trajectory exists.
   - **From cursor**: Between cursor and tail. If cursor is after tail, then play selection. This is different from MVIEW, which plays nothing.
   - **150ms @ cursor**: 150ms centered at the cursor, clamped to the selection (different from MVIEW; if you want the MVIEW behavior, slightly expand your selection).
   - **Between labels**: Only has an effect if the cursor is between two labels. Plays the audio between the previous and next labels.
-- **Select playback track**: TODO
+- **Select playback track (Ctrl+8)**: TODO
 
 Note that the behavior configured here applies to the "Play" button in the navbar as well.
 
@@ -232,8 +232,8 @@ Note that the behavior configured here applies to the "Play" button in the navba
 
 Currently a minimum of 25ms is enforced for the selection duration, regardless of sampling rate (slightly different from MVIEW). Customization will be allowed.
 
-- **Set head to cursor**: As it says; clamped to `tail - 25ms`.
-- **Set tail to cursor**: As it says; clamped to `head + 25ms`.
+- **Set head to cursor (Ctrl+D)**: As it says; clamped to `tail - 25ms`.
+- **Set tail to cursor (Ctrl+T)**: As it says; clamped to `head + 25ms`.
 - **Set selection to label pair**: Only has an effect if the cursor is between two labels. Sets head to the previous label and tail to the next label. The selection is at least 25ms long and is centered at the midpoint (or touches the start/end boundaries of the data).
 - **Reset selection**: Sets the selection to the whole data.
 - **Shrink selection**: Shrinks the selection by 10% on each side, keeping the center fixed. The selection is at least 25ms long.
@@ -264,7 +264,7 @@ Unlike MVIEW, labels are ordered by their creation, not by their temporal positi
 - **Make label**: Opens a dialog to add a new simple label at the end of the labels list. By default it's at the cursor position. A name is required (unlike MVIEW).
 - **Edit labels**: Opens a dialog to edit the labels list. Each label has a name, a position (in ms), and an optional note. You can delete and reorder labels. You can also edit the name, position, and note of each label. The position must be between the start and the end of the data.
 - **Clear all labels (Ctrl+Y)**: As it says. Shows a confirmation dialog.
-- **Export labels**: Exports labels to a `.lab` text file. The format is the same as MVIEW:
+- **Export labels (Ctrl+9)**: Exports labels to a `.lab` text file. The format is the same as MVIEW:
 
   ```plain
   LABEL    OFFSET    NOTE
@@ -276,7 +276,7 @@ Unlike MVIEW, labels are ordered by their creation, not by their temporal positi
 - **Import labels**: Imports labels from a `.lab` text file. The format is the same as MVIEW (see above). The imported labels are appended to the labels list. Only the `LABEL` and `OFFSET` columns are considered; any subsequent text is ignored (including the note).
 - **Save labels**: Saves the labels to the app shared memory (analogous to the MATLAB workspace), with an associated name.
 - **Load labels**: Loads the labels from the app shared memory. The loaded labels replace the current labels.
-- **Labeling behavior**: TODO
+- **Labeling behavior (Ctrl+K)**: TODO
 
 ## UI elements
 

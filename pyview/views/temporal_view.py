@@ -572,6 +572,7 @@ class TemporalView(QWidget):
             and self._event_is_in_cursor_axes(event)
             and event.xdata is not None
         ):
+            # TODO: modified click / shift-click
             open_label_dialog(self, ("create", float(event.xdata)))
 
     def _on_figure_leave(self, event) -> None:

@@ -20,9 +20,9 @@ class DataMenu(QMenu):
         self.root = parent.root
 
         self.addAction("Report", self._report)
-        self.addAction("Track formants", parent._todo("Track formants"))
+        self.addAction("Track formants", parent._todo("Track formants"), shortcut="Ctrl+J")
 
-        spect_config_action = QAction("Configure spectral analysis...", self)
+        spect_config_action = QAction("Configure spectral analysis...", self, shortcut="Ctrl+A")
         # Without this, the action gets the "Preferences" role and shows up in
         # the "Preferences" menu on MacOS.
         spect_config_action.setMenuRole(QAction.MenuRole.NoRole)

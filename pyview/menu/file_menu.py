@@ -212,7 +212,7 @@ class FileMenu(QMenu):
         open_figure_menu.addAction("Entire window", self._open_window_clone)
         self.addMenu(open_figure_menu)
         self.addSeparator()
-        self.addAction("Close window", self.root.close)
+        self.addAction("Close window", self.root.close, shortcut="Ctrl+W")
         self.addAction("Close all", self.root.window_manager.close_all)
 
     def _open_previous(self):

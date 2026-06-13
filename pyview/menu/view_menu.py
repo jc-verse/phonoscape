@@ -18,7 +18,7 @@ class ViewMenu(QMenu):
         self.state = parent.state
         self.root = parent.root
 
-        self.addAction("Temporal layout...", lambda: open_tempcfg_dialog(self))
+        self.addAction("Temporal layout...", lambda: open_tempcfg_dialog(self), shortcut="Ctrl+C")
         self.addAction(
             "Set common scaling...",
             lambda: open_common_scaling_dialog(self),
