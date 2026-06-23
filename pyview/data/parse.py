@@ -14,6 +14,7 @@ from ..state import (
     AudioTrajDisplay,
     ScalarTrajDisplay,
     SpatialTrajDisplay,
+    Color,
     AppConfig,
     get_component_names,
 )
@@ -454,7 +455,7 @@ def normalize_args(
     prop_cycle = plt.rcParams["axes.prop_cycle"]
     colors = prop_cycle.by_key()["color"]
     colors_iter = iter(colors)
-    colors: dict[str, str | tuple[float, float, float]] = {}
+    colors: dict[str, Color] = {}
     for name, traj in first_variable.trajectories.items():
         colors[name] = traj.color or (
             plt.rcParams["text.color"]

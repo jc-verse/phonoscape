@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from enum import IntFlag, Enum, auto
 from pathlib import Path
-from typing import Any, Literal, Unpack, TypedDict, cast
+from typing import Any, Literal, Unpack, TypedDict, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
+
+Color: TypeAlias = str | tuple[float, float, float]
 
 
 class ActiveAnalysis(IntFlag):
@@ -102,7 +104,7 @@ class SpatialTrajDisplay:
         return f"{prefix}{self.traj_name}{comp_str}"
 
 
-TrajDisplay = AudioTrajDisplay | ScalarTrajDisplay | SpatialTrajDisplay
+TrajDisplay: TypeAlias = AudioTrajDisplay | ScalarTrajDisplay | SpatialTrajDisplay
 
 
 @dataclass
@@ -112,7 +114,7 @@ class Trajectory:
     sample_rate_hz: float
     n_samples: int
     # As specified in the dataset
-    color: str | tuple[float, float, float] | None
+    color: Color | None
     data: NDArray[np.float64]
     angles: NDArray[np.float64] | None
 
@@ -168,7 +170,7 @@ class WindowState:
     selected_variable: str
     temporal_disp_specs: list[TrajDisplay]
     # Actually used (with defaults/customization/inheritance)
-    colors: dict[str, str | tuple[float, float, float]]
+    colors: dict[str, Color]
     app_config: AppConfig
     view: tuple[float, float, float]
     common_scaling: tuple[float, float, float] | None

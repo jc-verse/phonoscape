@@ -1,4 +1,4 @@
-from typing import Literal, TYPE_CHECKING
+from typing import Literal, TypeAlias, TYPE_CHECKING
 
 import numpy as np
 
@@ -27,7 +27,7 @@ from ..data.process import get_plotting_data
 from ..modals.label_modal import open_label_dialog
 from ..modals.common_scaling_modal import get_visible_scaling
 
-ArtistType = (
+ArtistType: TypeAlias = (
     tuple[Literal["spatial-single"], Line2D]
     # Multiple components are recentered
     | tuple[Literal["spatial-multi"], list[Line2D]]

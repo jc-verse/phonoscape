@@ -28,6 +28,7 @@ from ..state import (
     AudioTrajDisplay,
     ScalarTrajDisplay,
     SpatialTrajDisplay,
+    Color,
     get_component_names,
 )
 
@@ -197,7 +198,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     def selected_traj_name() -> str | None:
         return selected_loaded_name() or selected_displayed_name()
 
-    def color_to_qcolor(color: str | tuple[float, float, float]) -> QColor:
+    def color_to_qcolor(color: Color) -> QColor:
         if isinstance(color, str):
             return QColor(color)
         return QColor.fromRgbF(color[0], color[1], color[2])
@@ -205,7 +206,7 @@ def open_tempcfg_dialog(parent: ViewMenu) -> None:
     def qcolor_to_rgb(color: QColor) -> tuple[float, float, float]:
         return (color.redF(), color.greenF(), color.blueF())
 
-    def set_color_button_color(color: str | tuple[float, float, float]) -> None:
+    def set_color_button_color(color: Color) -> None:
         qcolor = color_to_qcolor(color)
         r = qcolor.redF()
         g = qcolor.greenF()

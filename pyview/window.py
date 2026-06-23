@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 from .data.process import analyze_audio
 from .menu.menu_bar import MenuBar
-from .state import WindowState, AppConfig, TrajDisplay
+from .state import WindowState, AppConfig, TrajDisplay, Color
 from .widgets.play_button import PlayButton, modes as play_modes
 from .widgets.readout import Readout
 from .views.temporal_view import TemporalView
@@ -30,7 +30,7 @@ class VarWindow(QMainWindow):
         window_manager: WindowManager,
         selected_variable: str,
         temporal_disp_specs: list[TrajDisplay],
-        colors: dict[str, str | tuple[float, float, float]],
+        colors: dict[str, Color],
         app_config: AppConfig,
         view: tuple[float, float, float],
         head_s: float,
