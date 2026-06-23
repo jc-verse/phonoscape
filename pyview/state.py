@@ -155,6 +155,7 @@ class Label:
     offset_s: float
     # MVIEW calls this "hook"
     note: str
+    color: Color
 
 
 class LabelEdit(TypedDict, total=False):
@@ -186,7 +187,7 @@ class WindowState:
         return self.app_config.data[self.selected_variable]
 
     def add_label(self, name: str, offset_s: float, note: str):
-        new_label = Label(name=name, offset_s=offset_s, note=note)
+        new_label = Label(name=name, offset_s=offset_s, note=note, color="red")
         self.labels.append(new_label)
         return new_label
 

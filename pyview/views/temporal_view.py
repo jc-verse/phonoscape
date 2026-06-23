@@ -267,7 +267,11 @@ class TemporalView(QWidget):
         label_artists: dict[Label, Line2D] = {}
         for label in self.state.labels:
             label_artists[label] = ax.axvline(
-                label.offset_s, color="red", linewidth=0.8, zorder=999, clip_on=True
+                label.offset_s,
+                color=label.color,
+                linewidth=0.8,
+                zorder=999,
+                clip_on=True,
             )
 
         if i == 0 or i == 1:
@@ -280,7 +284,7 @@ class TemporalView(QWidget):
                     label.name,
                     ha="left",
                     va="top",
-                    color="red",
+                    color=label.color,
                     zorder=999,
                     clip_on=False,
                 )
@@ -417,7 +421,7 @@ class TemporalView(QWidget):
                             ax = self.axes[i]
                             label_artists[label] = ax.axvline(
                                 label.offset_s,
-                                color="red",
+                                color=label.color,
                                 linewidth=0.8,
                                 zorder=999,
                                 clip_on=True,
@@ -432,7 +436,7 @@ class TemporalView(QWidget):
                                 label.offset_s,
                                 0.5,
                                 label.name,
-                                color="red",
+                                color=label.color,
                                 zorder=999,
                                 clip_on=True,
                             )
