@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 from enum import IntFlag, Enum, auto
 from pathlib import Path
-from typing import Any, Literal, Unpack, TypedDict, TypeAlias, cast
+from typing import Any, Literal, Unpack, TypedDict, TypeAlias, cast, TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from .lproc.protocol import LabelProcedure
+
 
 Color: TypeAlias = str | tuple[float, float, float]
 
@@ -162,12 +166,14 @@ class LabelEdit(TypedDict, total=False):
     name: str
     offset_s: float
     note: str
+    value: Any
 
 
 @dataclass
 class WindowState:
     custom: dict[str, tuple[str, Any]]
     labels: list[Label]
+    lproc: LabelProcedure
     selected_variable: str
     temporal_disp_specs: list[TrajDisplay]
     # Actually used (with defaults/customization/inheritance)

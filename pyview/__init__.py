@@ -4,8 +4,9 @@ from typing import Unpack
 from PySide6.QtWidgets import QApplication
 import matplotlib.pyplot as plt
 
-from .data.parse import load_variables, normalize_args, CmdArgs
+from .data.parse import load_variables, normalize_args, import_proc_ctor, CmdArgs
 from .window import VarWindow, WindowManager
+from .lproc.protocol import LabelProcedure
 
 
 def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
@@ -45,17 +46,21 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
             f"The duration of the selection (tail - head) must be at least 25 milliseconds, but got head={head_s * 1000} and tail={tail_s * 1000} ({(tail_s - head_s) * 1000:.1f} ms)"
         )
 
+    lproc_ctor_path = kwargs.get("lproc") or "pyview.lproc.lp_default"
+    lproc_ctor: type[LabelProcedure] = import_proc_ctor(lproc_ctor_path, "lp")
+
     app = QApplication.instance()
     owns_app = app is None
 
     if app is None:
         app = QApplication(sys.argv)
 
-    window_manager = WindowManager()
+    window_manager = WindowManager(lproc_ctor=lproc_ctor)
     window = VarWindow(
         window_manager=window_manager,
         selected_variable=selected_variable,
         temporal_disp_specs=temporal_disp_specs,
+        lproc_ctor=lproc_ctor,
         colors=colors,
         app_config=app_config,
         view=kwargs.get("view") or (0, -90, 0),

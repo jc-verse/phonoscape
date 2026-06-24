@@ -124,6 +124,12 @@ if __name__ == "__main__":
         metavar="HZ",
         help="Frequency upper limit (Hz) for spectrogram display (default: Nyquist frequency).",
     )
+    parser.add_argument(
+        "--lproc",
+        type=str,
+        metavar="PROC",
+        help="Label procedure to use for labeling (default: none).",
+    )
     args = parser.parse_args()
 
     pyview(
@@ -147,4 +153,5 @@ if __name__ == "__main__":
         tail=args.tail,
         sex=args.sex,
         spect_lim=args.spect_lim,
+        lproc=args.lproc,
     )

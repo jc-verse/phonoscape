@@ -422,7 +422,7 @@ Unlike MVIEW, the default labeling procedure is not special-cased; it is also de
 - `lp_extents`
 - `lp_findgest`
 - `lp_peaks`
-- `lp_PhaseAng`
+- `lp_phase_ang`
 - `lp_snapex`
 
 ## Loading/saving configuration

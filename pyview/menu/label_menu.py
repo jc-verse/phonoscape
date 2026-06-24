@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QMenu, QMessageBox, QFileDialog, QInputDialog
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
+from ..data.parse import import_proc_ctor
 from ..state import Label
 from ..modals.label_modal import open_label_dialog
 from ..modals.edit_labels_modal import open_edit_labels_dialog
@@ -36,9 +37,15 @@ class LabelMenu(QMenu):
         self.addAction("Save labels...", self._save_labels)
         self.addAction("Load labels...", self._load_labels)
         labeling_behavior_menu = QMenu("Labeling behavior", self)
+        self.lproc_name_display = labeling_behavior_menu.addAction(
+            self.state.lproc.name
+        )
+        self.lproc_name_display.setEnabled(False)
+        labeling_behavior_menu.addSeparator()
+
         labeling_behavior_menu.addAction("Clear", parent._todo("Clear"))
         labeling_behavior_menu.addAction(
-            "Select...", parent._todo("Select..."), shortcut="Ctrl+K"
+            "Select...", self._select_lproc, shortcut="Ctrl+K"
         )
         labeling_behavior_menu.addAction("Configure...", parent._todo("Configure..."))
         self.addMenu(labeling_behavior_menu)
@@ -222,3 +229,33 @@ class LabelMenu(QMenu):
             label for label in new_labels if label not in old_labels
         ]
         self.root.temporal_view.update_plot(labels=changed_labels)
+
+    def _select_lproc(self) -> None:
+        default_dir = Path(__file__).resolve().parent.parent / "lproc"
+        file_name, _selected_filter = QFileDialog.getOpenFileName(
+            self.root, "Select labeling procedure", str(default_dir), "Labeling procedures (lp_*.py)"
+        )
+
+        if not file_name:
+            return
+
+        path = Path(file_name)
+
+        if path.suffix != ".py" or not path.name.startswith("lp_"):
+            QMessageBox.critical(
+                self.root,
+                "Invalid labeling procedure",
+                "Choose a Python file named lp_*.py.",
+            )
+            return
+
+        try:
+            lproc_ctor = import_proc_ctor(path, "lp")
+            self.state.lproc = lproc_ctor()
+            self.lproc_name_display.setText(self.state.lproc.name)
+        except Exception as exc:
+            QMessageBox.critical(
+                self.root,
+                "Error loading labeling procedure",
+                f"Error attempting to load {path.name}:\n{exc}",
+            )

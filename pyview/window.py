@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from .data.process import analyze_audio
+from .lproc.protocol import LabelProcedure
 from .menu.menu_bar import MenuBar
 from .state import WindowState, AppConfig, TrajDisplay, Color
 from .widgets.play_button import PlayButton, modes as play_modes
@@ -30,6 +31,7 @@ class VarWindow(QMainWindow):
         window_manager: WindowManager,
         selected_variable: str,
         temporal_disp_specs: list[TrajDisplay],
+        lproc_ctor: type[LabelProcedure],
         colors: dict[str, Color],
         app_config: AppConfig,
         view: tuple[float, float, float],
@@ -43,6 +45,7 @@ class VarWindow(QMainWindow):
         self.state = WindowState(
             custom=custom,
             labels=[],
+            lproc=None,  # will be initialized later # pyright: ignore[reportArgumentType]
             selected_variable=selected_variable,
             temporal_disp_specs=temporal_disp_specs,
             colors=colors,
@@ -54,6 +57,7 @@ class VarWindow(QMainWindow):
             tail_s=tail_s,
             play_mode=play_modes[0],
         )
+        self.state.lproc = lproc_ctor()
         if self.state.app_config.audio_traj:
             self.state.selected_value.audio_traj = analyze_audio(
                 self.state.selected_value.trajectories[
@@ -239,8 +243,9 @@ class VarWindow(QMainWindow):
 
 
 class WindowManager:
-    def __init__(self):
+    def __init__(self, lproc_ctor: type[LabelProcedure]):
         self.windows: dict[str, VarWindow] = {}
+        self.lproc_ctor = lproc_ctor
 
     def open_window(self, name: str, parent_window: VarWindow) -> None:
         if name in self.windows:
@@ -273,6 +278,7 @@ class WindowManager:
                 k: selected_value.trajectories[k].color or v
                 for k, v in parent_window.state.colors.items()
             },
+            lproc_ctor=self.lproc_ctor,
             app_config=parent_window.state.app_config,
             view=parent_window.state.view,
             head_s=new_head,

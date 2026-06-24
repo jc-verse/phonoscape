@@ -1,7 +1,10 @@
 from pathlib import Path
+from importlib import import_module
+from importlib.util import spec_from_file_location, module_from_spec
+import sys
 import re
 from fnmatch import fnmatch
-from typing import TypedDict, Literal, cast, Any
+from typing import TypedDict, Literal, TypeVar, cast, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,6 +38,7 @@ class CmdArgs(TypedDict, total=False):
     tail: float | None
     sex: Literal["M", "F"] | None
     spect_lim: float | None
+    lproc: str | None
 
 
 def get_optional(arr: np.ndarray, name: str) -> np.ndarray | list[None]:
@@ -464,3 +468,34 @@ def normalize_args(
         )
 
     return config, temporal_disp_specs, colors
+
+
+T = TypeVar("T")
+
+
+def import_proc_ctor(mod: str | Path, prefix: str) -> type[T]:
+    if isinstance(mod, Path) or mod.endswith(".py"):
+        abs_path = Path(mod).resolve()
+        if not abs_path.exists():
+            raise FileNotFoundError(f"Label procedure file not found: {mod}")
+        mod_name = abs_path.stem
+        spec = spec_from_file_location(mod_name, abs_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load module from path {mod}")
+        print(spec)
+        proc_ctor_module = module_from_spec(spec)
+        sys.modules[mod_name] = proc_ctor_module
+        spec.loader.exec_module(proc_ctor_module)
+    else:
+        proc_ctor_module = import_module(mod)
+        _, mod_name = mod.rsplit(".", 1)
+        if not mod_name.startswith(f"{prefix}_"):
+            raise ValueError(
+                f"Label procedure name must start with '{prefix}_', but got {mod_name!r}"
+            )
+    proc_ctor_name = (
+        "".join(part.capitalize() for part in mod_name[len(prefix) + 1 :].split("_"))
+        + prefix.upper()
+    )
+    proc_ctor = cast(type[T], getattr(proc_ctor_module, proc_ctor_name))
+    return proc_ctor
