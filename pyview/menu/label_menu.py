@@ -233,7 +233,10 @@ class LabelMenu(QMenu):
     def _select_lproc(self) -> None:
         default_dir = Path(__file__).resolve().parent.parent / "lproc"
         file_name, _selected_filter = QFileDialog.getOpenFileName(
-            self.root, "Select labeling procedure", str(default_dir), "Labeling procedures (lp_*.py)"
+            self.root,
+            "Select labeling procedure",
+            str(default_dir),
+            "Labeling procedures (lp_*.py)",
         )
 
         if not file_name:

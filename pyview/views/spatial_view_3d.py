@@ -249,15 +249,11 @@ class SpatialView3D(QWidget):
                     else np.empty((0, 2, 3))
                 )
                 cmap = mpl.colormaps["hsv"]
-                colors = (
-                    cmap(np.linspace(0.0, 1.0, len(segments)))
-                    if len(segments)
-                    else np.empty((0, 4))
-                )
+                c = cmap(np.linspace(0.0, 1.0, len(segments))) if len(segments) else []
 
                 hue_artist = self.hue_history_artists[traj.name]
                 hue_artist.set_segments(segments)
-                hue_artist.set_color(colors)
+                hue_artist.set_color(c)
 
         if history_mode is not None:
             self.history = history_mode

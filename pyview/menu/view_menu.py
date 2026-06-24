@@ -1,10 +1,12 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtWidgets import QMenu
+from matplotlib.backend_bases import MouseEvent
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
+    from ..views.spatial_view_3d import SpatialView3D
 
 from ..modals.common_scaling_modal import open_common_scaling_dialog
 from ..modals.temporal_config_modal import open_tempcfg_dialog
@@ -17,6 +19,9 @@ class ViewMenu(QMenu):
 
         self.state = parent.state
         self.root = parent.root
+        self.spatial_view = cast(SpatialView3D, self.root.spatial_view)
+        # Otherwise the view menu should be disabled
+        assert isinstance(self.spatial_view, SpatialView3D)
 
         self.addAction(
             "Temporal layout...", lambda: open_tempcfg_dialog(self), shortcut="Ctrl+C"
@@ -43,7 +48,7 @@ class ViewMenu(QMenu):
         for label, value in [("None", False), ("History", True), ("Hue", "hue")]:
             action = QAction(label, self, checkable=True, checked=label == "None")
             action.triggered.connect(
-                lambda checked=False, value=value: self.root.spatial_view.update_plot(
+                lambda checked=False, value=value: self.spatial_view.update_plot(
                     history_mode=value
                 )
             )
@@ -80,11 +85,13 @@ class ViewMenu(QMenu):
             self.free_rotate_action.triggered.connect(self._free_rotate)
             spatial_3d_view_menu.addAction(self.free_rotate_action)
 
-            self.root.spatial_view.canvas.mpl_connect(
-                "motion_notify_event", self._on_spatial_axis_rotate
+            self.spatial_view.canvas.mpl_connect(
+                "motion_notify_event",
+                self._on_spatial_axis_rotate,  # pyright: ignore[reportArgumentType]
             )
-            self.root.spatial_view.canvas.mpl_connect(
-                "button_release_event", self._on_spatial_axis_rotate_complete
+            self.spatial_view.canvas.mpl_connect(
+                "button_release_event",
+                self._on_spatial_axis_rotate_complete,  # pyright: ignore[reportArgumentType]
             )
 
             self.addMenu(spatial_3d_view_menu)
@@ -98,25 +105,25 @@ class ViewMenu(QMenu):
         # but its icon shouldn't affect alignment of other items, so add a separator.
 
     def _hide_spline(self) -> None:
-        if self.root.spatial_view.spline_artist is not None:
-            self.root.spatial_view.spline_artist.set_visible(
+        if self.spatial_view.spline_artist is not None:
+            self.spatial_view.spline_artist.set_visible(
                 not self.hide_spline_action.isChecked()
             )
-            self.root.spatial_view.canvas.draw_idle()
+            self.spatial_view.canvas.draw_idle()
 
     def _free_rotate(self) -> None:
         free_rotate = self.free_rotate_action.isChecked()
         if free_rotate:
-            self.root.spatial_view.ax.mouse_init()
+            self.spatial_view.ax.mouse_init()
         else:
-            self.root.spatial_view.ax.disable_mouse_rotation()
+            self.spatial_view.ax.disable_mouse_rotation()
 
     def _set_view_option(self, label: str) -> None:
         elev, azim, roll = views[label]
         self.root.state.view = (elev, azim, roll)
         self.root.readout.readout_camera(elev=elev, azim=azim, roll=roll)
-        self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
-        self.root.spatial_view.canvas.draw_idle()
+        self.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
+        self.spatial_view.canvas.draw_idle()
 
     def _set_view(self, view: tuple[float, float, float]) -> None:
         matching_view = None
@@ -132,8 +139,8 @@ class ViewMenu(QMenu):
         elev, azim, roll = view
         self.root.state.view = view
         self.root.readout.readout_camera(elev=elev, azim=azim, roll=roll)
-        self.root.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
-        self.root.spatial_view.canvas.draw_idle()
+        self.spatial_view.ax.view_init(elev=elev, azim=azim, roll=roll)
+        self.spatial_view.canvas.draw_idle()
 
     def _clear_view_selection(self) -> None:
         self.view_action_group.setExclusive(False)
@@ -141,27 +148,27 @@ class ViewMenu(QMenu):
             action.setChecked(False)
         self.view_action_group.setExclusive(True)
 
-    def _on_spatial_axis_rotate(self, event) -> None:
+    def _on_spatial_axis_rotate(self, event: MouseEvent) -> None:
         if not self.free_rotate_action.isChecked():
             return
-        if event.inaxes is not self.root.spatial_view.ax:
+        if event.inaxes is not self.spatial_view.ax:
             return
         self.root.readout.readout_camera(
-            elev=self.root.spatial_view.ax.elev,
-            azim=self.root.spatial_view.ax.azim,
-            roll=self.root.spatial_view.ax.roll,
+            elev=self.spatial_view.ax.elev,
+            azim=self.spatial_view.ax.azim,
+            roll=self.spatial_view.ax.roll,
         )
 
-    def _on_spatial_axis_rotate_complete(self, event) -> None:
+    def _on_spatial_axis_rotate_complete(self, event: MouseEvent) -> None:
         if not self.free_rotate_action.isChecked():
             return
-        if event.inaxes is not self.root.spatial_view.ax:
+        if event.inaxes is not self.spatial_view.ax:
             return
 
         view = (
-            self.root.spatial_view.ax.elev,
-            self.root.spatial_view.ax.azim,
-            self.root.spatial_view.ax.roll,
+            self.spatial_view.ax.elev,
+            self.spatial_view.ax.azim,
+            self.spatial_view.ax.roll,
         )
         self.root.state.view = view
 

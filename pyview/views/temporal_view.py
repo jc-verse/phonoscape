@@ -7,6 +7,7 @@ import matplotlib.axes as plt_axes
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.colors import PowerNorm
 from matplotlib.figure import Figure
+from matplotlib.backend_bases import MouseEvent, LocationEvent
 from matplotlib.image import AxesImage
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
@@ -80,10 +81,21 @@ class TemporalView(QWidget):
         self.canvas = FigureCanvasQTAgg(self.figure)
         layout.addWidget(self.canvas)
 
-        self.canvas.mpl_connect("button_press_event", self._on_press)
-        self.canvas.mpl_connect("motion_notify_event", self._on_motion)
-        self.canvas.mpl_connect("button_release_event", self._on_release)
-        self.canvas.mpl_connect("figure_leave_event", self._on_figure_leave)
+        self.canvas.mpl_connect(
+            "button_press_event", self._on_press  # pyright: ignore[reportArgumentType]
+        )
+        self.canvas.mpl_connect(
+            "motion_notify_event",
+            self._on_motion,  # pyright: ignore[reportArgumentType]
+        )
+        self.canvas.mpl_connect(
+            "button_release_event",
+            self._on_release,  # pyright: ignore[reportArgumentType]
+        )
+        self.canvas.mpl_connect(
+            "figure_leave_event",
+            self._on_figure_leave,  # pyright: ignore[reportArgumentType]
+        )
 
         self.reset_plot()
 
@@ -285,6 +297,7 @@ class TemporalView(QWidget):
                     color=label.color,
                     zorder=999,
                     clip_on=False,
+                    transform=ax.get_xaxis_transform(),
                 )
                 label_text_artists[label] = text
         else:
@@ -424,11 +437,14 @@ class TemporalView(QWidget):
                             ax = self.axes[i]
                             text = ax.text(
                                 label.offset_s,
-                                0.5,
+                                0.98,
                                 label.name,
+                                ha="left",
+                                va="top",
                                 color=label.color,
                                 zorder=999,
-                                clip_on=True,
+                                clip_on=False,
+                                transform=ax.get_xaxis_transform(),
                             )
                             label_text_artists[label] = text
         if cursor or trajectories or frame or spect_ylim or spatial_ylim or labels:
@@ -473,16 +489,20 @@ class TemporalView(QWidget):
         toolbar = getattr(self.canvas, "toolbar", None)
         return toolbar is not None and bool(getattr(toolbar, "mode", ""))
 
-    def _on_press(self, event) -> None:
-        if self._toolbar_is_active() or event.xdata is None or event.button != 1:
+    def _on_press(self, event: MouseEvent) -> None:
+        if (
+            self._toolbar_is_active()
+            or event.xdata is None
+            or event.button != 1
+            or not event.inaxes
+        ):
             return
         if self._event_is_in_cursor_axes(event):
             idx = self.axes.index(event.inaxes)
             spec = self._get_temp_disp_specs()[idx]
             self.root.readout.readout_traj(
-                spec, self.plotting_data[idx][1], float(event.xdata)
+                spec, self.plotting_data[idx][1], event.xdata
             )
-        if self._event_is_in_cursor_axes(event):
             closest_label = None
             closest_dist = float("inf")
             for i, label in enumerate(self.state.labels):
@@ -490,9 +510,11 @@ class TemporalView(QWidget):
                 if dist < closest_dist:
                     closest_dist = dist
                     closest_label = i
-            # Smaller hitbox for labels
-            if closest_label is not None and closest_dist < 0.01 * (
-                self.state.tail_s - self.state.head_s
+            if (
+                closest_label is not None
+                and self.label_artists[idx][self.state.labels[closest_label]].contains(
+                    event
+                )[0]
             ):
                 if event.dblclick:
                     open_label_dialog(self, ("edit", closest_label))
@@ -500,70 +522,69 @@ class TemporalView(QWidget):
                     self.dragging = ("label", closest_label)
                 return
             self.dragging = "cursor"
-            self.root.set_cursor(float(event.xdata), keep_readout=True)
+            self.root.set_cursor(event.xdata, keep_readout=True)
         elif self._event_is_in_frame_axes(event):
             if event.dblclick:
                 self.root.set_selection(0, self.state.selected_value.duration_s)
                 return
-            loc = float(event.xdata)
-            dist_to_head = abs(loc - self.state.head_s)
-            dist_to_tail = abs(loc - self.state.tail_s)
-            # Allow a 5% hitbox around each edge
-            thres_dist = 0.025 * self.state.selected_value.duration_s
+            dist_to_head = abs(event.xdata - self.state.head_s)
+            dist_to_tail = abs(event.xdata - self.state.tail_s)
+            # Consistent with MVIEW's hitbox
+            # Can't use matplotlib's hit-testing because this is not a line
+            thres_dist = 0.008 * self.state.selected_value.duration_s
             if dist_to_head < dist_to_tail and dist_to_head < thres_dist:
                 self.dragging = "head"
-                self.root.set_head(loc)
+                self.root.set_head(event.xdata)
             elif dist_to_tail < dist_to_head and dist_to_tail < thres_dist:
                 self.dragging = "tail"
-                self.root.set_tail(loc)
-            elif self.state.head_s < loc < self.state.tail_s:
-                self.dragging = ("frame", loc)
+                self.root.set_tail(event.xdata)
+            elif self.state.head_s < event.xdata < self.state.tail_s:
+                self.dragging = ("frame", event.xdata)
 
-    def _on_motion(self, event) -> None:
-        if not self.dragging or event.xdata is None:
+    def _on_motion(self, event: MouseEvent) -> None:
+        if not self.dragging or event.xdata is None or event.inaxes is None:
             return
         if self._event_is_in_cursor_axes(event):
             idx = self.axes.index(event.inaxes)
             spec = self._get_temp_disp_specs()[idx]
             self.root.readout.readout_traj(
-                spec, self.plotting_data[idx][1], float(event.xdata)
+                spec, self.plotting_data[idx][1], event.xdata
             )
         if self.dragging == "cursor":
             if self._event_is_in_cursor_axes(event):
-                self.root.set_cursor(float(event.xdata), keep_readout=True)
+                self.root.set_cursor(event.xdata, keep_readout=True)
             else:
                 # Cancel drag if moved outside of axes
                 self.dragging = None
         elif self.dragging == "head":
             if self._event_is_in_frame_axes(event):
-                self.root.set_head(float(event.xdata))
+                self.root.set_head(event.xdata)
             else:
                 self.dragging = None
         elif self.dragging == "tail":
             if self._event_is_in_frame_axes(event):
-                self.root.set_tail(float(event.xdata))
+                self.root.set_tail(event.xdata)
             else:
                 self.dragging = None
         elif isinstance(self.dragging, tuple) and self.dragging[0] == "frame":
             old_loc = self.dragging[1]
             if self._event_is_in_frame_axes(event):
-                loc = float(event.xdata)
-                self.root.move_selection(loc - old_loc)
-                self.dragging = ("frame", loc)
+                self.root.move_selection(event.xdata - old_loc)
+                self.dragging = ("frame", event.xdata)
             else:
                 self.dragging = None
         elif isinstance(self.dragging, tuple) and self.dragging[0] == "label":
             label_idx = self.dragging[1]
             if self._event_is_in_cursor_axes(event):
                 new_label, old_label = self.state.edit_label(
-                    label_idx, offset_s=float(event.xdata)
+                    label_idx, offset_s=event.xdata
                 )
                 self.dragging = ("label", label_idx)
                 self.update_plot(labels=[new_label, old_label])
             else:
                 self.dragging = None
 
-    def _on_release(self, event) -> None:
+    def _on_release(self, event: MouseEvent) -> None:
         self.dragging = None
         if (
             event.button == 3
@@ -571,7 +592,7 @@ class TemporalView(QWidget):
             and event.xdata is not None
         ):
             # TODO: modified click / shift-click
-            open_label_dialog(self, ("create", float(event.xdata)))
+            open_label_dialog(self, ("create", event.xdata))
 
-    def _on_figure_leave(self, event) -> None:
+    def _on_figure_leave(self, event: LocationEvent) -> None:
         self.dragging = None
