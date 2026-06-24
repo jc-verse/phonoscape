@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
@@ -16,10 +16,12 @@ if TYPE_CHECKING:
     from ..views.temporal_view import TemporalView
 
 
-def open_label_dialog(
-    parent: TemporalView,
-    action: tuple[Literal["create"], float] | tuple[Literal["edit"], int],
-) -> None:
+LabelDialogAction: TypeAlias = (
+    tuple[Literal["create"], float] | tuple[Literal["edit"], int]
+)
+
+
+def open_label_dialog(parent: TemporalView, action: LabelDialogAction) -> None:
     dialog = QDialog(parent)
     dialog.setWindowTitle(f"{action[0].capitalize()} label")
     dialog.setModal(True)

@@ -1,4 +1,4 @@
-from typing import Literal, TypeAlias, TYPE_CHECKING
+from typing import Literal, TypeAlias, cast, TYPE_CHECKING
 
 import numpy as np
 
@@ -35,6 +35,12 @@ ArtistType: TypeAlias = (
     | tuple[Literal["scalar"], Line2D]
 )
 
+DraggingState: TypeAlias = (
+    Literal["cursor", "head", "tail", None]
+    | tuple[Literal["frame"], float]
+    | tuple[Literal["label"], int]
+)
+
 
 def contrast_gamma_from_db_range(data: np.ndarray, contrast: float):
     lo = np.nanpercentile(data, 1)
@@ -54,20 +60,12 @@ def contrast_gamma_from_db_range(data: np.ndarray, contrast: float):
 
 
 class TemporalView(QWidget):
-    def __init__(
-        self,
-        parent: QWidget,
-        root: VarWindow,
-    ):
+    def __init__(self, parent: QWidget, root: VarWindow):
         super().__init__(parent)
 
         self.root = root
-        self.dragging: (
-            Literal["cursor", "head", "tail", None]
-            | tuple[Literal["frame"], float]
-            | tuple[Literal["label"], int]
-        ) = None
         self.state = root.state
+        self.dragging: DraggingState = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -95,7 +93,8 @@ class TemporalView(QWidget):
             left=0.01, right=0.99, top=0.99, bottom=0.01, hspace=0
         )
         n = len(self.state.temporal_disp_specs)
-        height_ratios = [1.0, 0.08] + [  # Framing trajectory and spacing
+        # Framing trajectory and spacing
+        height_ratios = [1.0, 0.08] + [
             1.0 if spec.content != "SPECT" else 2.0
             for spec in self.state.temporal_disp_specs
         ]
@@ -140,24 +139,22 @@ class TemporalView(QWidget):
     ):
         traj = self.state.selected_value.trajectories[spec.traj_name]
         t, data = self.plotting_data[i]
-        artist: ArtistType | None = None
         if isinstance(spec, SpatialTrajDisplay):
             # Plotting multiple components: recenter
             if len(spec.components) > 1:
-                artist = ("spatial-multi", [])
+                lines: list[Line2D] = []
                 for j in range(data.shape[1]):
                     sub_data = data[:, j]
                     sub_data_center = (np.nanmax(sub_data) + np.nanmin(sub_data)) / 2
-                    a = ax.plot(
+                    line = ax.plot(
                         t,
                         sub_data - sub_data_center,
                         linewidth=0.8,
                         label=spec.components[j],
                         color=self.state.colors[traj.name],
-                        alpha=(1 - j * 0.3),
+                        alpha=1 - j * 0.3,
                     )[0]
-                    artist[1].append(a)
-
+                    lines.append(line)
                 ax.legend(
                     loc="upper right",
                     frameon=True,
@@ -165,6 +162,7 @@ class TemporalView(QWidget):
                     handlelength=1.2,
                     handletextpad=0.3,
                 )
+                artist: ArtistType = ("spatial-multi", lines)
             else:
                 artist = (
                     "spatial-single",
@@ -179,7 +177,7 @@ class TemporalView(QWidget):
                     data,
                     aspect="auto",
                     origin="lower",
-                    extent=t,
+                    extent=cast(tuple[float, float, float, float], t),
                     norm=PowerNorm(
                         gamma=contrast_gamma_from_db_range(data, spec.spect_contrast)
                     ),
@@ -312,7 +310,7 @@ class TemporalView(QWidget):
                 t, data = self.plotting_data[i]
                 if artist[0] == "image":
                     artist[1].set_data(data)
-                    artist[1].set_extent(t)
+                    artist[1].set_extent(cast(tuple[float, float, float, float], t))
                 elif artist[0] == "spatial-multi":
                     for j, line in enumerate(artist[1]):
                         sub_data = data[:, j]
@@ -341,42 +339,34 @@ class TemporalView(QWidget):
                     zero_visible = ymin < 0 < ymax
                     zero_artist.set_visible(zero_visible)
         if spatial_ylim or trajectories:
-            for i, (spec, ax, artist, (_, data)) in enumerate(
-                zip(
-                    self._get_temp_disp_specs(),
-                    self.axes,
-                    self.artists,
-                    self.plotting_data,
-                )
+            for spec, ax, artist, (_, data) in zip(
+                self._get_temp_disp_specs(), self.axes, self.artists, self.plotting_data
             ):
-                if artist[0] in ("spatial-single", "spatial-multi"):
-                    if self.state.common_scaling is None:
-                        ax.relim(visible_only=True)
-                        ax.autoscale(axis="y")
-                    else:
-                        scale = self.state.common_scaling[
-                            (
-                                0
-                                if spec.content == "movement"
-                                else 1 if spec.content == "velocity" else 2
-                            )
-                        ]
-                        if artist[0] == "spatial-multi":
-                            # Already centered
-                            ax.set_ylim(-scale / 2, scale / 2)
-                        else:
-                            data_center = (np.nanmax(data) + np.nanmin(data)) / 2
-                            ax.set_ylim(
-                                data_center - scale / 2, data_center + scale / 2
-                            )
+                if artist[0] not in ("spatial-single", "spatial-multi"):
+                    continue
+                if self.state.common_scaling is None:
+                    ax.relim(visible_only=True)
+                    ax.autoscale(axis="y")
+                    continue
+                scale = self.state.common_scaling[
+                    (
+                        0
+                        if spec.content == "movement"
+                        else 1 if spec.content == "velocity" else 2
+                    )
+                ]
+                if artist[0] == "spatial-multi":
+                    # Already centered
+                    ax.set_ylim(-scale / 2, scale / 2)
+                else:
+                    data_center = (np.nanmax(data) + np.nanmin(data)) / 2
+                    ax.set_ylim(data_center - scale / 2, data_center + scale / 2)
+
+        framing_traj = self.state.selected_value.trajectories[
+            self.state.app_config.framing_traj
+        ]
         # All of these may update ylim
-        if frame or (
-            (spatial_ylim or trajectories)
-            and self.state.selected_value.trajectories[
-                self.state.app_config.framing_traj
-            ].kind
-            == "spatial"
-        ):
+        if frame or ((spatial_ylim or trajectories) and framing_traj.kind == "spatial"):
             head_s = self.state.head_s
             tail_s = self.state.tail_s
             for i, ax in enumerate(self.axes):
@@ -447,20 +437,24 @@ class TemporalView(QWidget):
     def _get_temp_disp_specs(self):
         framing_traj_name = self.state.app_config.framing_traj
         framing_traj = self.state.selected_value.trajectories[framing_traj_name]
-        framing_traj_spec = (
-            ScalarTrajDisplay(content="MOVEMENT", traj_name=framing_traj_name)
-            if framing_traj.kind == "scalar"
-            else (
-                AudioTrajDisplay(content="SIGNAL", traj_name=framing_traj_name)
-                if framing_traj.kind == "audio"
-                else SpatialTrajDisplay(
-                    content="movement",
-                    traj_name=framing_traj_name,
-                    traj_dims=self.state.app_config.dimensions,
-                    components=get_component_names(self.state.app_config.dimensions),
-                )
+        framing_traj_spec: TrajDisplay
+
+        if framing_traj.kind == "scalar":
+            framing_traj_spec = ScalarTrajDisplay(
+                content="MOVEMENT", traj_name=framing_traj_name
             )
-        )
+        elif framing_traj.kind == "audio":
+            framing_traj_spec = AudioTrajDisplay(
+                content="SIGNAL", traj_name=framing_traj_name
+            )
+        else:
+            framing_traj_spec = SpatialTrajDisplay(
+                content="movement",
+                traj_name=framing_traj_name,
+                traj_dims=self.state.app_config.dimensions,
+                components=get_component_names(self.state.app_config.dimensions),
+            )
+
         return [framing_traj_spec] + self.state.temporal_disp_specs
 
     def _refresh_plotting_data(self) -> None:
