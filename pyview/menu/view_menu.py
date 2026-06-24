@@ -6,11 +6,11 @@ from matplotlib.backend_bases import MouseEvent
 
 if TYPE_CHECKING:
     from .menu_bar import MenuBar
-    from ..views.spatial_view_3d import SpatialView3D
 
 from ..modals.common_scaling_modal import open_common_scaling_dialog
 from ..modals.temporal_config_modal import open_tempcfg_dialog
 from ..modals.spatial_view_modal import open_spatial_view_dialog, views
+from ..views.spatial_view_3d import SpatialView3D
 
 
 class ViewMenu(QMenu):

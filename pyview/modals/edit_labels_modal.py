@@ -95,8 +95,9 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
         if not label_list.selectedItems():
             return
         selected = [index.row() for index in label_list.selectedIndexes()]
-        deleted = parent.state.delete_labels(selected)
-        parent.root.temporal_view.update_plot(labels=deleted)
+        result = parent.state.lproc.delete_labels(selected)
+        parent.state.apply_label_update(result)
+        parent.root.temporal_view.update_plot(labels=result)
         refresh_labels()
 
     def on_close() -> None:

@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING, cast
 from pathlib import Path
-import re
 
 from PySide6.QtWidgets import QMenu, QMessageBox, QFileDialog, QInputDialog
 
@@ -10,9 +9,7 @@ from ..data.parse import import_proc_ctor
 from ..state import Label
 from ..modals.label_modal import open_label_dialog
 from ..modals.edit_labels_modal import open_edit_labels_dialog
-
-_MVIEW_IMPORT_ROW_RE = re.compile(r"(\w*)\s+([0-9.]+)")
-_MVIEW_IMPORT_HEADER_RE = re.compile(r"(\w+)")
+from ..lproc.protocol import LabelUpdateResult
 
 
 class LabelMenu(QMenu):
@@ -67,9 +64,12 @@ class LabelMenu(QMenu):
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        all_labels = [*self.state.labels]
+        all_labels = list(range(len(self.state.labels)))
+        self.state.lproc.on_clear_labels()
         self.state.labels.clear()
-        self.root.temporal_view.update_plot(labels=all_labels)
+        self.root.temporal_view.update_plot(
+            labels=LabelUpdateResult(deleted_labels=all_labels)
+        )
 
     def _labels_to_mview_lab_text(self, labels: list[Label]) -> str:
         lines = ["LABEL\tOFFSET\tNOTE\n"]
@@ -112,37 +112,9 @@ class LabelMenu(QMenu):
         path = Path(file_name)
 
         try:
-            with path.open("r", encoding="utf-8", newline=None) as f:
-                lines = f.read().splitlines()
-
-            # MVIEW expects lines{1}; an empty file falls into the catch branch.
-            header_tokens = _MVIEW_IMPORT_HEADER_RE.findall(lines[0])
-            if (
-                len(header_tokens) < 2
-                or header_tokens[0] != "LABEL"
-                or header_tokens[1] != "OFFSET"
-            ):
-                raise ValueError("unrecognized format")
-
-            imported_labels: list[Label] = []
-
-            for line in lines[1:]:
-                match = _MVIEW_IMPORT_ROW_RE.search(line)
-                if match is None:
-                    continue
-
-                name = match.group(1)
-                offset_ms_text = match.group(2)
-                offset_ms = float(offset_ms_text)
-                offset_s = offset_ms / 1000.0
-
-                # MVIEW import sets HOOK = [], i.e. it does not preserve NOTE.
-                imported_labels.append(
-                    self.state.add_label(name=name, offset_s=offset_s, note="")
-                )
-
-            if imported_labels:
-                self.root.temporal_view.update_plot(labels=imported_labels)
+            result = self.state.lproc.import_labels(path)
+            self.state.apply_label_update(result)
+            self.root.temporal_view.update_plot(labels=result)
         except Exception:
             QMessageBox.critical(
                 self.root,
@@ -220,15 +192,14 @@ class LabelMenu(QMenu):
             return
 
         # In MVIEW, loading replaces current labels
-        old_labels = list(self.root.state.labels)
+        old_labels = list(range(len(self.state.labels)))
         new_labels = list(cast(list[Label], custom[key][1]))
-
         self.root.state.labels = new_labels
-
-        changed_labels = old_labels + [
-            label for label in new_labels if label not in old_labels
-        ]
-        self.root.temporal_view.update_plot(labels=changed_labels)
+        self.root.temporal_view.update_plot(
+            labels=LabelUpdateResult(
+                deleted_labels=old_labels, created_labels=new_labels
+            )
+        )
 
     def _select_lproc(self) -> None:
         default_dir = Path(__file__).resolve().parent.parent / "lproc"

@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from enum import IntFlag, Enum, auto
 from pathlib import Path
-from typing import Any, Literal, Unpack, TypedDict, TypeAlias, cast, TYPE_CHECKING
+from typing import Any, Literal, TypeAlias, cast, TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
 if TYPE_CHECKING:
-    from .lproc.protocol import LabelProcedure
+    from .lproc.protocol import LabelProcedure, LabelUpdateResult
 
 
 Color: TypeAlias = str | tuple[float, float, float]
@@ -160,13 +160,9 @@ class Label:
     # MVIEW calls this "hook"
     note: str
     color: Color
-
-
-class LabelEdit(TypedDict, total=False):
-    name: str
-    offset_s: float
-    note: str
-    value: Any
+    # MVIEW calls this "value"
+    # This is opaque to the user
+    lproc_data: Any = None
 
 
 @dataclass
@@ -192,21 +188,13 @@ class WindowState:
     def selected_value(self) -> DatasetVariable:
         return self.app_config.data[self.selected_variable]
 
-    def add_label(self, name: str, offset_s: float, note: str):
-        new_label = Label(name=name, offset_s=offset_s, note=note, color="red")
-        self.labels.append(new_label)
-        return new_label
-
-    def edit_label(
-        self, label_idx: int, **kwargs: Unpack[LabelEdit]
-    ) -> tuple[Label, Label]:
-        old_label = self.labels[label_idx]
-        new_label = Label(**{**vars(old_label), **kwargs})
-        self.labels[label_idx] = new_label
-        return new_label, old_label
-
-    def delete_labels(self, label_idx: list[int]):
-        return [self.labels.pop(i) for i in sorted(label_idx, reverse=True)]
+    def apply_label_update(self, update: LabelUpdateResult):
+        for label in update.created_labels:
+            self.labels.append(label)
+        for idx, new_label in update.edited_labels.items():
+            self.labels[idx] = new_label
+        for idx in sorted(update.deleted_labels, reverse=True):
+            self.labels.pop(idx)
 
 
 def get_component_names(dimensions: int):

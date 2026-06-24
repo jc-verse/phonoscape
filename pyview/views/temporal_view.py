@@ -10,7 +10,6 @@ from matplotlib.figure import Figure
 from matplotlib.backend_bases import MouseEvent, LocationEvent
 from matplotlib.image import AxesImage
 from matplotlib.lines import Line2D
-from matplotlib.text import Text
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 
 if TYPE_CHECKING:
@@ -21,10 +20,10 @@ from ..state import (
     AudioTrajDisplay,
     ScalarTrajDisplay,
     SpatialTrajDisplay,
-    Label,
     get_component_names,
 )
 from ..data.process import get_plotting_data
+from ..lproc.protocol import LabelPlotContext, RenderedLabel, LabelUpdateResult
 from ..modals.label_modal import open_label_dialog
 from ..modals.common_scaling_modal import get_visible_scaling
 
@@ -128,18 +127,15 @@ class TemporalView(QWidget):
         self.artists: list[ArtistType] = []
         self.zero_artists: list[Line2D | None] = []
         self.cursor_artists: list[Line2D] = []
-        self.label_artists: list[dict[Label, Line2D]] = []
-        self.label_text_artists: list[dict[Label, Text]] = []
+        self.rendered_labels: list[list[RenderedLabel]] = []
         for i, ax, spec in zip(range(n + 1), self.axes, self._get_temp_disp_specs()):
-            artist, zero_artist, cursor_artist, label_artists, label_text_artists = (
-                self._plot_one_axis(ax, spec, i=i, duration_s=duration_s)
+            artist, zero_artist, cursor_artist, rendered_labels = self._plot_one_axis(
+                ax, spec, i=i, duration_s=duration_s
             )
             self.artists.append(artist)
             self.zero_artists.append(zero_artist)
             self.cursor_artists.append(cursor_artist)
-            self.label_artists.append(label_artists)
-            if label_text_artists is not None:
-                self.label_text_artists.append(label_text_artists)
+            self.rendered_labels.append(rendered_labels)
 
         if self.state.common_scaling:
             self.update_plot(spatial_ylim=True)
@@ -274,36 +270,13 @@ class TemporalView(QWidget):
                 clip_on=True,
             )
 
-        label_artists: dict[Label, Line2D] = {}
+        rendered_labels: list[RenderedLabel] = []
         for label in self.state.labels:
-            label_artists[label] = ax.axvline(
-                label.offset_s,
-                color=label.color,
-                linewidth=0.8,
-                zorder=999,
-                clip_on=True,
-            )
+            ctx = LabelPlotContext(ax=ax, ax_index=i, spec=spec)
+            rendered_label = self.state.lproc.plot_label(label, ctx)
+            rendered_labels.append(rendered_label)
 
-        if i == 0 or i == 1:
-            label_text_artists: dict[Label, Text] | None = {}
-            # Only plot label for framing and first real data trajectory
-            for label in self.state.labels:
-                text = ax.text(
-                    label.offset_s,
-                    0.98,
-                    label.name,
-                    ha="left",
-                    va="top",
-                    color=label.color,
-                    zorder=999,
-                    clip_on=False,
-                    transform=ax.get_xaxis_transform(),
-                )
-                label_text_artists[label] = text
-        else:
-            label_text_artists = None
-
-        return artist, zero_artist, cursor_artist, label_artists, label_text_artists
+        return artist, zero_artist, cursor_artist, rendered_labels
 
     def update_plot(
         self,
@@ -312,11 +285,14 @@ class TemporalView(QWidget):
         frame: bool = False,
         spect_ylim: bool = False,
         spatial_ylim: bool = False,
-        labels: list[Label] | None = None,
+        labels: LabelUpdateResult | None = None,
     ) -> None:
+        if not labels:
+            labels = LabelUpdateResult()
         if cursor:
             for line in self.cursor_artists:
                 line.set_xdata([self.state.cursor_s, self.state.cursor_s])
+        specs = self._get_temp_disp_specs()
         if trajectories:
             self._refresh_plotting_data()
             for i, artist in enumerate(self.artists):
@@ -353,7 +329,7 @@ class TemporalView(QWidget):
                     zero_artist.set_visible(zero_visible)
         if spatial_ylim or trajectories:
             for spec, ax, artist, (_, data) in zip(
-                self._get_temp_disp_specs(), self.axes, self.artists, self.plotting_data
+                specs, self.axes, self.artists, self.plotting_data
             ):
                 if artist[0] not in ("spatial-single", "spatial-multi"):
                     continue
@@ -398,56 +374,41 @@ class TemporalView(QWidget):
                 ]
             )
         if spect_ylim:
-            for i, spec in enumerate(self._get_temp_disp_specs()):
+            for i, spec in enumerate(specs):
                 if spec.content == "SPECT":
                     ax = self.axes[i]
                     ax.set_ylim(0, self.state.app_config.spectral_display_cutoff_hz)
-        if labels:
-            for label in labels:
-                if label not in self.state.labels:
-                    # Label deleted
-                    for label_artists in self.label_artists:
-                        if label in label_artists:
-                            label_artists[label].remove()
-                            del label_artists[label]
-                    for label_text_artists in self.label_text_artists:
-                        if label in label_text_artists:
-                            label_text_artists[label].remove()
-                            del label_text_artists[label]
-                else:
-                    # Label added or updated
-                    for i, label_artists in enumerate(self.label_artists):
-                        if label in label_artists:
-                            la = label_artists[label]
-                            la.set_xdata([label.offset_s, label.offset_s])
-                        else:
-                            ax = self.axes[i]
-                            label_artists[label] = ax.axvline(
-                                label.offset_s,
-                                color=label.color,
-                                linewidth=0.8,
-                                zorder=999,
-                                clip_on=True,
-                            )
-                    for i, label_text_artists in enumerate(self.label_text_artists):
-                        if label in label_text_artists:
-                            lta = label_text_artists[label]
-                            lta.set_x(label.offset_s)
-                        else:
-                            ax = self.axes[i]
-                            text = ax.text(
-                                label.offset_s,
-                                0.98,
-                                label.name,
-                                ha="left",
-                                va="top",
-                                color=label.color,
-                                zorder=999,
-                                clip_on=False,
-                                transform=ax.get_xaxis_transform(),
-                            )
-                            label_text_artists[label] = text
-        if cursor or trajectories or frame or spect_ylim or spatial_ylim or labels:
+        for label_idx, label in labels.edited_labels.items():
+            for i, ax_rendered_labels in enumerate(self.rendered_labels):
+                # Always replot
+                # TODO: perhaps the lproc can specify how to incrementally update
+                for artist in ax_rendered_labels[label_idx].artists:
+                    artist.remove()
+                ctx = LabelPlotContext(ax=self.axes[i], ax_index=i, spec=specs[i])
+                ax_rendered_labels[label_idx] = self.state.lproc.plot_label(label, ctx)
+        for label_idx in labels.deleted_labels:
+            for ax_rendered_labels in self.rendered_labels:
+                for artist in ax_rendered_labels[label_idx].artists:
+                    artist.remove()
+        for label_idx in sorted(labels.deleted_labels, reverse=True):
+            for ax_rendered_labels in self.rendered_labels:
+                ax_rendered_labels.pop(label_idx)
+        for label in labels.created_labels:
+            for i, ax_rendered_labels in enumerate(self.rendered_labels):
+                ctx = LabelPlotContext(ax=self.axes[i], ax_index=i, spec=specs[i])
+                rendered_label = self.state.lproc.plot_label(label, ctx)
+                ax_rendered_labels.append(rendered_label)
+
+        if (
+            cursor
+            or trajectories
+            or frame
+            or spect_ylim
+            or spatial_ylim
+            or labels.created_labels
+            or labels.edited_labels
+            or labels.deleted_labels
+        ):
             self.canvas.draw_idle()
 
     def _get_temp_disp_specs(self):
@@ -512,9 +473,11 @@ class TemporalView(QWidget):
                     closest_label = i
             if (
                 closest_label is not None
-                and self.label_artists[idx][self.state.labels[closest_label]].contains(
-                    event
-                )[0]
+                and any(
+                    a.contains(event)[0]
+                    for a in self.rendered_labels[idx][closest_label].hit_test_artists
+                )
+                > 0
             ):
                 if event.dblclick:
                     open_label_dialog(self, ("edit", closest_label))
@@ -576,11 +539,10 @@ class TemporalView(QWidget):
         elif isinstance(self.dragging, tuple) and self.dragging[0] == "label":
             label_idx = self.dragging[1]
             if self._event_is_in_cursor_axes(event):
-                new_label, old_label = self.state.edit_label(
-                    label_idx, offset_s=event.xdata
-                )
                 self.dragging = ("label", label_idx)
-                self.update_plot(labels=[new_label, old_label])
+                result = self.state.lproc.edit_label(label_idx, offset_s=event.xdata)
+                self.state.apply_label_update(result)
+                self.update_plot(labels=result)
             else:
                 self.dragging = None
 

@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from .data.process import analyze_audio
-from .lproc.protocol import LabelProcedure
+from .lproc.protocol import LabelProcedure, LPWindowState
 from .menu.menu_bar import MenuBar
 from .state import WindowState, AppConfig, TrajDisplay, Color
 from .widgets.play_button import PlayButton, modes as play_modes
@@ -57,7 +57,7 @@ class VarWindow(QMainWindow):
             tail_s=tail_s,
             play_mode=play_modes[0],
         )
-        self.state.lproc = lproc_ctor()
+        self.state.lproc = lproc_ctor(LPWindowState(self.state))
         if self.state.app_config.audio_traj:
             self.state.selected_value.audio_traj = analyze_audio(
                 self.state.selected_value.trajectories[

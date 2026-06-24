@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 
 if TYPE_CHECKING:
     from ..views.temporal_view import TemporalView
-
+from ..state import Label
 
 LabelDialogAction: TypeAlias = (
     tuple[Literal["create"], float] | tuple[Literal["edit"], int]
@@ -84,13 +84,17 @@ def open_label_dialog(parent: TemporalView, action: LabelDialogAction) -> None:
         note = note_entry.text().strip()
 
         if action[0] == "create":
-            new_label = parent.state.add_label(name, offset_ms / 1000.0, note)
-            parent.update_plot(labels=[new_label])
+            result = parent.state.lproc.create_label(
+                Label(name=name, offset_s=offset_ms / 1000.0, note=note, color="red")
+            )
+            parent.state.apply_label_update(result)
+            parent.update_plot(labels=result)
         else:
-            new_label, old_label = parent.state.edit_label(
+            result = parent.state.lproc.edit_label(
                 action[1], name=name, offset_s=offset_ms / 1000.0, note=note
             )
-            parent.update_plot(labels=[new_label, old_label])
+            parent.state.apply_label_update(result)
+            parent.update_plot(labels=result)
 
         dialog.accept()
 
@@ -100,8 +104,9 @@ def open_label_dialog(parent: TemporalView, action: LabelDialogAction) -> None:
     def on_delete() -> None:
         if action[0] != "edit" or not init_label:
             return
-        parent.state.delete_labels([action[1]])
-        parent.update_plot(labels=[init_label])
+        result = parent.state.lproc.delete_labels([action[1]])
+        parent.state.apply_label_update(result)
+        parent.update_plot(labels=result)
         dialog.accept()
 
     buttons_layout = QHBoxLayout()
