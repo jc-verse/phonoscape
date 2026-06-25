@@ -21,6 +21,9 @@ from ..state import (
     AppConfig,
     get_component_names,
 )
+from ..dproc.protocol import DataProcedure
+from ..lproc.protocol import LabelProcedure
+from ..pproc.protocol import PlottingProcedure
 
 
 class CmdArgs(TypedDict, total=False):
@@ -38,7 +41,9 @@ class CmdArgs(TypedDict, total=False):
     tail: float | None
     sex: Literal["M", "F"] | None
     spect_lim: float | None
-    lproc: str | None
+    lproc: str | type[LabelProcedure] | None
+    dproc: str | type[DataProcedure] | None
+    pproc: str | type[PlottingProcedure] | None
 
 
 def get_optional(arr: np.ndarray, name: str) -> np.ndarray | list[None]:

@@ -7,6 +7,8 @@ from numpy.typing import NDArray
 
 if TYPE_CHECKING:
     from .lproc.protocol import LabelProcedure, LabelUpdateResult
+    from .dproc.protocol import DataProcedure
+    from .pproc.protocol import PlottingProcedure
 
 
 Color: TypeAlias = str | tuple[float, float, float]
@@ -170,6 +172,8 @@ class WindowState:
     custom: dict[str, tuple[str, Any]]
     labels: list[Label]
     lproc: LabelProcedure
+    dproc: DataProcedure | None
+    pproc: PlottingProcedure | None
     selected_variable: str
     temporal_disp_specs: list[TrajDisplay]
     # Actually used (with defaults/customization/inheritance)

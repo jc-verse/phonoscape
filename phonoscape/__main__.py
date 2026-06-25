@@ -5,16 +5,16 @@ if __name__ == "__main__":
     import argparse
 
     # [ ] CONFIG
-    # [ ] DPROC
+    # [x] DPROC
     # [x] FTRAJ
     # [x] HEAD
     # [ ] LABELS
-    # [ ] LPROC
+    # [x] LPROC
     # [x] IS3D
     # [x] MAP / TEMPMAP
     # [x] PALATE
     # [x] PHARYNX
-    # [ ] PPROC
+    # [x] PPROC
     # [x] SEX
     # [x] SPLINE
     # [ ] SPREAD
@@ -128,7 +128,19 @@ if __name__ == "__main__":
         "--lproc",
         type=str,
         metavar="PROC",
-        help="Label procedure to use for labeling (default: none).",
+        help="Label procedure to use (default: phonoscape.lproc.lp_default).",
+    )
+    parser.add_argument(
+        "--dproc",
+        type=str,
+        metavar="PROC",
+        help="Data procedure to use (default: none).",
+    )
+    parser.add_argument(
+        "--pproc",
+        type=str,
+        metavar="PROC",
+        help="Plotting procedure to use (default: none).",
     )
     args = parser.parse_args()
 
@@ -154,4 +166,6 @@ if __name__ == "__main__":
         sex=args.sex,
         spect_lim=args.spect_lim,
         lproc=args.lproc,
+        dproc=args.dproc,
+        pproc=args.pproc,
     )

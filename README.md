@@ -6,7 +6,7 @@ Python port of MVIEW.
 
 ## Quick start
 
-PhonoScape, as a Python package, needs Python to run. You may have your own Python environment setup already, but PhonoScape is best run in a standalone virtual environment. We strongly recommend using [uv](https://github.com/astral-sh/uv):
+PhonoScape, as a Python package, needs Python to run. You may have your own Python environment setup already, but PhonoScape is best run in a standalone virtual environment. We strongly recommend using [uv](hhttps://docs.astral.sh/uv/). First following the instructions to install uv and then install the latest Python. Now you can create a virtual environment and install PhonoScape with:
 
 ```bash
 uv venv
@@ -43,7 +43,7 @@ TODO: I'm considering a bundled distribution with all dependencies, including a 
 
 ### Running from source
 
-To try the vert latest features of PhonoScape, clone the repository and install the dependencies:
+To try the very latest features of PhonoScape, clone the repository and install the dependencies:
 
 ```bash
 uv sync
@@ -91,8 +91,8 @@ You can run `python -m phonoscape --help` to see the full list of command-line a
   - `--pharynx VAR` (MVIEW `PHARYNX`): use the variable `VAR` (in the `file`) to plot a pharynx curve in the spatial view. If specified, the variable must contain a `[n_samples × n_dims]` array of pharynx points. However, per MVIEW compatibility, if the pharynx trace is 2D and the spatial data is 3D, an extra column of zeros will be added as the y-axis. If unspecified, the variable `pha` is used if it exists and contains data in the required shape; otherwise no pharynx is plotted.
   - `--spline TRAJ1 TRAJ2 ...` (MVIEW `SPLINE`): specifies that the trajectories `TRAJ1`, `TRAJ2`, etc. (in each variable) should have a spline fitted in the spatial view. If specified, all names must refer to spatial trajectories. If unspecified, then all spatial trajectories with name starting with `T` are used as default. This is slightly different from MVIEW which disables spline by default, but in the command line it's hard to differentiate between `[]` (MVIEW "use `T*`") and `0` (MVIEW "disable"). If you want to hide the spline, just use the [**Hide spline**](#view-menu) action.
   - `--polyline-spline` (MVIEW `SPLINE` with a negative first index): specifies that the spline should be plotted as a polyline instead of a smooth curve. Might improve real-time update performance.
-  - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) contains audio data. If specified, the name must refer to a scalar trajectory. If unspecified, then the first audio trajectory is used as the default. If no such trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
-  - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If specified, the name must refer to a scalar trajectory. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
+  - `--audio TRAJ`: specifies that the trajectory `TRAJ` (in each variable) should be used as the "privileged" audio trajectory. If specified, the name must refer to an audio trajectory. If unspecified, then the first audio trajectory is used as the default. If no audio trajectory exists, then all audio-related features (spectrogram time-slice, playback, etc.) are disabled.
+  - `--framing TRAJ` (MVIEW `FTRAJ`): specifies that the trajectory `TRAJ` (in each variable) should be used for temporal framing. If unspecified, then the audio trajectory is used as the default framing trajectory, and if no audio trajectory is found, then the first trajectory of any kind is used as the framing trajectory.
   - `--temporal-display SPEC1 SPEC2 ...` (MVIEW `TEMPMAP`): a list of temporal view specifications. Each specification specifies one temporal plot. See [temporal view](#temporal-view) for more details regarding their presentation.
     - If designating an audio trajectory (sampling rate ≥ 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: `SPECT` (spectrogram), `RMS` (root mean square), `ZC` (zero-crossing rate), `F0` (fundamental frequency). **Note**: unlike MVIEW, we have a strict separation of audio and physiological scalar trajectories.
     - If designating a scalar trajectory (sampling rate < 5000 Hz): `TRAJ` or `TRAJ_MODIFIER`, where `MODIFIER` can be: ``VEL` (velocity), `ABSVEL` (absolute velocity).
@@ -108,8 +108,10 @@ You can run `python -m phonoscape --help` to see the full list of command-line a
   - `--sex SEX` (MVIEW `SEX`): the subject's sex. `M` for male; `F` for female. This can be later customized in the 'Configure spectral analysis' dialog, but it affects the default LPC degree. Default is `M`.
   - `--spect-lim HZ` (MVIEW `SPECLIM`): frequency upper limit (Hz) for spectrogram display. This affects the visualization of the spectrograms but does not affect the underlying spectral analysis. Default is the Nyquist frequency.
   - `--lproc PROC` (MVIEW `LPROC`): specifies the label procedure to use. If unspecified, then the default label procedure `phonoscape.lproc.lp_default` is used. If specified, it must be either a Python module specifier (qualified name based on `sys.path`) or a path (ending in `.py`, resolved relative to CWD) to a module starting with `lp_`. See [labeling procedures](#labeling-procedures) for more details.
+  - `--dproc PROC` (MVIEW `DPROC`): specifies the data procedure to use. Its handling is like `--lproc`, except the module must start with `dp_`, and there is no default. See [data procedures](#data-procedures) for more details.
+  - `--pproc PROC` (MVIEW `PPROC`): specifies the plotting procedure to use. Its handling is like `--lproc`, except the module must start with `pp_`, and there is no default. See [plotting procedures](#plotting-procedures) for more details.
 
-Note that the framing and audio trajectory discovery is slightly different from MVIEW's; for one, we never special-case the very first trajectory.
+Note that the framing and audio trajectory discovery is slightly different from MVIEW's; for one, we never special-case the very first trajectory, other than as a default. If you specify another trajectory to use, the first track is just like any other one for audio playback, framing, etc.
 
 The `NAME`, `VLIST` and `VLSEL` arguments are not supported because all of their downstream effects can be easily customized, and they interact poorly with other features (e.g., "Variables" menu, the `variables` argument, etc.). Please let me know if you have a specific use case.
 
@@ -132,15 +134,15 @@ The following fields are required for each trajectory struct:
 
 - `NAME` (string): trajectory name. Will be uppercased and stripped of underscores. The actual names absolutely do not matter with one quirk: if the `--spline` [argument](#command-line-arguments) is not provided, all spatial trajectories with name starting with `T` will be used as default.
 - `SRATE` (float): sampling rate in Hz. The actual sampling rate value only matters in one place: trajectories with `SRATE` ≥ 5000 Hz are considered audio trajectories, and those with `SRATE` < 5000 Hz are considered physiological trajectories.
-- `SIGNAL` (array `[n_samples × n_dims]`): 1D is scalar, 2D or 3D is spatial. Higher dimensions are truncated off and moved into `ANGLES`; if `ANGLES` is also provided, then the extra dimensions are ignored and `ANGLES` is used instead. Currently only 3D is well-supported for spatial trajectories.
+- `SIGNAL` (array `[n_samples × n_dims]`): 1D is scalar, 2D or 3D is spatial. Higher dimensions are truncated off and moved into `ANGLES`; if `ANGLES` is also provided, then the extra dimensions are ignored and `ANGLES` is used instead.
 
 All trajectories in a variable are expected to have roughly the same `n_samples * SRATE`. When displaying, the minimum duration is used (i.e., where all trajectories have data).
 
 For 3D data, the following axis-component mapping is preferred (configurable via the `--comps` [argument](#command-line-arguments)):
 
-- x-axis is sagittal (posterior = negative, anterior = positive)
-- y-axis is transverse (right = negative, left = positive)
-- z-axis is longitudinal (inferior = negative, superior = positive).
+- The first component (x-axis) is sagittal (posterior = negative, anterior = positive)
+- The second component (y-axis) is transverse (right = negative, left = positive)
+- The third component (z-axis) is longitudinal (inferior = negative, superior = positive).
 
 The following optional fields are effectively variable-wide metadata. Only the first struct's field is used.
 
@@ -222,6 +224,7 @@ The following optional fields may be provided for each trajectory struct:
   - Select a spectrogram to customize its color contrast. This is equivalent to the MVIEW vertical slider in the bottom left. The spectrogram is power-law normalized. The higher the setting, the higher the gamma parameter, and the sharper the contrast.
 
   The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
+
 - **Set common scaling**: Opens a dialog to configure the y-axis limits for all spatial trajectories.
   - **Adaptive scaling**: Each trajectory has its own y-axis limits, determined by the range of the trajectory data (i.e., matplotlib default auto-scaling logic). New in PhonoScape.
   - Configured spreads: Configure a common spread for all movement/velocity/acceleration trajectories, respectively. The `ymax - ymin` will be equal to that value, leaving an equal margin on the top and bottom.
@@ -288,7 +291,7 @@ Currently a minimum of 25ms is enforced for the selection duration, regardless o
 - **Configure movement**: Opens a dialog to configure the movement behavior.
   - **Nudge step size (ms)** (default: 5ms): The amount of time to move when stepping forward/backward, in milliseconds. (In MVIEW this also controls the cycling; in PhonoScape you use playback rate instead.)
   - **Playback rate** (default: 1; i.e., synchronized with real time): How fast the simulated motion is relative to real time when cycling. For example, if the playback rate is 2, then the cursor moves twice as fast as real time, so a 10-second selection would take 5 seconds to cycle through.
-  
+
   While cycling, the [read-out panel](#read-out) displays the actual nudge step size and frame rate of the simulated motion. The frame rate mostly depends on how fast your computer can process each cursor update. On my M1 mac, it's around 10 FPS, so at 1x playback, each nudge step is approximately 100 ms (sorry Python isn't really efficient for real-time stuff). You can improve the temporal resolution by reducing the playback rate.
 
 ### Label menu
@@ -406,11 +409,7 @@ There are three types of external procedures: data procedures (DP), plotting pro
 
 ### Data procedures
 
-The class must implement the following protocol:
-
-```py
-TODO
-```
+The following built-in data procedures are provided, and can be imported directly by using `--dproc phonoscape.dproc.dp_<name>`:
 
 - `dp_AggVel`
 - `dp_AZEL`
@@ -430,16 +429,24 @@ TODO
 - `dp_traj`
 - `dp_vel`
 
-### Plotting procedures
-
-The class must implement the following protocol:
+A custom data procedure can be defined by creating a new class that inherits from `DataProcedure`. The class must implement the following protocol (which, again, should be defined in a file `dp_my_example.py`):
 
 ```py
 TODO
 ```
 
+### Plotting procedures
+
+The following built-in plotting procedures are provided, and can be imported directly by using `--pproc phonoscape.pproc.pp_<name>`:
+
 - `pp_movie`
 - `pp_phase`
+
+A custom plotting procedure can be defined by creating a new class that inherits from `PlottingProcedure`. The class must implement the following protocol (which, again, should be defined in a file `pp_my_example.py`):
+
+```py
+TODO
+```
 
 ### Labeling procedures
 
@@ -452,21 +459,67 @@ A labeling procedure controls all behaviors relevant to labeling, namely:
 - Handling dragging of labels in the temporal view.
 - [Label menu](#label-menu) actions: edit, export, import, save, load.
 
-The class must implement the following protocol:
-
-```py
-TODO
-```
-
-Unlike MVIEW, the default labeling procedure is not special-cased; it is also defined in a file.
+Unlike MVIEW, the default labeling procedure is not special-cased; it is also defined in a file. The following built-in labeling procedures are provided, and can be imported directly by using `--lproc phonoscape.lproc.lp_<name>`:
 
 - `lp_default`
-- `lp_exportvals`
+- `lp_export_vals`
 - `lp_extents`
-- `lp_findgest`
+- `lp_find_gest`
 - `lp_peaks`
 - `lp_phase_ang`
-- `lp_snapex`
+- `lp_snap_ex`
+
+A custom labeling procedure can be defined by creating a new class that inherits from `LabelProcedure`. The class must implement the following protocol (which, again, should be defined in a file `lp_my_example.py`):
+
+```py
+from phonoscape.lproc.protocol import LabelProcedure, RenderedLabel, LabelUpdateResult
+
+class MyExampleLP(LabelProcedure):
+    # Displayed in the "Labeling behavior menu".
+    name: str = "My procedure name"
+    state: LPWindowState
+
+    def plot_label(self, label: Label, context: LabelPlotContext) -> RenderedLabel:
+        # The RenderedLabel object contains:
+        # - `artists`: list of artists that have been added to the axes. They
+        # will be removed when deleting/replotting.
+        # - `hit_test_artists`: must be a subset of `artists`. They are used
+        # to tell if the user is clicking on a label for dragging/editing.
+        #
+        # You may use context.plot_default(label) to plot a line and maybe a
+        # text label, respecting the label's name, offset, and color.
+        # You can add additional artists later.
+        rendered = context.plot_default(label)
+        text_artist = context.ax.text(
+            label.offset_s, 0, f"My label", color="red", fontsize=8
+        )
+        rendered.artists.append(text_artist)
+        return rendered
+
+    def create_label(
+        self, label: Label, context: ClickContext | None = None
+    ) -> LabelUpdateResult:
+        ...
+
+    def edit_label(
+        self, label_idx: int, **kwargs: Unpack[LabelEdit]
+    ) -> LabelUpdateResult:
+        ...
+
+    def delete_labels(self, labels: list[int]) -> LabelUpdateResult:
+        ...
+
+    def on_clear_labels(self) -> None:
+        ...
+
+    def import_labels(self, path: Path) -> LabelUpdateResult:
+        ...
+
+    def export_labels(self, labels: list[Label], path: Path) -> None:
+        ...
+```
+
+Most of these methods provide sensible default implementations, so you only need to override the ones that are relevant to your procedure. See the built-in labeling procedures for examples.
 
 ## Loading/saving configuration
 
@@ -481,8 +534,15 @@ The parameters are exactly the same as the [command line arguments](#command-lin
 ```py
 from phonoscape import phonoscape
 
-phonoscape("./test_data/S02_data.mat", "*", palate="S02_pal", temporal_display=["AUDIO_SPECT", "TDx", "vTDx", "TDz", "vTDz"])
+phonoscape(
+    "./test_data/S02_data.mat",
+    "*",
+    palate="S02_pal",
+    temporal_display=["AUDIO_SPECT", "TDx", "vTDx", "TDz", "vTDz"],
+)
 ```
+
+Specially, in the programmatic API, `lproc`, `dproc`, and `pproc` can also be specified as a class directly.
 
 ## Distribution
 

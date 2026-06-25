@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
 
 from .data.process import analyze_audio
 from .lproc.protocol import LabelProcedure, LPWindowState
+from .dproc.protocol import DataProcedure
+from .pproc.protocol import PlottingProcedure
 from .menu.menu_bar import MenuBar
 from .state import WindowState, AppConfig, TrajDisplay, Color
 from .widgets.play_button import PlayButton, modes as play_modes
@@ -32,6 +34,8 @@ class VarWindow(QMainWindow):
         selected_variable: str,
         temporal_disp_specs: list[TrajDisplay],
         lproc_ctor: type[LabelProcedure],
+        dproc_ctor: type[DataProcedure] | None,
+        pproc_ctor: type[PlottingProcedure] | None,
         colors: dict[str, Color],
         app_config: AppConfig,
         view: tuple[float, float, float],
@@ -46,6 +50,8 @@ class VarWindow(QMainWindow):
             custom=custom,
             labels=[],
             lproc=None,  # will be initialized later # pyright: ignore[reportArgumentType]
+            dproc=None if dproc_ctor is None else dproc_ctor(),
+            pproc=None if pproc_ctor is None else pproc_ctor(),
             selected_variable=selected_variable,
             temporal_disp_specs=temporal_disp_specs,
             colors=colors,
@@ -66,7 +72,9 @@ class VarWindow(QMainWindow):
                 self.state.app_config,
             )
 
-        self.setWindowTitle(f"PhonoScape - {app_config.file.name} - {selected_variable}")
+        self.setWindowTitle(
+            f"PhonoScape - {app_config.file.name} - {selected_variable}"
+        )
         self.resize(1440, 1000)
 
         self._build_ui()
@@ -243,9 +251,16 @@ class VarWindow(QMainWindow):
 
 
 class WindowManager:
-    def __init__(self, lproc_ctor: type[LabelProcedure]):
+    def __init__(
+        self,
+        lproc_ctor: type[LabelProcedure],
+        dproc_ctor: type[DataProcedure] | None,
+        pproc_ctor: type[PlottingProcedure] | None,
+    ):
         self.windows: dict[str, VarWindow] = {}
         self.lproc_ctor = lproc_ctor
+        self.dproc_ctor = dproc_ctor
+        self.pproc_ctor = pproc_ctor
 
     def open_window(self, name: str, parent_window: VarWindow) -> None:
         if name in self.windows:
@@ -279,6 +294,8 @@ class WindowManager:
                 for k, v in parent_window.state.colors.items()
             },
             lproc_ctor=self.lproc_ctor,
+            dproc_ctor=self.dproc_ctor,
+            pproc_ctor=self.pproc_ctor,
             app_config=parent_window.state.app_config,
             view=parent_window.state.view,
             head_s=new_head,

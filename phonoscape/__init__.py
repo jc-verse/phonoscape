@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from .data.parse import load_variables, normalize_args, import_proc_ctor, CmdArgs
 from .window import VarWindow, WindowManager
 from .lproc.protocol import LabelProcedure
+from .dproc.protocol import DataProcedure
+from .pproc.protocol import PlottingProcedure
 
 
 def phonoscape(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
@@ -47,7 +49,32 @@ def phonoscape(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> No
         )
 
     lproc_ctor_path = kwargs.get("lproc") or "phonoscape.lproc.lp_default"
-    lproc_ctor: type[LabelProcedure] = import_proc_ctor(lproc_ctor_path, "lp")
+    if isinstance(lproc_ctor_path, str):
+        lproc_ctor: type[LabelProcedure] = import_proc_ctor(lproc_ctor_path, "lp")
+    else:
+        lproc_ctor = lproc_ctor_path
+
+    dproc_ctor_path = kwargs.get("dproc")
+    if dproc_ctor_path is not None:
+        if isinstance(dproc_ctor_path, str):
+            dproc_ctor: type[DataProcedure] | None = import_proc_ctor(
+                dproc_ctor_path, "dp"
+            )
+        else:
+            dproc_ctor = dproc_ctor_path
+    else:
+        dproc_ctor = None
+
+    pproc_ctor_path = kwargs.get("pproc")
+    if pproc_ctor_path is not None:
+        if isinstance(pproc_ctor_path, str):
+            pproc_ctor: type[PlottingProcedure] | None = import_proc_ctor(
+                pproc_ctor_path, "pp"
+            )
+        else:
+            pproc_ctor = pproc_ctor_path
+    else:
+        pproc_ctor = None
 
     app = QApplication.instance()
     owns_app = app is None
@@ -55,12 +82,16 @@ def phonoscape(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> No
     if app is None:
         app = QApplication(sys.argv)
 
-    window_manager = WindowManager(lproc_ctor=lproc_ctor)
+    window_manager = WindowManager(
+        lproc_ctor=lproc_ctor, dproc_ctor=dproc_ctor, pproc_ctor=pproc_ctor
+    )
     window = VarWindow(
         window_manager=window_manager,
         selected_variable=selected_variable,
         temporal_disp_specs=temporal_disp_specs,
         lproc_ctor=lproc_ctor,
+        dproc_ctor=dproc_ctor,
+        pproc_ctor=pproc_ctor,
         colors=colors,
         app_config=app_config,
         view=kwargs.get("view") or (0, -90, 0),
