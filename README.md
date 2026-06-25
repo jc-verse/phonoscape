@@ -488,6 +488,6 @@ phonoscape("./test_data/S02_data.mat", "*", palate="S02_pal", temporal_display=[
 
 ```bash
 rm -rf dist build *.egg-info
-uv run python -m build
+uv build
 uv run twine upload dist/*
 ```
