@@ -1,6 +1,14 @@
 from typing import cast
-from . import phonoscape
 import argparse
+from importlib.metadata import version, PackageNotFoundError
+
+from . import phonoscape
+
+def get_version() -> str:
+    try:
+        return version("phonoscape")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 def main():
@@ -27,6 +35,7 @@ def main():
     # [x] SPECLIM
 
     parser = argparse.ArgumentParser(
+        prog="phonoscape",
         description="PhonoScape: Visualize acoustics & articulatory data."
     )
     parser.add_argument("file", type=str, help="Path to the .mat file to visualize.")
@@ -142,6 +151,8 @@ def main():
         metavar="PROC",
         help="Plotting procedure to use (default: none).",
     )
+
+    parser.add_argument("--version", action="version", version=f"%(prog)s {get_version()}")
     args = parser.parse_args()
 
     phonoscape(

@@ -6,6 +6,8 @@ Python port of MVIEW.
 
 ## Quick start
 
+### Installation as a global tool
+
 PhonoScape, as a Python package, needs Python to run. You may have your own Python environment setup already, but PhonoScape is best run in a standalone virtual environment. We strongly recommend using [uv](https://docs.astral.sh/uv/). First following the instructions to install uv and then install the latest Python. Now you can directly install PhonoScape as a tool:
 
 ```bash
@@ -18,7 +20,15 @@ Now, you can run PhonoScape from the command line. You do need to have your own 
 phonoscape ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
-But if you prefer to use your own Python environment, you can also install PhonoScape with:
+Later, you can update PhonoScape (installed as a tool) with:
+
+```bash
+uv tool update phonoscape
+```
+
+### Installation as a Python package
+
+If you prefer to use your own Python environment (for example, to use a different dependency version, or to use the [programmatic API](#programmatic-invocation)), you can also install PhonoScape with:
 
 ```bash
 pip install phonoscape
@@ -30,13 +40,7 @@ If you installed PhonoScape as a normal Python package, you must run it with `py
 python -m phonoscape ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
-Later, you can update PhonoScape (installed as a tool) with:
-
-```bash
-uv tool update phonoscape
-```
-
-Or, in the Python environment of your choice:
+To upgrade, in the Python environment of your choice:
 
 ```bash
 pip install --upgrade phonoscape
