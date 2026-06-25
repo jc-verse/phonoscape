@@ -66,7 +66,7 @@ class VarWindow(QMainWindow):
                 self.state.app_config,
             )
 
-        self.setWindowTitle(f"PyView - {app_config.file.name} - {selected_variable}")
+        self.setWindowTitle(f"PhonoScape - {app_config.file.name} - {selected_variable}")
         self.resize(1440, 1000)
 
         self._build_ui()

@@ -1,4 +1,4 @@
-from pyview.lproc.protocol import LabelProcedure
+from phonoscape.lproc.protocol import LabelProcedure
 
 
 class DefaultLP(LabelProcedure):

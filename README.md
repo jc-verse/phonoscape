@@ -1,10 +1,10 @@
-# PyView
+# PhonoScape
 
 Python port of MVIEW
 
 ## Quick start
 
-To try PyView, clone the repository and install the dependencies:
+To try PhonoScape, clone the repository and install the dependencies:
 
 ```bash
 uv sync
@@ -14,14 +14,14 @@ source .venv/bin/activate
 Then execute the following command. You do need to have your own dataset file.
 
 ```bash
-python -m pyview ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
+python -m phonoscape ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
 Prepackaged distributions will be available in the future.
 
-## Why PyView?
+## Why PhonoScape?
 
-PyView strives to be 100% MVIEW-compatible: any input that works in MVIEW, probably works here; anything you can do in MVIEW, you probably can achieve here. Even the user interface and interactions should be familiar. Compare to MVIEW:
+PhonoScape strives to be 100% MVIEW-compatible: any input that works in MVIEW, probably works here; anything you can do in MVIEW, you probably can achieve here. Even the user interface and interactions should be familiar. Compare to MVIEW:
 
 1. No more MATLAB. No compatibility issues; no license required; no slow startup times and unfamiliar programming environments.
 2. Completely Command Line Interface (CLI) based; launch from your favorite terminal.
@@ -31,7 +31,7 @@ PyView strives to be 100% MVIEW-compatible: any input that works in MVIEW, proba
 
 ## Still WIP
 
-PyView is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
+PhonoScape is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
 
 1. [External procedures](#external-procedures)
 2. F0/Formant tracking
@@ -42,7 +42,7 @@ PyView is 90% complete. The outstanding items you can find as TODOs below. In or
 
 ## Central concepts
 
-- **Dataset**: although not hard-enforced, it is highly, highly recommended that each time PyView is opened with a `.mat` file for one subject, using the same data collection procedure. Many things are shared across windows: the palate/pharynx trace, metadata about the trajectories, the spatial bounds, 2D/3D configuration, etc. If your variables are not consistent in their semantics, PyView _will break_.
+- **Dataset**: although not hard-enforced, it is highly, highly recommended that each time PhonoScape is opened with a `.mat` file for one subject, using the same data collection procedure. Many things are shared across windows: the palate/pharynx trace, metadata about the trajectories, the spatial bounds, 2D/3D configuration, etc. If your variables are not consistent in their semantics, PhonoScape _will break_.
 - **Variable**: your `.mat` file can contain many variables. Each window is associated with one variable. Each variable represents one condition. You may wish to chop up each recording session's data into many variables for easier manipulation.
 - **Trajectory**: for the exact storage format, see [dataset format](#dataset-format). At a high level, these trajectories are assumed to be synchronized (sampling rate taken into account). We differentiate between three kinds of trajectories: audio (scalar, sampling rate ≥ 5000 Hz), physiological scalar (scalar, sampling rate < 5000 Hz), and spatial (2D or 3D). This determines how they can each be analyzed temporally. Each variable can have one "privileged" audio trajectory; this one is used for audio playback and spectral analysis.
 - **Cursor**: TODO
@@ -51,7 +51,7 @@ PyView is 90% complete. The outstanding items you can find as TODOs below. In or
 
 ## Command-line arguments
 
-You can run `python -m pyview --help` to see the full list of command-line arguments.
+You can run `python -m phonoscape --help` to see the full list of command-line arguments.
 
 - First, you need to provide a `file` argument pointing to a `.mat` [dataset file](#dataset-format).
 - Then, you can optionally provide a `variables` pattern. It uses [`fnmatch`](https://docs.python.org/3/library/fnmatch.html), so you can use `*` to match a sequence of characters and `?` to match a single character. If no variable pattern is provided, then all variables in the dataset file are used.
@@ -76,6 +76,7 @@ You can run `python -m pyview --help` to see the full list of command-line argum
   - `--tail MS` (MVIEW `TAIL`): the position (in milliseconds) of the right edge of the temporal selection. If specified, it must be a non-negative number greater than `--head + 25`. If unspecified, it defaults to the end of the first variable's data. It only has an effect on the first opened window; subsequent windows inherit the opening window's selection.
   - `--sex SEX` (MVIEW `SEX`): the subject's sex. `M` for male; `F` for female. This can be later customized in the 'Configure spectral analysis' dialog, but it affects the default LPC degree. Default is `M`.
   - `--spect-lim HZ` (MVIEW `SPECLIM`): frequency upper limit (Hz) for spectrogram display. This affects the visualization of the spectrograms but does not affect the underlying spectral analysis. Default is the Nyquist frequency.
+  - `--lproc PROC` (MVIEW `LPROC`): specifies the label procedure to use. If unspecified, then the default label procedure `phonoscape.lproc.lp_default` is used. If specified, it must be either a Python module specifier (qualified name based on `sys.path`) or a path (ending in `.py`, resolved relative to CWD) to a module starting with `lp_`. See [labeling procedures](#labeling-procedures) for more details.
 
 Note that the framing and audio trajectory discovery is slightly different from MVIEW's; for one, we never special-case the very first trajectory.
 
@@ -87,7 +88,7 @@ Other forms of `mview` data loader, including struct data and raw numeric arrays
 
 The `.mat` file contains three levels:
 
-- Variables: each PyView window views one variable.
+- Variables: each PhonoScape window views one variable.
 - Trajectories: each variable contains one or more trajectories, represented as an array of structs.
 - Fields: each trajectory struct has required and optional fields.
 
@@ -191,7 +192,7 @@ The following optional fields may be provided for each trajectory struct:
 
   The list of names on the right-hand side are known as "temporal display specifications". They are also used in the `--temporal-display` [argument](#command-line-arguments) and the "Report" output.
 - **Set common scaling**: Opens a dialog to configure the y-axis limits for all spatial trajectories.
-  - **Adaptive scaling**: Each trajectory has its own y-axis limits, determined by the range of the trajectory data (i.e., matplotlib default auto-scaling logic). New in PyView.
+  - **Adaptive scaling**: Each trajectory has its own y-axis limits, determined by the range of the trajectory data (i.e., matplotlib default auto-scaling logic). New in PhonoScape.
   - Configured spreads: Configure a common spread for all movement/velocity/acceleration trajectories, respectively. The `ymax - ymin` will be equal to that value, leaving an equal margin on the top and bottom.
 
   By default adaptive scaling is enabled and you cannot configure spreads. When you disable it, the spreads default to `1.1` of the maximum range across all _visible_ trajectories (different from MVIEW, which also considers invisible trajectories and therefore can end up with an excessively large common scale). The values you set (or default) are good for as long as the temporal display remains the same or adaptive scaling remains disabled; the next time you enable and re-disable adaptive scaling, or when you change the temporal display settings, the common scaling will be re-computed.
@@ -254,7 +255,7 @@ Currently a minimum of 25ms is enforced for the selection duration, regardless o
 - **Reflective cycling**: Continuously shifts the cursor forward; if it hits one boundary, moves in the opposite direction.
 - **Stop cycling (Ctrl+X)**: As it says.
 - **Configure movement**: Opens a dialog to configure the movement behavior.
-  - **Nudge step size (ms)** (default: 5ms): The amount of time to move when stepping forward/backward, in milliseconds. (In MVIEW this also controls the cycling; in PyView you use playback rate instead.)
+  - **Nudge step size (ms)** (default: 5ms): The amount of time to move when stepping forward/backward, in milliseconds. (In MVIEW this also controls the cycling; in PhonoScape you use playback rate instead.)
   - **Playback rate** (default: 1; i.e., synchronized with real time): How fast the simulated motion is relative to real time when cycling. For example, if the playback rate is 2, then the cursor moves twice as fast as real time, so a 10-second selection would take 5 seconds to cycle through.
   
   While cycling, the [read-out panel](#read-out) displays the actual nudge step size and frame rate of the simulated motion. The frame rate mostly depends on how fast your computer can process each cursor update. On my M1 mac, it's around 10 FPS, so at 1x playback, each nudge step is approximately 100 ms (sorry Python isn't really efficient for real-time stuff). You can improve the temporal resolution by reducing the playback rate.
@@ -263,7 +264,7 @@ Currently a minimum of 25ms is enforced for the selection duration, regardless o
 
 Unlike MVIEW, labels are ordered by their creation, not by their temporal position; this affects most actions below. However, sorting and reordering is allowed if you prefer some other ordering.
 
-- **Make label**: Opens a dialog to add a new simple label at the end of the labels list. By default it's at the cursor position. A name is required (unlike MVIEW).
+- **Make label**: Opens a dialog to add a new simple label at the end of the labels list. By default it's at the cursor position. Unlike MVIEW: (1) this always only adds a simple label and doesn't invoke the labeling procedure; (2) a name is required.
 - **Edit labels**: Opens a dialog to edit the labels list. Each label has a name, a position (in ms), and an optional note. You can delete and reorder labels. You can also edit the name, position, and note of each label. The position must be between the start and the end of the data.
 - **Clear all labels (Ctrl+Y)**: As it says. Shows a confirmation dialog.
 - **Export labels (Ctrl+9)**: Exports labels to a `.lab` text file. The format is the same as MVIEW:
@@ -350,7 +351,7 @@ The cursor spectrum is the bottom-left panel. It shows the frequency spectrum of
 - **Spectral display cutoff (Hz)**
 - **Pre-emphasis**
 
-All 4 modes are supported and displayed in the same panel: Linear Predictive Coding (LPC), Discrete Fourier Transform (DFT), Average (AVG), Cepstral (CEPS). By default only LPC is enabled. In MVIEW, only the former two are displayed in the main panel; in PyView, all of them are, rendering the external spectrum unnecessary.
+All 4 modes are supported and displayed in the same panel: Linear Predictive Coding (LPC), Discrete Fourier Transform (DFT), Average (AVG), Cepstral (CEPS). By default only LPC is enabled. In MVIEW, only the former two are displayed in the main panel; in PhonoScape, all of them are, rendering the external spectrum unnecessary.
 
 The x-axis limit is from 0 to the value configured by **Spectral display cutoff**. The y-axis is in dB, whose limits expand as the plot updates (i.e., as you move the cursor). The way to reset the limit is to re-adjust the [SPL reference](#data-menu) which effectively shifts the curve.
 
@@ -362,7 +363,7 @@ The vertical slider here that customizes the spectrogram contrast has been moved
 
 At the very bottom-left, there is a small panel. What it displays depends on what you just did.
 
-1. If you just clicked on a temporal trajectory, it shows the trajectory name (new in PyView!) and the value at the cursor. The text is not cleared when the mouse is released or moved outside; it is persisted so you can copy it out.
+1. If you just clicked on a temporal trajectory, it shows the trajectory name (new in PhonoScape!) and the value at the cursor. The text is not cleared when the mouse is released or moved outside; it is persisted so you can copy it out.
 2. If you just panned the 3D spatial view, it shows the current camera angle in terms of elevation, azimuth, and roll. In MVIEW, a separate message box is used for this.
 3. If you are [cycling](#movement-menu) through the selection, it shows the frame rate, playback rate, and effective nudge step size of the simulated motion.
 
@@ -370,9 +371,11 @@ The cursor/head/tail inputs have been moved to the [navbar](#navbar).
 
 ## External procedures
 
+There are three types of external procedures: data procedures (DP), plotting procedures (PP), and labeling procedures (LP). They must be defined in files called `dp_<name>.py`, `pp_<name>.py`, and `lp_<name>.py`, respectively. Each module is only imported once for the lifetime of the application. Each module defines a single class that implements the corresponding protocol, with the name that's `<name>` converted to PascalCase (e.g., `dp_EstTV` → `EstTVDP`, `pp_movie` → `MoviePP`, `lp_find_gest` → `FindGestLP`). The class is instantiated once per variable window.
+
 ### Data procedures
 
-Each data procedure must be defined in a file called `dp_<name>.py`. It must export a class whose name matches case-insensitively with `<name>`. The class must implement the following protocol:
+The class must implement the following protocol:
 
 ```py
 TODO
@@ -398,7 +401,7 @@ TODO
 
 ### Plotting procedures
 
-Each plotting procedure must be defined in a file called `pp_<name>.py`. It must export a class whose name matches case-insensitively with `<name>`. The class must implement the following protocol:
+The class must implement the following protocol:
 
 ```py
 TODO
@@ -409,7 +412,16 @@ TODO
 
 ### Labeling procedures
 
-Each labeling procedure must be defined in a file called `lp_<name>.py`. It must export a class whose name matches case-insensitively with `<name>`. The class must implement the following protocol:
+A labeling procedure controls all behaviors relevant to labeling, namely:
+
+- Configure its own behaviors (either on first load or through [Label menu > Labeling behavior > Configure](#label-menu)).
+- Plotting the labels in the temporal view.
+- Handling right-clicks in the temporal view (create).
+- Handling double-clicks on labels in the temporal view (edit/delete).
+- Handling dragging of labels in the temporal view.
+- [Label menu](#label-menu) actions: edit, export, import, save, load.
+
+The class must implement the following protocol:
 
 ```py
 TODO
@@ -431,10 +443,10 @@ TODO
 
 ## Programmatic invocation
 
-Currently only the `pyview()` function is supported. It's not really designed as a utility library; you can find many better alternatives.
+Currently only the `phonoscape()` function is supported. It's not really designed as a utility library; you can find many better alternatives.
 
 The parameters are exactly the same as the [command line arguments](#command-line-arguments) (that is to say, the CLI is a very thin wrapper around the function). Just translate `-` to `_` and remove the leading `--`. For example:
 
 ```py
-pyview("./test_data/S02_data.mat", "*", palate="S02_pal", temporal_display=["AUDIO_SPECT", "TDx", "vTDx", "TDz", "vTDz"])
+phonoscape("./test_data/S02_data.mat", "*", palate="S02_pal", temporal_display=["AUDIO_SPECT", "TDx", "vTDx", "TDz", "vTDz"])
 ```

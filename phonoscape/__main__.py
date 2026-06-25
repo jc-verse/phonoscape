@@ -1,5 +1,5 @@
 from typing import cast
-from . import pyview
+from . import phonoscape
 
 if __name__ == "__main__":
     import argparse
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     # [x] SPECLIM
 
     parser = argparse.ArgumentParser(
-        description="PyView: A tool for visualizing .mat files."
+        description="PhonoScape: Visualize acoustics & articulatory data."
     )
     parser.add_argument("file", type=str, help="Path to the .mat file to visualize.")
     parser.add_argument(
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    pyview(
+    phonoscape(
         args.file,
         args.variables,
         palate=args.palate,

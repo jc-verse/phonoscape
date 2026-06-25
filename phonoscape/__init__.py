@@ -9,7 +9,7 @@ from .window import VarWindow, WindowManager
 from .lproc.protocol import LabelProcedure
 
 
-def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
+def phonoscape(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
     plt.style.use("dark_background")
 
     path = Path(file)
@@ -46,7 +46,7 @@ def pyview(file: str, variables: str = "*", **kwargs: Unpack[CmdArgs]) -> None:
             f"The duration of the selection (tail - head) must be at least 25 milliseconds, but got head={head_s * 1000} and tail={tail_s * 1000} ({(tail_s - head_s) * 1000:.1f} ms)"
         )
 
-    lproc_ctor_path = kwargs.get("lproc") or "pyview.lproc.lp_default"
+    lproc_ctor_path = kwargs.get("lproc") or "phonoscape.lproc.lp_default"
     lproc_ctor: type[LabelProcedure] = import_proc_ctor(lproc_ctor_path, "lp")
 
     app = QApplication.instance()

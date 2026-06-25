@@ -365,6 +365,43 @@ wheels = [
 ]
 
 [[package]]
+name = "phonoscape"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "amfm-decompy" },
+    { name = "fastapi" },
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pydantic" },
+    { name = "pyside6" },
+    { name = "scipy" },
+    { name = "sounddevice" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "black" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "amfm-decompy", specifier = ">=1.0.12.2" },
+    { name = "fastapi", specifier = ">=0.136" },
+    { name = "matplotlib", specifier = ">=3.10.9" },
+    { name = "numpy", specifier = ">=2.4" },
+    { name = "pydantic", specifier = ">=2.13" },
+    { name = "pyside6", specifier = ">=6.11.1" },
+    { name = "scipy", specifier = ">=1.17" },
+    { name = "sounddevice", specifier = ">=0.5.5" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.47" },
+]
+
+[package.metadata.requires-dev]
+dev = [{ name = "black", specifier = ">=26.5.1" }]
+
+[[package]]
 name = "pillow"
 version = "12.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -567,43 +604,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/39/2a/cbbf9250020a4a8dd53ba83a46c097b69e5eb49dd14e708f496f548c6612/pytokens-0.4.1-cp314-cp314t-win_amd64.whl", hash = "sha256:584c80c24b078eec1e227079d56dc22ff755e0ba8654d8383b2c549107528918", size = 116287, upload-time = "2026-01-30T01:03:30.912Z" },
     { url = "https://files.pythonhosted.org/packages/c6/78/397db326746f0a342855b81216ae1f0a32965deccfd7c830a2dbc66d2483/pytokens-0.4.1-py3-none-any.whl", hash = "sha256:26cef14744a8385f35d0e095dc8b3a7583f6c953c2e3d269c7f82484bf5ad2de", size = 13729, upload-time = "2026-01-30T01:03:45.029Z" },
 ]
-
-[[package]]
-name = "pyview"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "amfm-decompy" },
-    { name = "fastapi" },
-    { name = "matplotlib" },
-    { name = "numpy" },
-    { name = "pydantic" },
-    { name = "pyside6" },
-    { name = "scipy" },
-    { name = "sounddevice" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "black" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "amfm-decompy", specifier = ">=1.0.12.2" },
-    { name = "fastapi", specifier = ">=0.136" },
-    { name = "matplotlib", specifier = ">=3.10.9" },
-    { name = "numpy", specifier = ">=2.4" },
-    { name = "pydantic", specifier = ">=2.13" },
-    { name = "pyside6", specifier = ">=6.11.1" },
-    { name = "scipy", specifier = ">=1.17" },
-    { name = "sounddevice", specifier = ">=0.5.5" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.47" },
-]
-
-[package.metadata.requires-dev]
-dev = [{ name = "black", specifier = ">=26.5.1" }]
 
 [[package]]
 name = "pyyaml"

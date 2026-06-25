@@ -8,8 +8,8 @@ from numpy.typing import NDArray
 from scipy.interpolate import PchipInterpolator
 from scipy.signal import butter, filtfilt
 
-from pyview.state import Label, SpatialTrajDisplay, ScalarTrajDisplay
-from pyview.lproc.protocol import LabelProcedure, LabelUpdateResult
+from phonoscape.state import Label, SpatialTrajDisplay, ScalarTrajDisplay
+from phonoscape.lproc.protocol import LabelProcedure, LabelUpdateResult
 
 if TYPE_CHECKING:
     from ..state import Color, TrajDisplay, Trajectory
