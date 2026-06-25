@@ -6,12 +6,16 @@ Python port of MVIEW.
 
 ## Quick start
 
-PhonoScape, as a Python package, needs Python to run. You may have your own Python environment setup already, but PhonoScape is best run in a standalone virtual environment. We strongly recommend using [uv](hhttps://docs.astral.sh/uv/). First following the instructions to install uv and then install the latest Python. Now you can create a virtual environment and install PhonoScape with:
+PhonoScape, as a Python package, needs Python to run. You may have your own Python environment setup already, but PhonoScape is best run in a standalone virtual environment. We strongly recommend using [uv](https://docs.astral.sh/uv/). First following the instructions to install uv and then install the latest Python. Now you can directly install PhonoScape as a tool:
 
 ```bash
-uv venv
-source .venv/bin/activate
-uv pip install phonoscape
+uv tool install phonoscape
+```
+
+Now, you can run PhonoScape from the command line. You do need to have your own dataset file.
+
+```bash
+phonoscape ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
 But if you prefer to use your own Python environment, you can also install PhonoScape with:
@@ -20,17 +24,16 @@ But if you prefer to use your own Python environment, you can also install Phono
 pip install phonoscape
 ```
 
-Now, you can run PhonoScape from the command line. You do need to have your own dataset file.
+If you installed PhonoScape as a normal Python package, you must run it with `python`:
 
 ```bash
 python -m phonoscape ./test_data/S02_data.mat --palate S02_pal --temporal-display AUDIO_SPECT TDx vTDx TDz vTDz
 ```
 
-Later, you can update PhonoScape with:
+Later, you can update PhonoScape (installed as a tool) with:
 
 ```bash
-source .venv/bin/activate
-uv pip install --upgrade phonoscape
+uv tool update phonoscape
 ```
 
 Or, in the Python environment of your choice:
@@ -39,7 +42,7 @@ Or, in the Python environment of your choice:
 pip install --upgrade phonoscape
 ```
 
-TODO: I'm considering a bundled distribution with all dependencies, including a Python interpreter, so it can be fully runnable out-of-the-box as a global command.
+TODO: I'm considering a bundled distribution with all dependencies, including a Python interpreter, so it can be fully runnable out-of-the-box with an installation script.
 
 ### Running from source
 
@@ -528,6 +531,8 @@ TODO
 ## Programmatic invocation
 
 Currently only the `phonoscape()` function is supported. It's not really designed as a utility library; you can find many better alternatives.
+
+To import phonoscape, you must have installed it as a package instead of as a tool.
 
 The parameters are exactly the same as the [command line arguments](#command-line-arguments) (that is to say, the CLI is a very thin wrapper around the function). Just translate `-` to `_` and remove the leading `--`. For example:
 

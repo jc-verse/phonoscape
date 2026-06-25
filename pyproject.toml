@@ -15,6 +15,9 @@ dependencies = [
     "uvicorn[standard]>=0.47",
 ]
 
+[project.scripts]
+phonoscape = "phonoscape.__main__:main"
+
 [dependency-groups]
 dev = [
     "black>=26.5.1",
