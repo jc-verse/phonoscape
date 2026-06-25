@@ -1,6 +1,7 @@
 [project]
 name = "phonoscape"
-version = "0.1.0"
+version = "0.1.1"
+readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "amfm-decompy>=1.0.12.2",
@@ -17,7 +18,17 @@ dependencies = [
 [dependency-groups]
 dev = [
     "black>=26.5.1",
+    "build>=1.5.0",
+    "twine>=6.2.0",
 ]
+
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["phonoscape*"]
+exclude = ["baseline*", "phonoscape-fe-js*", "test_data*"]
 
 [tool.black]
 target-version = ["py314"]

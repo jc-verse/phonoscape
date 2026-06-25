@@ -1,0 +1,7 @@
+prune baseline
+prune phonoscape-fe-js
+prune test_data
+
+global-exclude __pycache__ *.py[cod] .DS_Store
+global-exclude .pytest_cache .mypy_cache .ruff_cache .venv venv env
+global-exclude *.egg-info

@@ -1,6 +1,8 @@
 # PhonoScape
 
-Python port of MVIEW
+Visualize acoustics & articulatory data.
+
+Python port of MVIEW.
 
 ## Quick start
 
@@ -448,5 +450,15 @@ Currently only the `phonoscape()` function is supported. It's not really designe
 The parameters are exactly the same as the [command line arguments](#command-line-arguments) (that is to say, the CLI is a very thin wrapper around the function). Just translate `-` to `_` and remove the leading `--`. For example:
 
 ```py
+from phonoscape import phonoscape
+
 phonoscape("./test_data/S02_data.mat", "*", palate="S02_pal", temporal_display=["AUDIO_SPECT", "TDx", "vTDx", "TDz", "vTDz"])
+```
+
+## Distribution
+
+```bash
+rm -rf dist build *.egg-info
+uv run python -m build
+uv run twine upload dist/*
 ```
