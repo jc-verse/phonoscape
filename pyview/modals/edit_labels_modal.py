@@ -40,7 +40,7 @@ def open_edit_labels_dialog(parent: LabelMenu) -> None:
     header_layout.setSpacing(0)
 
     label_header = QLabel("Label", dialog)
-    offset_header = QLabel("Offset", dialog)
+    offset_header = QLabel("Offset (ms)", dialog)
     note_header = QLabel("Note", dialog)
 
     label_header.setFixedWidth(120)

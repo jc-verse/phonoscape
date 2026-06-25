@@ -118,22 +118,32 @@ class LabelPlotContext:
         return RenderedLabel(artists=artists, hit_test_artists=[artist])
 
 
+@dataclass
+class ClickContext:
+    ax: Axes
+    ax_index: int
+    spec: TrajDisplay
+    modifiers: set[str]
+    button: int
+
+
 _MVIEW_IMPORT_ROW_RE = re.compile(r"(\w*)\s+([0-9.]+)")
 _MVIEW_IMPORT_HEADER_RE = re.compile(r"(\w+)")
 
 
 class LabelProcedure(Protocol):
-    name: str
+    name: str = "<Unnamed>"
     state: LPWindowState
 
     def __init__(self, state: LPWindowState) -> None:
-        self.name = "<Unnamed>"
         self.state = state
 
     def plot_label(self, label: Label, context: LabelPlotContext) -> RenderedLabel:
         return context.plot_default(label)
 
-    def create_label(self, label: Label) -> LabelUpdateResult:
+    def create_label(
+        self, label: Label, context: ClickContext | None = None
+    ) -> LabelUpdateResult:
         return LabelUpdateResult(created_labels=[label])
 
     def edit_label(
@@ -186,3 +196,9 @@ class LabelProcedure(Protocol):
             )
 
         return LabelUpdateResult(created_labels=imported_labels)
+
+    def export_labels(self, labels: list[Label], path: Path) -> None:
+        with path.open("w", encoding="utf-8", newline="\n") as f:
+            f.write("LABEL\tOFFSET\tNOTE\n")
+            for label in labels:
+                f.write(f"{label.name}\t{label.offset_s * 1000.0:.1f}\t{label.note}\n")

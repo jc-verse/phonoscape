@@ -23,7 +23,12 @@ from ..state import (
     get_component_names,
 )
 from ..data.process import get_plotting_data
-from ..lproc.protocol import LabelPlotContext, RenderedLabel, LabelUpdateResult
+from ..lproc.protocol import (
+    LabelPlotContext,
+    RenderedLabel,
+    LabelUpdateResult,
+    ClickContext,
+)
 from ..modals.label_modal import open_label_dialog
 from ..modals.common_scaling_modal import get_visible_scaling
 
@@ -551,10 +556,22 @@ class TemporalView(QWidget):
         if (
             event.button == 3
             and self._event_is_in_cursor_axes(event)
+            and event.inaxes is not None
             and event.xdata is not None
         ):
             # TODO: modified click / shift-click
-            open_label_dialog(self, ("create", event.xdata))
+            idx = self.axes.index(event.inaxes)
+            open_label_dialog(
+                self,
+                ("create", event.xdata),
+                click_context=ClickContext(
+                    ax=event.inaxes,
+                    ax_index=idx,
+                    spec=self._get_temp_disp_specs()[idx],
+                    modifiers=set(),
+                    button=3,
+                ),
+            )
 
     def _on_figure_leave(self, event: LocationEvent) -> None:
         self.dragging = None

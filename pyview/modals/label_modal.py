@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 if TYPE_CHECKING:
     from ..views.temporal_view import TemporalView
+    from ..lproc.protocol import ClickContext
 from ..state import Label
 
 LabelDialogAction: TypeAlias = (
@@ -21,7 +22,11 @@ LabelDialogAction: TypeAlias = (
 )
 
 
-def open_label_dialog(parent: TemporalView, action: LabelDialogAction) -> None:
+def open_label_dialog(
+    parent: TemporalView,
+    action: LabelDialogAction,
+    click_context: ClickContext | None = None,
+) -> None:
     dialog = QDialog(parent)
     dialog.setWindowTitle(f"{action[0].capitalize()} label")
     dialog.setModal(True)
@@ -77,15 +82,12 @@ def open_label_dialog(parent: TemporalView, action: LabelDialogAction) -> None:
             return
 
         name = name_entry.text().strip()
-        if not name:
-            QMessageBox.critical(dialog, "Invalid name", "Name cannot be empty.")
-            return
-
         note = note_entry.text().strip()
 
         if action[0] == "create":
             result = parent.state.lproc.create_label(
-                Label(name=name, offset_s=offset_ms / 1000.0, note=note, color="red")
+                Label(name=name, offset_s=offset_ms / 1000.0, note=note, color="red"),
+                click_context,
             )
             parent.state.apply_label_update(result)
             parent.update_plot(labels=result)

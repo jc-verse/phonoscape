@@ -9,7 +9,7 @@ from ..data.parse import import_proc_ctor
 from ..state import Label
 from ..modals.label_modal import open_label_dialog
 from ..modals.edit_labels_modal import open_edit_labels_dialog
-from ..lproc.protocol import LabelUpdateResult
+from ..lproc.protocol import LabelUpdateResult, LPWindowState
 
 
 class LabelMenu(QMenu):
@@ -225,7 +225,7 @@ class LabelMenu(QMenu):
 
         try:
             lproc_ctor = import_proc_ctor(path, "lp")
-            self.state.lproc = lproc_ctor()
+            self.state.lproc = lproc_ctor(LPWindowState(self.state))
             self.lproc_name_display.setText(self.state.lproc.name)
         except Exception as exc:
             QMessageBox.critical(

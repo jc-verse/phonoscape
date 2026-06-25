@@ -482,7 +482,6 @@ def import_proc_ctor(mod: str | Path, prefix: str) -> type[T]:
         spec = spec_from_file_location(mod_name, abs_path)
         if spec is None or spec.loader is None:
             raise ImportError(f"Could not load module from path {mod}")
-        print(spec)
         proc_ctor_module = module_from_spec(spec)
         sys.modules[mod_name] = proc_ctor_module
         spec.loader.exec_module(proc_ctor_module)
