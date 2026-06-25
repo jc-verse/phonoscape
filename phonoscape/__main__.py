@@ -1,9 +1,9 @@
 from typing import cast
 from . import phonoscape
+import argparse
 
-if __name__ == "__main__":
-    import argparse
 
+def main():
     # [ ] CONFIG
     # [x] DPROC
     # [x] FTRAJ
@@ -169,3 +169,7 @@ if __name__ == "__main__":
         dproc=args.dproc,
         pproc=args.pproc,
     )
+
+
+if __name__ == "__main__":
+    main()
