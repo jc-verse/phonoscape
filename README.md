@@ -71,7 +71,7 @@ PhonoScape strives to be 100% MVIEW-compatible: any input that works in MVIEW, p
 
 PhonoScape is 90% complete. The outstanding items you can find as TODOs below. In order of importance:
 
-1. [External procedures](#external-procedures)
+1. [External procedures](#external-procedures); currently only labeling procedures are supported, and only `lp_findgest` has been ported. Configuration and export are not yet supported.
 2. F0/Formant tracking
 3. File export (configuration, data, etc.)
 4. Dataset import: `LABELS`, `CONTOURS`, `SPREAD` fields

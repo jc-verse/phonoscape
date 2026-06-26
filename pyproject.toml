@@ -18,6 +18,12 @@ dependencies = [
 [project.scripts]
 phonoscape = "phonoscape.__main__:main"
 
+[project.urls]
+"Homepage" = "https://github.com/jc-verse/phonoscape"
+"Repository" = "https://github.com/jc-verse/phonoscape"
+"Bug Tracker" = "https://github.com/jc-verse/phonoscape/issues"
+"Documentation" = "https://github.com/jc-verse/phonoscape"
+
 [dependency-groups]
 dev = [
     "black>=26.5.1",
